@@ -1,6 +1,6 @@
 import Image from "next/image";
 
-const APP_SCENERY_SRC = "/shared-assets/coastal-island-kingdom-day.png";
+const APP_SCENERY_SRC = "/shared-assets/coastal-island-kingdom-supercell.png";
 
 export function AppScenery() {
   return (

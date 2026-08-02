@@ -157,7 +157,7 @@ export function HomeScreen({
             badge={<Icon icon={diceIcon} />}
             description="Play instantly with bots or players"
             disabled={isPending || !displayName.trim()}
-            imageSrc="/home-assets/menu/quick-match.png"
+            imageSrc="/home-assets/menu/quick-match-v2.png"
             onPress={() => setShowBotSetup(true)}
             pending={pendingAction === "quick"}
             title="Quick Match"
@@ -168,7 +168,7 @@ export function HomeScreen({
             badge={<Icon icon={houseIcon} />}
             description="Invite friends to a private island"
             disabled={isPending || !displayName.trim()}
-            imageSrc="/home-assets/menu/host-island.png"
+            imageSrc="/home-assets/menu/host-island-v2.png"
             onPress={() => void onCreateRoom()}
             pending={pendingAction === "create"}
             title="Host Island"
@@ -179,7 +179,7 @@ export function HomeScreen({
             badge={<Icon icon={usersIcon} />}
             description="Jump in with a friend code"
             disabled={isPending || !displayName.trim()}
-            imageSrc="/home-assets/menu/join-crew.png"
+            imageSrc="/home-assets/menu/join-crew-v2.png"
             onPress={() => setShowJoinRoom(true)}
             pending={pendingAction === "join"}
             title="Join Crew"

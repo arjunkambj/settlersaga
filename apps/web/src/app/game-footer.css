@@ -668,3 +668,99 @@
     grid-template-rows: 1fr;
   }
 }
+
+@media (max-height: 560px) and (orientation: landscape) {
+  .reference-game {
+    --game-toast-bottom: calc(4.5rem + var(--space-md));
+  }
+
+  .reference-game .game-footer.game-footer--three-sections {
+    grid-template-areas: "resources buildings turn";
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) 6rem;
+    grid-template-rows: 4.5rem;
+    align-items: stretch;
+    gap: var(--space-xs);
+  }
+
+  .reference-game .game-footer--three-sections .resource-hand {
+    --hand-card-gap: var(--space-2xs);
+    --hand-card-width: 2.25rem;
+
+    display: block;
+    grid-area: resources;
+    padding: var(--space-2xs) var(--space-xs);
+  }
+
+  .reference-game .game-footer--three-sections .resource-card-list {
+    width: 100%;
+    height: 100%;
+    justify-content: start;
+    gap: var(--hand-card-gap);
+    padding-top: 0;
+  }
+
+  .reference-game .game-footer--three-sections .resource-card-face {
+    width: var(--hand-card-width);
+    min-width: 0;
+    height: auto;
+    max-height: 100%;
+    aspect-ratio: 2 / 3;
+  }
+
+  .reference-game .action-dock-stack {
+    width: 100%;
+    height: 4.5rem;
+    grid-area: buildings;
+    align-self: stretch;
+    justify-self: stretch;
+  }
+
+  .reference-game .game-footer--three-sections .building-actions-dock {
+    width: 100%;
+    height: 4.5rem;
+    justify-content: flex-start;
+    gap: var(--space-xs);
+    padding: var(--space-2xs) var(--space-xs);
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
+  .reference-game .game-footer--three-sections .building-actions-dock .action-group {
+    gap: var(--space-xs);
+  }
+
+  .reference-game .game-footer--three-sections .building-actions-dock .action-tile-preset--dock,
+  .reference-game .game-footer--three-sections .building-actions-dock .trade-launch,
+  .reference-game
+    .game-footer--three-sections
+    .building-actions-dock
+    .build-actions
+    .action-button {
+    width: 2.5rem;
+    min-width: 2.5rem;
+    height: 3.75rem;
+    min-height: 0;
+  }
+
+  .reference-game .action-dock-stack .player-turn-summary,
+  .reference-game .turn-control-stack > .turn-clock {
+    display: none;
+  }
+
+  .reference-game .turn-control-stack {
+    width: 100%;
+    height: 4.5rem;
+    grid-area: turn;
+    align-self: stretch;
+  }
+
+  .reference-game .turn-control {
+    height: 4.5rem;
+    grid-template-rows: 1fr;
+    padding: var(--space-xs);
+  }
+
+  .reference-game .turn-control .roll-preview-card {
+    display: none;
+  }
+}

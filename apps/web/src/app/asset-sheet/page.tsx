@@ -19,15 +19,16 @@ import {
 import { AWARD_ASSET_PATHS } from "@/constants/game/award-assets";
 import { END_TURN_ICON_ASSET_PATH, WAIT_ICON_ASSET_PATH } from "@/constants/game/ui-assets";
 import {
-  getTerrainAssetPath,
   OCEAN_BOARD_ASSET_PATH,
   PORT_BOAT_ASSET_PATH,
   PORT_DOCK_ASSET_PATH,
+  TERRAIN_ATLAS_ASSET_PATH,
 } from "@/constants/game/board-assets";
 import { SOUND_EFFECT_PATHS, type SoundEffect } from "@/lib/game/audio-cues";
 
 import { AssetCard, type AssetCardItem } from "./asset-card";
 import styles from "./asset-sheet.module.css";
+import { TerrainBoardPreview } from "./terrain-board-preview";
 import { ThemeToggle } from "./theme-toggle";
 
 export const metadata: Metadata = {
@@ -88,15 +89,6 @@ const SOUND_EFFECT_ASSETS = SOUND_EFFECT_DEFINITIONS.map(([name, description, so
 const selectAssets = (assets: readonly AssetItem[], names: readonly string[]) =>
   assets.filter((asset) => names.includes(asset.name));
 
-const TERRAIN_TYPES = [
-  ["Fields", "fields", "Wheat-producing farmland hex."],
-  ["Forest", "forest", "Tree-producing woodland hex."],
-  ["Hills", "hills", "Brick-producing clay hills hex."],
-  ["Mountains", "mountains", "Stone-producing mountain hex."],
-  ["Pasture", "pasture", "Sheep-producing grassland hex."],
-  ["Desert", "desert", "Non-producing robber hex."],
-] as const;
-
 const SOUND_EFFECT_SUBCATEGORIES = [
   {
     name: "General",
@@ -126,12 +118,11 @@ const ASSET_CATEGORIES = [
     name: "Brand & environments",
     assets: [
       {
-        name: "Coastal cove",
-        description:
-          "Shared daytime coastal panorama used by the login, home, and end-of-game views.",
+        name: "Island world (supercell)",
+        description: "Tabletop island backdrop used by the login, home, and end-of-game views.",
         fit: "cover",
         format: "PNG · 1672×941",
-        path: "/shared-assets/coastal-island-kingdom-day.png",
+        path: "/shared-assets/coastal-island-kingdom-supercell.png",
         status: "generated",
       },
     ],
@@ -141,36 +132,40 @@ const ASSET_CATEGORIES = [
     assets: [
       {
         name: "Quick match",
-        description: "Dice, road, and island illustration.",
-        format: "PNG · 512×512",
-        path: "/home-assets/menu/quick-match.png",
+        description: "Glossy rolling dice on a floating board island.",
+        format: "PNG · 1080×1080",
+        path: "/home-assets/menu/quick-match-v2.png",
         status: "generated",
       },
       {
         name: "Host island",
-        description: "Lighthouse illustration for room creation.",
-        format: "PNG · 512×512",
-        path: "/home-assets/menu/host-island.png",
+        description: "Crooked storybook island home with golden roof.",
+        format: "PNG · 1080×1080",
+        path: "/home-assets/menu/host-island-v2.png",
         status: "generated",
       },
       {
         name: "Join crew",
-        description: "Map and compass illustration for joining a room.",
-        format: "PNG · 512×512",
-        path: "/home-assets/menu/join-crew.png",
+        description: "Treasure map with brass compass for joining a room.",
+        format: "PNG · 1080×1080",
+        path: "/home-assets/menu/join-crew-v2.png",
         status: "generated",
       },
     ],
   },
   {
     name: "Terrain tiles",
-    assets: TERRAIN_TYPES.map(([name, terrain, description]) => ({
-      name,
-      description,
-      format: "PNG · 512×512",
-      path: getTerrainAssetPath(terrain),
-      status: "generated" as const,
-    })),
+    assets: [
+      {
+        name: "Terrain atlas",
+        description:
+          "Single-source 3×2 atlas for fields, forest, hills, mountains, pasture, and desert. The board clips each frame into its exact flat-top hex geometry.",
+        fit: "cover",
+        format: "PNG · 1536×1024 · six 512×512 frames",
+        path: TERRAIN_ATLAS_ASSET_PATH,
+        status: "generated" as const,
+      },
+    ],
   },
   {
     name: "Resource cards",
@@ -571,7 +566,11 @@ function AssetCategoryRow({ category }: { category: AssetCategory }) {
   const generatedCount = assets.filter((asset) => asset.status === "generated").length;
 
   return (
-    <section className={styles.category} aria-labelledby={`category-${toId(category.name)}`}>
+    <section
+      aria-labelledby={`category-${toId(category.name)}`}
+      className={styles.category}
+      data-live-preview={category.name === "Terrain tiles" || undefined}
+    >
       <div className={styles.categoryHeader}>
         <h2 id={`category-${toId(category.name)}`}>{category.name}</h2>
         <span className={styles.categoryCount}>
@@ -599,11 +598,14 @@ function AssetCategoryRow({ category }: { category: AssetCategory }) {
           ))}
         </div>
       ) : (
-        <div className={styles.assetRow}>
-          {assets.map((asset) => (
-            <AssetCard asset={asset} key={`${category.name}-${asset.name}`} />
-          ))}
-        </div>
+        <>
+          <div className={styles.assetRow}>
+            {assets.map((asset) => (
+              <AssetCard asset={asset} key={`${category.name}-${asset.name}`} />
+            ))}
+          </div>
+          {category.name === "Terrain tiles" ? <TerrainBoardPreview /> : null}
+        </>
       )}
     </section>
   );

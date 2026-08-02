@@ -6,27 +6,31 @@
   --font-ui:
     var(--font-dm-sans), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
     sans-serif;
-  --brand-parchment: #fff7ed;
-  --brand-ink: #43284b;
-  --brand-purple: #824193;
-  --brand-amethyst: #c078cb;
+  /* Harbor palette: deep sea ink, teal surfaces, golden highlights */
+  --brand-parchment: #f6f0e2;
+  --brand-ink: #083457;
+  --brand-sea: #0d5c80;
+  --brand-sea-bright: #4ea8c8;
   --brand-gold: #e5a72e;
+  /* Legacy aliases kept so older call-sites keep resolving */
+  --brand-purple: var(--brand-sea);
+  --brand-amethyst: var(--brand-sea-bright);
   --background: oklch(0.977 0.021 78);
-  --foreground: oklch(0.32 0.075 315);
+  --foreground: oklch(0.34 0.085 240);
   --surface: oklch(0.993 0.01 83);
   --surface-foreground: var(--foreground);
-  --surface-secondary: oklch(0.953 0.032 325);
+  --surface-secondary: oklch(0.953 0.028 220);
   --surface-secondary-foreground: var(--foreground);
-  --surface-tertiary: oklch(0.915 0.041 326);
+  --surface-tertiary: oklch(0.915 0.034 222);
   --surface-tertiary-foreground: var(--foreground);
   --overlay: var(--surface);
   --overlay-foreground: var(--foreground);
-  --muted: oklch(0.55 0.035 315);
-  --scrollbar-thumb: color-mix(in oklch, var(--brand-purple) 30%, transparent);
+  --muted: oklch(0.55 0.04 228);
+  --scrollbar-thumb: color-mix(in oklch, var(--brand-sea) 30%, transparent);
   --scrollbar-color: var(--scrollbar-thumb) transparent;
-  --default: oklch(0.945 0.025 325);
+  --default: oklch(0.945 0.022 222);
   --default-foreground: var(--foreground);
-  --accent: oklch(0.47 0.135 316);
+  --accent: oklch(0.52 0.115 225);
   --accent-foreground: oklch(0.99 0.012 80);
   --field-background: var(--surface);
   --field-foreground: var(--foreground);
@@ -37,42 +41,42 @@
   --warning-foreground: oklch(0.3 0.055 65);
   --segment: var(--surface);
   --segment-foreground: var(--foreground);
-  --border: oklch(0.72 0.055 320 / 24%);
-  --separator: oklch(0.72 0.055 320 / 18%);
-  --focus: var(--brand-amethyst);
-  --link: var(--brand-purple);
+  --border: oklch(0.74 0.045 225 / 24%);
+  --separator: oklch(0.74 0.045 225 / 18%);
+  --focus: var(--brand-sea-bright);
+  --link: var(--brand-sea);
   --player-color: #ee695d;
   font-family: var(--font-ui);
 }
 
 [data-theme="dark"] {
-  --background: oklch(0.2 0.055 315);
-  --foreground: oklch(0.98 0.025 78);
-  --surface: oklch(0.26 0.065 315);
+  --background: oklch(0.26 0.045 245);
+  --foreground: oklch(0.96 0.02 90);
+  --surface: oklch(0.33 0.06 238);
   --surface-foreground: var(--foreground);
-  --surface-secondary: oklch(0.31 0.07 315);
+  --surface-secondary: oklch(0.38 0.065 236);
   --surface-secondary-foreground: var(--foreground);
-  --surface-tertiary: oklch(0.35 0.075 315);
+  --surface-tertiary: oklch(0.42 0.07 234);
   --surface-tertiary-foreground: var(--foreground);
-  --overlay: oklch(0.285 0.065 315);
+  --overlay: oklch(0.36 0.06 240);
   --overlay-foreground: var(--foreground);
-  --muted: oklch(0.8 0.04 320);
-  --default: oklch(0.32 0.065 315);
+  --muted: oklch(0.8 0.035 225);
+  --default: oklch(0.39 0.06 238);
   --default-foreground: var(--foreground);
-  --accent: oklch(0.68 0.13 320);
-  --accent-foreground: oklch(0.2 0.055 315);
-  --field-background: oklch(0.27 0.06 315);
+  --accent: oklch(0.7 0.11 215);
+  --accent-foreground: oklch(0.24 0.05 240);
+  --field-background: oklch(0.34 0.055 240);
   --field-foreground: var(--foreground);
   --success: oklch(0.7 0.09 175);
-  --success-foreground: oklch(0.2 0.055 315);
+  --success-foreground: oklch(0.24 0.05 240);
   --warning: oklch(0.82 0.14 78);
   --warning-foreground: oklch(0.24 0.05 65);
-  --segment: oklch(0.39 0.075 315);
+  --segment: oklch(0.45 0.06 236);
   --segment-foreground: var(--foreground);
-  --border: oklch(0.78 0.06 320 / 22%);
-  --separator: oklch(0.78 0.06 320 / 16%);
-  --focus: var(--brand-amethyst);
-  --link: var(--brand-amethyst);
+  --border: oklch(0.78 0.05 225 / 22%);
+  --separator: oklch(0.78 0.05 225 / 16%);
+  --focus: var(--brand-sea-bright);
+  --link: var(--brand-sea-bright);
   color-scheme: dark;
 }
 
@@ -104,49 +108,53 @@
 /* Game HUD: dark-purple table theme ("reference" preset). Channel triplets
    feed rgb(var(--token) / alpha) so a single hue drives every opacity step.
    Defined on :root so portaled dialogs and CSS modules can also consume them. */
+/* Game HUD: deep-sea table theme. Channel triplets feed rgb(var(--token) /
+   alpha) so a single hue drives every opacity step. */
 :root {
-  /* Panel surfaces (brand purple ramp) */
-  --hud-bg: #2a1234;
-  --hud-surface: 111 57 126;
-  --hud-surface-deep: 49 20 61;
-  --hud-surface-raised: 139 72 158;
-  --hud-surface-raised-deep: 61 24 76;
+  /* Panel surfaces (deep-sea ramp) */
+  --hud-bg: #082338;
+  --hud-surface: 13 74 112;
+  --hud-surface-deep: 7 38 61;
+  --hud-surface-raised: 23 100 142;
+  --hud-surface-raised-deep: 10 52 79;
 
-  /* Action tiles (brighter violet ramp) */
-  --hud-action: 132 65 149;
-  --hud-action-deep: 76 31 88;
-  --hud-action-hover: #a85ab5;
-  --hud-action-hover-deep: #6c2e79;
-  --hud-action-muted: 91 48 104;
-  --hud-action-muted-deep: 46 20 57;
-  --hud-card: 126 62 143;
+  /* Action tiles (brighter teal ramp) */
+  --hud-action: 18 139 180;
+  --hud-action-deep: 11 92 122;
+  --hud-action-hover: #2faecf;
+  --hud-action-hover-deep: #0d6f94;
+  --hud-action-muted: 16 82 110;
+  --hud-action-muted-deep: 9 48 66;
+  --hud-card: 17 96 138;
 
   /* Lines and highlights */
-  --hud-line: 225 184 230;
-  --hud-line-bright: 245 216 239;
+  --hud-line: 140 196 224;
+  --hud-line-bright: 184 226 246;
   --hud-edge: 255 255 255;
   --hud-hover-border: rgb(var(--hud-line-bright) / 0.58);
-  --hud-amethyst: 192 120 203; /* --brand-amethyst channels */
+  --hud-sea-bright: 78 168 200;
+  --hud-amethyst: var(--hud-sea-bright); /* legacy alias */
 
   /* Counter badge (light pill on dark panels) */
   --hud-badge: #fff8f4;
-  --hud-badge-ink: #846386;
-  --hud-badge-line: rgb(67 40 75 / 0.32); /* --brand-ink channels */
+  --hud-badge-ink: #3d6a85;
+  --hud-badge-line: rgb(8 52 87 / 0.32);
 
   /* Text */
   --hud-text: var(--brand-parchment);
-  --hud-text-strong: #fffaf3;
-  --hud-text-soft: #e7dbe9;
-  --hud-text-muted: #d6bdd8;
-  --hud-text-subtle: #cbb0ce;
-  --hud-text-faint: #bfa2c4;
-  --hud-text-pearl: #f5deef;
+  --hud-text-strong: #fbf7ea;
+  --hud-text-soft: #dcebf2;
+  --hud-text-muted: #b7d4e2;
+  --hud-text-subtle: #a6c9d9;
+  --hud-text-faint: #94bdcf;
+  --hud-text-pearl: #d7eefa;
 
   /* Inset wells and deep cavities */
-  --hud-well: 14 5 21;
+  --hud-well: 4 20 32;
 
   /* Brand ramps as channels (for alpha variants) */
-  --hud-brand-purple: 130 65 147;
+  --hud-brand-sea: 13 92 128;
+  --hud-brand-purple: var(--hud-brand-sea); /* legacy alias */
   --hud-brand-gold: 229 167 46;
 
   /* Trade direction accents: teal = incoming, coral = outgoing */
@@ -154,13 +162,13 @@
   --hud-trade-out: 255 158 143;
 
   /* Elevation shadows */
-  --hud-shadow-key: 34 10 42;
-  --hud-shadow-deep: 23 8 31;
+  --hud-shadow-key: 6 30 48;
+  --hud-shadow-deep: 4 20 32;
 
   /* Gold action ramp (brand gold) */
-  --hud-gold: #ffc95c;
+  --hud-gold: #ffd071;
   --hud-gold-deep: #e59a24;
-  --hud-gold-hover: #ffd475;
+  --hud-gold-hover: #ffdd8a;
   --hud-gold-deep-hover: #efa932;
   --hud-gold-accent: #f2b83f;
   --hud-gold-line: 126 72 18;
@@ -1821,6 +1829,7 @@ select {
 
 .board-canvas-static {
   z-index: 0;
+  filter: drop-shadow(0 0.45rem 0.55rem rgb(var(--hud-shadow-deep) / 0.28));
 }
 
 .board-canvas-dynamic {
@@ -3417,7 +3426,7 @@ select {
   }
 
   .board-stage {
-    width: min(58cqw, 34rem);
+    width: min(58cqw, calc(100cqh * 0.9091), 34rem);
   }
 
   .game-footer {
@@ -4841,7 +4850,7 @@ select {
 
 @media (max-width: 620px) and (max-height: 560px) and (orientation: landscape) {
   .board-stage {
-    width: min(58cqw, 34rem);
+    width: min(58cqw, calc(100cqh * 0.9091), 34rem);
   }
 
   .game-footer {

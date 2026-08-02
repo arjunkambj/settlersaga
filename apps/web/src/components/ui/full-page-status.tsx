@@ -17,33 +17,41 @@ export function FullPageStatus({ label }: FullPageStatusProps) {
       <div className={styles.content}>
         <Brand className={styles.brand} />
 
-        <div className={styles.island} aria-hidden="true">
-          <span className={`${styles.hex} ${styles.top}`} />
-          <span className={`${styles.hex} ${styles.upperLeft}`} />
-          <span className={`${styles.hex} ${styles.upperRight}`} />
-          <span className={`${styles.hex} ${styles.center}`} />
-          <span className={`${styles.hex} ${styles.lowerLeft}`} />
-          <span className={`${styles.hex} ${styles.lowerRight}`} />
-          <span className={`${styles.hex} ${styles.bottom}`} />
-          <Image
-            alt=""
-            className={styles.settlement}
-            height={64}
-            priority
-            src="/game-assets/pieces/settlement-piece.png"
-            width={64}
-          />
+        <div className={styles.scene} aria-hidden="true">
+          <span className={styles.halo} />
+
+          <div className={styles.island}>
+            <span className={`${styles.hex} ${styles.top}`} />
+            <span className={`${styles.hex} ${styles.upperLeft}`} />
+            <span className={`${styles.hex} ${styles.upperRight}`} />
+            <span className={`${styles.hex} ${styles.center}`} />
+            <span className={`${styles.hex} ${styles.lowerLeft}`} />
+            <span className={`${styles.hex} ${styles.lowerRight}`} />
+            <span className={`${styles.hex} ${styles.bottom}`} />
+            <Image
+              alt=""
+              className={styles.settlement}
+              height={64}
+              priority
+              src="/game-assets/pieces/settlement-piece.png"
+              width={64}
+            />
+          </div>
+
+          <div className={styles.dice}>
+            <span className={`${styles.die} ${styles.dieA}`}>5</span>
+            <span className={`${styles.die} ${styles.dieB}`}>6</span>
+          </div>
         </div>
 
         <div className={styles.copy} aria-atomic="true" aria-live="polite" role="status">
-          <p className={styles.eyebrow}>Preparing your voyage</p>
           <p className={styles.label}>{label}</p>
-          <p className={styles.hint}>Charting coasts and gathering your crew</p>
-          <span className={styles.dots} aria-hidden="true">
-            <span />
-            <span />
-            <span />
+
+          <span className={styles.progress}>
+            <span className={styles.progressFill} />
           </span>
+
+          <p className={styles.hint}>Charting coasts and gathering your crew…</p>
         </div>
       </div>
     </main>

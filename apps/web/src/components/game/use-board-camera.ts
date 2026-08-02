@@ -16,6 +16,7 @@ import {
   getDefaultBoardViewport,
   getBoardViewportFocus,
   getBoardViewportTransform,
+  isCompactBoardViewport,
   normalizeBoardWheelDelta,
   panBoardViewport,
   pinchBoardViewport,
@@ -97,7 +98,7 @@ export function useBoardCamera(): BoardCamera {
   const suppressedBuildTargetRef = useRef<Element | null>(null);
   const suppressedClickTimerRef = useRef<number | null>(null);
   const gamePageRef = useRef<Element | null>(null);
-  const hasPositionedDefaultViewportRef = useRef(false);
+  const defaultViewportModeRef = useRef<"compact" | "regular" | null>(null);
   const refreshStageBoundsRef = useRef<() => void>(() => undefined);
 
   const scheduleSceneWrite = useCallback(() => {
@@ -457,13 +458,13 @@ export function useBoardCamera(): BoardCamera {
         width: Math.max(1, rect.width),
       };
 
+      const viewportMode = isCompactBoardViewport(stageBoundsRef.current) ? "compact" : "regular";
+      const crossedViewportMode = defaultViewportModeRef.current !== viewportMode;
       const clampedViewport = clampBoardViewport(
-        hasPositionedDefaultViewportRef.current
-          ? viewportRef.current
-          : getDefaultBoardViewport(stageBoundsRef.current),
+        crossedViewportMode ? getDefaultBoardViewport(stageBoundsRef.current) : viewportRef.current,
         stageBoundsRef.current,
       );
-      hasPositionedDefaultViewportRef.current = true;
+      defaultViewportModeRef.current = viewportMode;
       setTransientViewport(clampedViewport);
       commitViewport();
       rebasePointerGesture();

@@ -22,7 +22,7 @@
 
 .label {
   margin: 0;
-  color: #e9c8ef;
+  color: var(--hud-text-soft);
   font-size: 0.76rem;
   text-shadow: none;
 }
@@ -30,11 +30,11 @@
 .input.input {
   min-height: 4rem;
   padding: 0.8rem 1rem;
-  border: 2px solid #d9c6df;
+  border: 2px solid rgb(var(--hud-line) / 0.52);
   border-radius: 0.9rem;
-  background: #fffaf3;
-  box-shadow: inset 0 1px 2px rgba(67, 40, 75, 0.06);
-  color: #43284b;
+  background: var(--brand-parchment);
+  box-shadow: inset 0 1px 2px rgb(var(--hud-well) / 0.1);
+  color: var(--brand-ink);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 1.4rem;
   font-weight: 850;
@@ -44,16 +44,16 @@
 }
 
 .input.input::placeholder {
-  color: #c0a9ca;
+  color: rgb(var(--hud-surface-raised) / 0.72);
   font-size: 1.1rem;
   letter-spacing: 0.3em;
 }
 
 .input.input:focus-visible,
 .input.input[data-focus-visible="true"] {
-  border-color: #a15fb5;
+  border-color: var(--brand-sea-bright);
   outline: 0;
-  box-shadow: 0 0 0 4px rgba(161, 95, 181, 0.18);
+  box-shadow: 0 0 0 4px rgb(var(--hud-sea-bright) / 0.24);
 }
 
 .codeProgress {
@@ -66,21 +66,21 @@
 .codeProgress span {
   height: 0.22rem;
   border-radius: 999px;
-  background: rgba(214, 189, 216, 0.36);
+  background: rgb(var(--hud-line) / 0.36);
   transition:
     background-color 160ms ease,
     transform 160ms ease;
 }
 
 .codeProgress .filledCharacter {
-  background: #f0b21a;
+  background: var(--hud-gold-deep);
   transform: scaleY(1.25);
 }
 
 .help {
   min-height: 1.1rem;
   margin: 0;
-  color: #d6bdd8;
+  color: var(--hud-text-muted);
   font-size: 0.7rem;
 }
 

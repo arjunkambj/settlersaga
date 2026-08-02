@@ -28,19 +28,19 @@
   margin: 0;
   background: transparent;
   box-shadow: none;
-  color: #fff;
+  color: var(--hud-text-strong);
   overflow-y: auto;
 }
 
 .body :global(.lobby-settings-title) {
   padding: 0;
-  color: #fff;
+  color: var(--hud-text-strong);
   font-size: 0.9rem;
 }
 
 .body :global(.lobby-settings-intro) {
   margin-bottom: 0.75rem;
-  color: #d6bdd8;
+  color: var(--hud-text-muted);
 }
 
 .body :global(.lobby-settings-grid) {
@@ -50,30 +50,30 @@
 }
 
 .body :global(.lobby-settings-group) {
-  border-color: rgba(245, 216, 239, 0.14);
-  background: rgba(52, 21, 64, 0.3);
+  border-color: rgb(var(--hud-line) / 0.2);
+  background: rgb(var(--hud-well) / 0.3);
 }
 
 .body :global(.lobby-settings-group-header h2) {
-  color: #fffaf3;
+  color: var(--hud-text-strong);
 }
 
 .body :global(.lobby-settings-group-header p) {
-  color: #d6bdd8;
+  color: var(--hud-text-muted);
 }
 
 .body :global(.lobby-settings-control),
 .body :global(.lobby-settings-toggle),
 .body :global(.lobby-settings-static) {
-  border-color: rgba(245, 216, 239, 0.14);
-  background: rgba(255, 248, 251, 0.96);
+  border-color: rgb(var(--hud-line) / 0.2);
+  background: var(--brand-parchment);
 }
 
 .note {
   padding: 0.55rem 1rem 0;
   margin: 0;
-  background: rgba(52, 21, 64, 0.32);
-  color: #d6bdd8;
+  background: rgb(var(--hud-well) / 0.32);
+  color: var(--hud-text-muted);
 }
 
 .footer {

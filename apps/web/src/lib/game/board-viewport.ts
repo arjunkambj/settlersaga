@@ -18,14 +18,21 @@ export interface BoardViewportState extends BoardViewportPoint {
 }
 
 export const DEFAULT_BOARD_VIEWPORT: BoardViewportState = {
-  scale: 1.1,
+  scale: 1.12,
   x: 0,
   y: 0,
 };
 
 const DEFAULT_BOARD_VIEWPORT_OFFSET = {
   x: 0.15,
-  y: -0.05,
+  y: -0.085,
+} as const;
+
+const COMPACT_BOARD_VIEWPORT = {
+  maxWidth: 500,
+  scale: 1.14,
+  xOffset: 0,
+  yOffset: -0.02,
 } as const;
 
 export const BOARD_VIEWPORT_SCALE = {
@@ -40,14 +47,23 @@ export const BOARD_VIEWPORT_PAN = {
 } as const;
 
 export function getDefaultBoardViewport(bounds: BoardViewportBounds): BoardViewportState {
+  const isCompact = isCompactBoardViewport(bounds);
   return clampBoardViewport(
     {
-      ...DEFAULT_BOARD_VIEWPORT,
-      x: bounds.width * DEFAULT_BOARD_VIEWPORT_OFFSET.x,
-      y: bounds.height * DEFAULT_BOARD_VIEWPORT_OFFSET.y,
+      scale: isCompact ? COMPACT_BOARD_VIEWPORT.scale : DEFAULT_BOARD_VIEWPORT.scale,
+      x:
+        bounds.width *
+        (isCompact ? COMPACT_BOARD_VIEWPORT.xOffset : DEFAULT_BOARD_VIEWPORT_OFFSET.x),
+      y:
+        bounds.height *
+        (isCompact ? COMPACT_BOARD_VIEWPORT.yOffset : DEFAULT_BOARD_VIEWPORT_OFFSET.y),
     },
     bounds,
   );
+}
+
+export function isCompactBoardViewport(bounds: BoardViewportBounds): boolean {
+  return bounds.width <= COMPACT_BOARD_VIEWPORT.maxWidth;
 }
 
 export function clampBoardViewport(

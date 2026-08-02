@@ -46,7 +46,7 @@
 
 .label {
   margin: 0;
-  color: #e9c8ef;
+  color: var(--hud-text-soft);
   font-size: 0.76rem;
   font-weight: 750;
   text-shadow: none;
@@ -55,25 +55,25 @@
 .input.input {
   min-height: 3.15rem;
   padding: 0.75rem 0.95rem;
-  border: 2px solid rgba(216, 185, 224, 0.32);
+  border: 2px solid rgb(var(--hud-line) / 0.42);
   border-radius: 0.9rem;
-  background: rgba(255, 250, 243, 0.96);
-  box-shadow: inset 0 1px 2px rgba(67, 40, 75, 0.07);
-  color: #43284b;
+  background: color-mix(in srgb, var(--brand-parchment) 96%, transparent);
+  box-shadow: inset 0 1px 2px rgb(var(--hud-well) / 0.1);
+  color: var(--brand-ink);
   font-size: 1rem;
   font-weight: 700;
 }
 
 .input.input::placeholder {
-  color: #b39cbf;
+  color: rgb(var(--hud-surface-raised) / 0.72);
   font-weight: 600;
 }
 
 .input.input:focus-visible,
 .input.input[data-focus-visible="true"] {
-  border-color: #c078cb;
+  border-color: var(--brand-sea-bright);
   outline: 0;
-  box-shadow: 0 0 0 4px rgba(192, 120, 203, 0.2);
+  box-shadow: 0 0 0 4px rgb(var(--hud-sea-bright) / 0.24);
 }
 
 .footer {
@@ -92,33 +92,33 @@
 }
 
 .cancel {
-  border: 1px solid rgba(245, 216, 239, 0.22);
-  background: rgba(225, 184, 230, 0.1);
-  color: #fffaf3;
+  border: 1px solid rgb(var(--hud-line) / 0.34);
+  background: rgb(var(--hud-line) / 0.1);
+  color: var(--hud-text-strong);
 }
 
 .cancel:not(:disabled):hover,
 .cancel[data-hovered="true"] {
-  background: rgba(225, 184, 230, 0.16);
+  background: rgb(var(--hud-line-bright) / 0.16);
 }
 
 .save {
   border: 0;
-  background: linear-gradient(180deg, #ffd56a, #f0b21a);
-  box-shadow: 0 8px 20px rgba(180, 120, 10, 0.28);
-  color: #3a2813;
+  background: linear-gradient(180deg, var(--hud-gold), var(--hud-gold-deep));
+  box-shadow: 0 8px 20px rgb(var(--hud-brand-gold) / 0.28);
+  color: var(--hud-gold-ink);
 }
 
 .save:not(:disabled):hover,
 .save[data-hovered="true"] {
-  background: linear-gradient(180deg, #ffe08a, #f5bc2a);
-  box-shadow: 0 10px 24px rgba(180, 120, 10, 0.34);
+  background: linear-gradient(180deg, var(--hud-gold-hover), var(--hud-gold-deep-hover));
+  box-shadow: 0 10px 24px rgb(var(--hud-brand-gold) / 0.34);
 }
 
 .save:disabled {
-  background: rgba(205, 231, 242, 0.2);
+  background: rgb(var(--hud-line) / 0.2);
   box-shadow: none;
-  color: rgba(236, 249, 255, 0.58);
+  color: rgb(var(--hud-text-muted) / 0.58);
 }
 
 @media (max-width: 520px) {

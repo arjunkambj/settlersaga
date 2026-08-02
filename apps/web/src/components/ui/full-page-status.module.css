@@ -3,13 +3,13 @@
   isolation: isolate;
   display: grid;
   width: 100%;
-  height: 100dvh;
+  height: 100%;
   min-height: 0;
   place-items: center;
   padding: max(1.5rem, env(safe-area-inset-top)) max(1.25rem, env(safe-area-inset-right))
     max(1.5rem, env(safe-area-inset-bottom)) max(1.25rem, env(safe-area-inset-left));
   overflow: hidden;
-  background: #2a1234;
+  background: var(--hud-bg);
 }
 
 .page::before,
@@ -23,12 +23,12 @@
 
 .page::before {
   background:
-    radial-gradient(circle at 50% 46%, rgba(192, 120, 203, 0.1) 0 9rem, transparent 25rem),
-    linear-gradient(180deg, rgba(52, 20, 64, 0.1) 20%, rgba(24, 8, 32, 0.52) 100%);
+    radial-gradient(circle at 50% 46%, rgb(var(--hud-sea-bright) / 0.1) 0 9rem, transparent 25rem),
+    linear-gradient(180deg, rgb(var(--hud-surface) / 0.08) 20%, rgb(var(--hud-well) / 0.52) 100%);
 }
 
 .page::after {
-  box-shadow: inset 0 0 min(18vw, 10rem) rgba(22, 7, 30, 0.44);
+  box-shadow: inset 0 0 min(18vw, 10rem) rgb(var(--hud-shadow-deep) / 0.44);
 }
 
 .content {
@@ -40,7 +40,7 @@
   align-items: center;
   margin-top: clamp(-2.5rem, -5vh, -1rem);
   text-align: center;
-  filter: drop-shadow(0 1rem 1.8rem rgba(24, 8, 34, 0.34));
+  filter: drop-shadow(0 1rem 1.8rem rgb(var(--hud-shadow-deep) / 0.34));
 }
 
 .brand {
@@ -48,12 +48,37 @@
   transform: scale(1.12);
 }
 
+.scene {
+  position: relative;
+  display: flex;
+  width: 24rem;
+  height: 15.5rem;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.25rem;
+}
+
+.halo {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  margin: auto;
+  width: 19rem;
+  height: 13rem;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 50% 46%,
+    rgb(var(--hud-gold-halo) / 0.32) 0 34%,
+    transparent 66%
+  );
+  filter: blur(14px);
+}
+
 .island {
   position: relative;
   width: 16rem;
   height: 12.5rem;
-  margin-bottom: 1.25rem;
-  filter: drop-shadow(0 1rem 0.8rem rgba(0, 39, 83, 0.32));
+  filter: drop-shadow(0 1rem 0.8rem rgb(var(--hud-shadow-deep) / 0.34));
 }
 
 .hex {
@@ -62,11 +87,12 @@
   height: 5.5rem;
   overflow: hidden;
   clip-path: polygon(25% 2%, 75% 2%, 100% 50%, 75% 98%, 25% 98%, 0 50%);
-  background-position: center;
-  background-size: cover;
+  background-image: url("/game-assets/terrain/terrain-atlas.png");
+  background-repeat: no-repeat;
+  background-size: 300% 200%;
   box-shadow:
-    inset 0 0 0 0.2rem rgba(255, 224, 130, 0.88),
-    inset 0 -0.7rem 1rem rgba(47, 33, 19, 0.16);
+    inset 0 0 0 0.2rem rgb(var(--hud-gold-shine) / 0.88),
+    inset 0 -0.7rem 1rem rgb(var(--hud-gold-line) / 0.16);
   opacity: 0;
   transform: translateY(1rem) scale(0.82);
   animation: place-tile 2.25s cubic-bezier(0.22, 0.8, 0.24, 1) infinite;
@@ -82,21 +108,21 @@
 .top {
   top: 0;
   left: 4.875rem;
-  background-image: url("/game-assets/terrain/mountains.png");
+  background-position: 0 100%;
   animation-delay: 0ms;
 }
 
 .upperLeft {
   top: 3.1rem;
   left: 0.6rem;
-  background-image: url("/game-assets/terrain/forest.png");
+  background-position: 50% 0;
   animation-delay: 110ms;
 }
 
 .upperRight {
   top: 3.1rem;
   right: 0.6rem;
-  background-image: url("/game-assets/terrain/pasture.png");
+  background-position: 50% 100%;
   animation-delay: 220ms;
 }
 
@@ -104,28 +130,28 @@
   z-index: 1;
   top: 3.1rem;
   left: 4.875rem;
-  background-image: url("/game-assets/terrain/fields.png");
+  background-position: 0 0;
   animation-delay: 330ms;
 }
 
 .lowerLeft {
   top: 6.2rem;
   left: 0.6rem;
-  background-image: url("/game-assets/terrain/hills.png");
+  background-position: 100% 0;
   animation-delay: 440ms;
 }
 
 .lowerRight {
   top: 6.2rem;
   right: 0.6rem;
-  background-image: url("/game-assets/terrain/forest.png");
+  background-position: 50% 0;
   animation-delay: 550ms;
 }
 
 .bottom {
   top: 6.2rem;
   left: 4.875rem;
-  background-image: url("/game-assets/terrain/pasture.png");
+  background-position: 50% 100%;
   animation-delay: 660ms;
 }
 
@@ -140,20 +166,105 @@
   opacity: 0;
   transform: translateY(0.7rem) scale(0.72);
   animation: place-settlement 2.25s ease-out 760ms infinite;
-  filter: drop-shadow(0 0.35rem 0.25rem rgba(65, 28, 15, 0.42));
+  filter: drop-shadow(0 0.35rem 0.25rem rgb(var(--hud-gold-line) / 0.42));
+}
+
+/* Rolling dice beside the island */
+
+.dice {
+  position: absolute;
+  z-index: 4;
+  right: -0.25rem;
+  bottom: 0.75rem;
+  display: flex;
+  gap: 0.5rem;
+  transform: rotate(9deg);
+  filter: drop-shadow(0 0.5rem 0.6rem rgb(var(--hud-shadow-deep) / 0.4));
+}
+
+.die {
+  display: grid;
+  width: 2.4rem;
+  height: 2.4rem;
+  place-items: center;
+  border: 0.14rem solid rgb(var(--hud-gold-shine) / 0.94);
+  border-radius: 0.62rem;
+  background:
+    radial-gradient(circle at 30% 26%, rgb(var(--hud-edge) / 0.68), transparent 52%),
+    linear-gradient(
+      145deg,
+      var(--hud-gold-hover) 0%,
+      var(--hud-gold-deep-hover) 58%,
+      var(--hud-gold-deep) 100%
+    );
+  box-shadow:
+    inset 0 2px 0 rgb(var(--hud-edge) / 0.52),
+    inset 0 -3px 0 rgb(var(--hud-gold-line) / 0.4),
+    0 0.35rem 0.7rem rgb(var(--hud-shadow-deep) / 0.36);
+  color: var(--hud-gold-ink);
+  font-size: 1.25rem;
+  font-weight: 950;
+  animation: die-tumble 2.25s cubic-bezier(0.22, 0.8, 0.24, 1) infinite;
+}
+
+.dieA {
+  transform: rotate(-13deg);
+}
+
+.dieB {
+  transform: rotate(9deg);
+  animation-delay: 140ms;
 }
 
 .copy {
   display: grid;
   justify-items: center;
   gap: 0.35rem;
-  color: #fff7ed;
-  text-shadow: 0 2px 8px rgba(24, 8, 34, 0.68);
+  color: var(--hud-text-strong);
+  text-shadow: 0 2px 8px rgb(var(--hud-shadow-deep) / 0.68);
+}
+
+.progress {
+  position: relative;
+  width: min(15rem, 62vw);
+  height: 0.42rem;
+  margin-top: 0.55rem;
+  overflow: hidden;
+  border: 1px solid rgb(var(--hud-gold-shine) / 0.42);
+  border-radius: 999px;
+  background: rgb(var(--hud-well) / 0.52);
+  box-shadow: inset 0 1px 2px rgb(var(--hud-well) / 0.6);
+}
+
+.progressFill {
+  position: absolute;
+  inset: 0;
+  width: 42%;
+  border-radius: inherit;
+  background: linear-gradient(
+    90deg,
+    var(--hud-gold) 0%,
+    var(--hud-gold-deep-hover) 60%,
+    var(--hud-gold-shine) 100%
+  );
+  box-shadow: 0 0 10px rgb(var(--hud-brand-gold) / 0.6);
+  animation: progress-slide 1.6s ease-in-out infinite;
+}
+
+@keyframes progress-slide {
+  0% {
+    transform: translateX(-110%);
+  }
+
+  60%,
+  100% {
+    transform: translateX(330%);
+  }
 }
 
 .eyebrow {
   margin: 0;
-  color: #ecc6f2;
+  color: var(--hud-text-pearl);
   font-size: 0.72rem;
   font-weight: 900;
   letter-spacing: 0.18em;
@@ -162,7 +273,7 @@
 
 .label {
   margin: 0;
-  color: #fffaf3;
+  color: var(--hud-text-strong);
   font-size: clamp(1.25rem, 4.4vw, 1.65rem);
   font-weight: 950;
   line-height: 1.15;
@@ -170,7 +281,7 @@
 
 .hint {
   margin: 0;
-  color: #d6bdd8;
+  color: var(--hud-text-muted);
   font-size: 0.9rem;
   font-weight: 700;
 }
@@ -185,8 +296,8 @@
   width: 0.4rem;
   height: 0.4rem;
   border-radius: 50%;
-  background: #ffe064;
-  box-shadow: 0 2px 5px rgba(24, 8, 34, 0.46);
+  background: var(--hud-gold);
+  box-shadow: 0 2px 5px rgb(var(--hud-shadow-deep) / 0.46);
   animation: dot-bob 1.2s ease-in-out infinite;
 }
 
@@ -252,6 +363,22 @@
   }
 }
 
+@keyframes die-tumble {
+  0%,
+  12% {
+    transform: rotate(-16deg) translateY(0);
+  }
+
+  34%,
+  72% {
+    transform: rotate(-4deg) translateY(-0.35rem);
+  }
+
+  100% {
+    transform: rotate(-16deg) translateY(0);
+  }
+}
+
 @media (max-height: 580px) {
   .brand {
     margin-bottom: 0.75rem;
@@ -267,11 +394,17 @@
   .content {
     margin-top: -0.5rem;
   }
+
+  .scene {
+    margin-bottom: 0.4rem;
+    transform: scale(0.85);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .hex,
   .settlement,
+  .die,
   .dots span {
     animation: none;
     opacity: 1;
