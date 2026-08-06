@@ -2,9 +2,21 @@
 
 import type { BaseGameSettings, BotDifficulty, GameMapId } from "@settersaga/game";
 import { AVAILABLE_GAME_MAPS, getGameMapDefinition } from "@settersaga/game/maps";
-import { Description, Label, ListBox, NumberField, Select, Switch } from "@heroui/react";
 import { useId } from "react";
 import type { CSSProperties } from "react";
+
+import { Button } from "@/components/ui/button";
+import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 
 import {
   getBotCapacity,
@@ -119,7 +131,6 @@ export function LobbySettings({
             label="Victory Points"
             max={13}
             min={3}
-            name="victoryPoints"
             onChange={(value) => updateSetting("victoryPoints", value)}
             value={settings.victoryPoints}
           />
@@ -131,91 +142,82 @@ export function LobbySettings({
             label="Discard Limit"
             max={20}
             min={5}
-            name="discardLimit"
             onChange={(value) => updateSetting("discardLimit", value)}
             value={settings.discardLimit}
           />
 
-          <Select
-            className="lobby-settings-control"
-            isDisabled={disabled}
-            onChange={(value) =>
-              updateSetting(
-                "turnTimerSeconds",
-                Number(value) as BaseGameSettings["turnTimerSeconds"],
-              )
-            }
-            value={String(settings.turnTimerSeconds)}
-          >
-            <Label className="lobby-settings-label">Turn Timer</Label>
-            <Select.Trigger
-              aria-describedby={`${id}-turn-timer-description`}
-              className="lobby-settings-select"
-              id={`${id}-turn-timer`}
+          <Field className="lobby-settings-control">
+            <FieldLabel htmlFor={`${id}-turn-timer`} className="lobby-settings-label">
+              Turn Timer
+            </FieldLabel>
+            <Select
+              disabled={disabled}
+              value={String(settings.turnTimerSeconds)}
+              onValueChange={(value) =>
+                updateSetting(
+                  "turnTimerSeconds",
+                  Number(value) as BaseGameSettings["turnTimerSeconds"],
+                )
+              }
             >
-              <Select.Value />
-              <Select.Indicator />
-            </Select.Trigger>
-            <Description className="lobby-settings-description" id={`${id}-turn-timer-description`}>
-              Off keeps turns untimed. Timed turns show a shared countdown.
-            </Description>
-            <Select.Popover className="lobby-settings-popover">
-              <ListBox>
+              <SelectTrigger id={`${id}-turn-timer`} className="lobby-settings-select">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="lobby-settings-popover">
                 {TURN_TIMER_OPTIONS.map((seconds) => (
-                  <ListBox.Item id={String(seconds)} key={seconds} textValue={String(seconds)}>
+                  <SelectItem key={seconds} value={String(seconds)}>
                     {seconds === 0 ? "Off" : `${seconds} seconds`}
-                    <ListBox.ItemIndicator />
-                  </ListBox.Item>
+                  </SelectItem>
                 ))}
-              </ListBox>
-            </Select.Popover>
-          </Select>
-
-          <Select
-            className="lobby-settings-control"
-            isDisabled={disabled}
-            onChange={(value) => {
-              const maxPlayers = Number(value) as BaseGameSettings["maxPlayers"];
-              const nextBotLimit = getBotCapacity(maxPlayers, humanCount);
-              const nextBotFloor = toBotCount(Math.min(minBotCount, nextBotLimit));
-              emit(
-                { ...settings, maxPlayers },
-                toBotCount(Math.max(nextBotFloor, Math.min(botCount, nextBotLimit))),
-              );
-            }}
-            value={String(settings.maxPlayers)}
-          >
-            <Label className="lobby-settings-label">Max Players</Label>
-            <Select.Trigger
-              aria-describedby={`${id}-max-players-description`}
-              className="lobby-settings-select"
-              id={`${id}-max-players`}
+              </SelectContent>
+            </Select>
+            <FieldDescription
+              className="lobby-settings-description"
+              id={`${id}-turn-timer-description`}
             >
-              <Select.Value />
-              <Select.Indicator />
-            </Select.Trigger>
-            <Description
+              Off keeps turns untimed. Timed turns show a shared countdown.
+            </FieldDescription>
+          </Field>
+
+          <Field className="lobby-settings-control">
+            <FieldLabel htmlFor={`${id}-max-players`} className="lobby-settings-label">
+              Max Players
+            </FieldLabel>
+            <Select
+              disabled={disabled}
+              value={String(settings.maxPlayers)}
+              onValueChange={(value) => {
+                const maxPlayers = Number(value) as BaseGameSettings["maxPlayers"];
+                const nextBotLimit = getBotCapacity(maxPlayers, humanCount);
+                const nextBotFloor = toBotCount(Math.min(minBotCount, nextBotLimit));
+                emit(
+                  { ...settings, maxPlayers },
+                  toBotCount(Math.max(nextBotFloor, Math.min(botCount, nextBotLimit))),
+                );
+              }}
+            >
+              <SelectTrigger id={`${id}-max-players`} className="lobby-settings-select">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="lobby-settings-popover">
+                {selectedMap.playerCounts.map((playerCount) => (
+                  <SelectItem
+                    key={playerCount}
+                    value={String(playerCount)}
+                    disabled={playerCount < minPlayerCount}
+                  >
+                    {playerCount} players
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <FieldDescription
               className="lobby-settings-description"
               id={`${id}-max-players-description`}
             >
               {selectedMap.description}
-            </Description>
-            <Select.Popover className="lobby-settings-popover">
-              <ListBox>
-                {selectedMap.playerCounts.map((playerCount) => (
-                  <ListBox.Item
-                    id={String(playerCount)}
-                    isDisabled={playerCount < minPlayerCount}
-                    key={playerCount}
-                    textValue={`${playerCount} players`}
-                  >
-                    {playerCount} players
-                    <ListBox.ItemIndicator />
-                  </ListBox.Item>
-                ))}
-              </ListBox>
-            </Select.Popover>
-          </Select>
+            </FieldDescription>
+          </Field>
         </section>
 
         <section aria-labelledby={`${id}-bots-title`} className="lobby-settings-group">
@@ -224,73 +226,80 @@ export function LobbySettings({
             <p>Reserve open seats for bots and set one shared difficulty.</p>
           </header>
 
-          <NumberField
-            aria-describedby={`${id}-bot-count-description`}
-            className="lobby-settings-control"
-            isDisabled={disabled}
-            maxValue={botLimit}
-            minValue={botFloor}
-            name="botCount"
-            onChange={(value) => emit(settings, toBotCount(value))}
-            value={botCount}
-          >
-            <Label className="lobby-settings-label">Bot Seats</Label>
-            <NumberField.Group className="lobby-settings-stepper">
-              <NumberField.DecrementButton
+          <Field className="lobby-settings-control">
+            <FieldLabel htmlFor={`${id}-bot-count`} className="lobby-settings-label">
+              Bot Seats
+            </FieldLabel>
+            <div className="lobby-settings-stepper">
+              <Button
+                type="button"
                 aria-label="Remove one bot seat"
                 className="lobby-settings-step-button"
+                disabled={disabled || botCount <= botFloor}
+                onClick={() => emit(settings, toBotCount(botCount - 1))}
+                size="icon-sm"
+                variant="outline"
               >
                 −
-              </NumberField.DecrementButton>
-              <NumberField.Input className="lobby-settings-step-value" />
-              <NumberField.IncrementButton
+              </Button>
+              <Input
+                id={`${id}-bot-count`}
+                className="lobby-settings-step-value"
+                disabled={disabled}
+                readOnly
+                value={String(botCount)}
+              />
+              <Button
+                type="button"
                 aria-label="Add one bot seat"
                 className="lobby-settings-step-button"
+                disabled={disabled || botCount >= botLimit}
+                onClick={() => emit(settings, toBotCount(botCount + 1))}
+                size="icon-sm"
+                variant="outline"
               >
                 +
-              </NumberField.IncrementButton>
-            </NumberField.Group>
-            <Description className="lobby-settings-description" id={`${id}-bot-count-description`}>
+              </Button>
+            </div>
+            <FieldDescription
+              className="lobby-settings-description"
+              id={`${id}-bot-count-description`}
+            >
               {botLimit === 0
                 ? "No bot seats are available for this table."
                 : botFloor === botLimit
                   ? `${botLimit} bot ${botLimit === 1 ? "seat is" : "seats are"} required for this table.`
                   : `Choose ${botFloor}–${botLimit} bot seats for this table.`}
-            </Description>
-          </NumberField>
+            </FieldDescription>
+          </Field>
 
-          <Select
-            className="lobby-settings-control"
-            isDisabled={disabled || botCount === 0}
-            onChange={(value) => emit(settings, botCount, value as BotDifficulty)}
-            value={botDifficulty}
-          >
-            <Label className="lobby-settings-label">Bot Difficulty</Label>
-            <Select.Trigger
-              aria-describedby={`${id}-bot-difficulty-description`}
-              className="lobby-settings-select"
-              id={`${id}-bot-difficulty`}
+          <Field className="lobby-settings-control">
+            <FieldLabel htmlFor={`${id}-bot-difficulty`} className="lobby-settings-label">
+              Bot Difficulty
+            </FieldLabel>
+            <Select
+              disabled={disabled || botCount === 0}
+              value={botDifficulty}
+              onValueChange={(value) => emit(settings, botCount, value as BotDifficulty)}
             >
-              <Select.Value />
-              <Select.Indicator />
-            </Select.Trigger>
-            <Description
+              <SelectTrigger id={`${id}-bot-difficulty`} className="lobby-settings-select">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="lobby-settings-popover">
+                {BOT_DIFFICULTY_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <FieldDescription
               className="lobby-settings-description"
               id={`${id}-bot-difficulty-description`}
             >
               {selectedDifficulty.description}
-            </Description>
-            <Select.Popover className="lobby-settings-popover">
-              <ListBox>
-                {BOT_DIFFICULTY_OPTIONS.map((option) => (
-                  <ListBox.Item id={option.value} key={option.value} textValue={option.label}>
-                    {option.label}
-                    <ListBox.ItemIndicator />
-                  </ListBox.Item>
-                ))}
-              </ListBox>
-            </Select.Popover>
-          </Select>
+            </FieldDescription>
+          </Field>
         </section>
 
         <section aria-labelledby={`${id}-options-title`} className="lobby-settings-group">
@@ -299,55 +308,48 @@ export function LobbySettings({
             <p>Apply the same optional rules to every player.</p>
           </header>
 
-          <Select
-            className="lobby-settings-control"
-            isDisabled={disabled}
-            onChange={(value) => {
-              const map = value as GameMapId;
-              const maxPlayers = getCompatiblePlayerCount(map, humanCount, settings.maxPlayers);
-              if (maxPlayers === null) {
-                return;
-              }
-
-              const nextBotLimit = getBotCapacity(maxPlayers, humanCount);
-              const nextBotFloor = toBotCount(Math.min(minBotCount, nextBotLimit));
-              emit(
-                { ...settings, map, maxPlayers },
-                toBotCount(Math.max(nextBotFloor, Math.min(botCount, nextBotLimit))),
-              );
-            }}
-            value={settings.map}
-          >
-            <Label className="lobby-settings-label">Map Size</Label>
-            <Select.Trigger
-              aria-describedby={`${id}-map-description`}
-              className="lobby-settings-select"
-              id={`${id}-map`}
+          <Field className="lobby-settings-control">
+            <FieldLabel htmlFor={`${id}-map`} className="lobby-settings-label">
+              Map Size
+            </FieldLabel>
+            <Select
+              disabled={disabled}
+              value={settings.map}
+              onValueChange={(value) => {
+                const map = value as GameMapId;
+                const maxPlayers = getCompatiblePlayerCount(map, humanCount, settings.maxPlayers);
+                if (maxPlayers === null) {
+                  return;
+                }
+                const nextBotLimit = getBotCapacity(maxPlayers, humanCount);
+                const nextBotFloor = toBotCount(Math.min(minBotCount, nextBotLimit));
+                emit(
+                  { ...settings, map, maxPlayers },
+                  toBotCount(Math.max(nextBotFloor, Math.min(botCount, nextBotLimit))),
+                );
+              }}
             >
-              <Select.Value />
-              <Select.Indicator />
-            </Select.Trigger>
-            <Description className="lobby-settings-description" id={`${id}-map-description`}>
-              {selectedMap.description}
-            </Description>
-            <Select.Popover className="lobby-settings-popover">
-              <ListBox>
+              <SelectTrigger id={`${id}-map`} className="lobby-settings-select">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="lobby-settings-popover">
                 {AVAILABLE_GAME_MAPS.map((map) => (
-                  <ListBox.Item
-                    id={map.id}
-                    isDisabled={
+                  <SelectItem
+                    key={map.id}
+                    value={map.id}
+                    disabled={
                       getCompatiblePlayerCount(map.id, humanCount, settings.maxPlayers) === null
                     }
-                    key={map.id}
-                    textValue={map.label}
                   >
                     {map.label}
-                    <ListBox.ItemIndicator />
-                  </ListBox.Item>
+                  </SelectItem>
                 ))}
-              </ListBox>
-            </Select.Popover>
-          </Select>
+              </SelectContent>
+            </Select>
+            <FieldDescription className="lobby-settings-description" id={`${id}-map-description`}>
+              {selectedMap.description}
+            </FieldDescription>
+          </Field>
 
           <RuleToggle
             checked={settings.friendlyRobber}
@@ -394,7 +396,6 @@ function NumberSetting({
   label,
   max,
   min,
-  name,
   onChange,
   value,
 }: {
@@ -404,43 +405,51 @@ function NumberSetting({
   readonly label: string;
   readonly max: number;
   readonly min: number;
-  readonly name: string;
   readonly onChange: (value: number) => void;
   readonly value: number;
 }) {
+  const decrement = () => onChange(clampInteger(value - 1, min, max));
+  const increment = () => onChange(clampInteger(value + 1, min, max));
   return (
-    <NumberField
-      aria-describedby={`${id}-description`}
-      className="lobby-settings-control"
-      isDisabled={disabled}
-      maxValue={max}
-      minValue={min}
-      name={name}
-      onChange={(nextValue) => onChange(clampInteger(nextValue, min, max))}
-      value={value}
-    >
-      <Label className="lobby-settings-label" id={`${id}-label`}>
+    <Field className="lobby-settings-control">
+      <FieldLabel htmlFor={id} className="lobby-settings-label" id={`${id}-label`}>
         {label}
-      </Label>
-      <NumberField.Group className="lobby-settings-stepper">
-        <NumberField.DecrementButton
+      </FieldLabel>
+      <div className="lobby-settings-stepper">
+        <Button
+          type="button"
           aria-label={`Decrease ${label.toLowerCase()}`}
           className="lobby-settings-step-button"
+          disabled={disabled || value <= min}
+          onClick={decrement}
+          size="icon-sm"
+          variant="outline"
         >
           −
-        </NumberField.DecrementButton>
-        <NumberField.Input className="lobby-settings-step-value" id={id} />
-        <NumberField.IncrementButton
+        </Button>
+        <Input
+          className="lobby-settings-step-value"
+          id={id}
+          readOnly
+          disabled={disabled}
+          value={String(value)}
+        />
+        <Button
+          type="button"
           aria-label={`Increase ${label.toLowerCase()}`}
           className="lobby-settings-step-button"
+          disabled={disabled || value >= max}
+          onClick={increment}
+          size="icon-sm"
+          variant="outline"
         >
           +
-        </NumberField.IncrementButton>
-      </NumberField.Group>
-      <Description className="lobby-settings-description" id={`${id}-description`}>
+        </Button>
+      </div>
+      <FieldDescription className="lobby-settings-description" id={`${id}-description`}>
         {description} Choose {min}–{max}.
-      </Description>
-    </NumberField>
+      </FieldDescription>
+    </Field>
   );
 }
 
@@ -462,24 +471,23 @@ function RuleToggle({
   readonly onChange: (checked: boolean) => void;
 }) {
   return (
-    <Switch
-      className="lobby-settings-toggle"
-      id={id}
-      isDisabled={disabled}
-      isSelected={checked}
-      name={name}
-      onChange={onChange}
-    >
-      <Switch.Content className="lobby-settings-toggle-content">
-        <Switch.Control>
-          <Switch.Thumb />
-        </Switch.Control>
-        <strong>{label}</strong>
-      </Switch.Content>
-      <Description className="lobby-settings-description" id={`${id}-description`}>
+    <Field className="lobby-settings-toggle">
+      <div className="lobby-settings-toggle-content flex items-center gap-3">
+        <Switch
+          id={id}
+          checked={checked}
+          disabled={disabled}
+          name={name}
+          onCheckedChange={onChange}
+        />
+        <Label htmlFor={id} className="font-medium">
+          {label}
+        </Label>
+      </div>
+      <FieldDescription className="lobby-settings-description" id={`${id}-description`}>
         {description}
-      </Description>
-    </Switch>
+      </FieldDescription>
+    </Field>
   );
 }
 

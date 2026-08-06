@@ -8,16 +8,15 @@ import {
   type ResourceInventory,
   type ResourceType,
 } from "@settersaga/game";
-import { Button } from "@heroui/react";
+import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 
-import { liquidGlassClassName } from "@/components/ui/liquid-glass";
 import { RESOURCE_CARD_ASSET_PATHS } from "@/constants/game/card-assets";
 
 import { HandDockPortal } from "./hand-dock";
 import { RESOURCE_LABELS } from "./resource-icon";
-import styles from "./development-card-dialog.module.css";
 
 type ChoiceCard = "monopoly" | "year-of-plenty";
 
@@ -83,24 +82,20 @@ export function DevelopmentCardDialog({
 
   return (
     <HandDockPortal>
-      <div className={styles.dialogDockAnchor}>
+      <div className={""}>
         <section
           aria-label={isMonopoly ? "Choose a Monopoly resource" : "Choose two resources"}
-          className={liquidGlassClassName({
-            className: `game-purple-glass ${styles.dialog}`,
-            kind: "card",
-            radius: "md",
-          })}
+          className={"rounded-md border bg-card"}
           ref={dialogRef}
           role="dialog"
           tabIndex={-1}
         >
-          <header className={styles.header}>
+          <header className={""}>
             <div>
-              <p className={styles.kicker}>Development card</p>
+              <p className={""}>Development card</p>
               <h2>{isMonopoly ? "Play Monopoly" : "Year of Plenty"}</h2>
             </div>
-            <Button isDisabled={pending} onPress={onClose} variant="ghost">
+            <Button disabled={pending} onClick={onClose} size="icon-sm" variant="ghost">
               <span className="sr-only">Close</span>
               <svg aria-hidden="true" viewBox="0 0 24 24">
                 <path d="M6 6l12 12M18 6 6 18" />
@@ -108,13 +103,13 @@ export function DevelopmentCardDialog({
             </Button>
           </header>
 
-          <p className={styles.instructions}>
+          <p className={""}>
             {isMonopoly
               ? "Choose one resource. Every opponent gives you all cards of that type."
               : "Choose exactly two available bank cards. You can choose the same type twice."}
           </p>
 
-          <div className={styles.resources}>
+          <div className={""}>
             {RESOURCE_ORDER.map((resource) => {
               const selected = isMonopoly
                 ? monopolyResource === resource
@@ -129,14 +124,14 @@ export function DevelopmentCardDialog({
                     (knownAvailable !== undefined && selected >= knownAvailable)));
 
               return (
-                <article className={styles.resource} data-selected={selected > 0} key={resource}>
+                <article className={""} data-selected={selected > 0} key={resource}>
                   {isMonopoly ? (
                     <Button
                       aria-label={`Choose ${RESOURCE_LABELS[resource]}`}
                       aria-pressed={selected > 0}
-                      className={styles.resourceChoice}
-                      isDisabled={pending}
-                      onPress={() => setMonopolyResource(resource)}
+                      className={""}
+                      disabled={pending}
+                      onClick={() => setMonopolyResource(resource)}
                       variant="ghost"
                     >
                       <ResourceCard resource={resource} selected={selected} />
@@ -146,13 +141,12 @@ export function DevelopmentCardDialog({
                   )}
 
                   {!isMonopoly ? (
-                    <div className={styles.quantity}>
+                    <div className={""}>
                       <Button
                         aria-label={`Remove one ${RESOURCE_LABELS[resource]}`}
-                        isDisabled={pending || selected === 0}
-                        isIconOnly
-                        onPress={() => changePlentyResource(resource, -1)}
-                        size="sm"
+                        disabled={pending || selected === 0}
+                        onClick={() => changePlentyResource(resource, -1)}
+                        size="icon-sm"
                         variant="ghost"
                       >
                         −
@@ -160,10 +154,9 @@ export function DevelopmentCardDialog({
                       <span aria-label={`${selected} selected`}>{selected}</span>
                       <Button
                         aria-label={`Add one ${RESOURCE_LABELS[resource]}`}
-                        isDisabled={cannotAdd}
-                        isIconOnly
-                        onPress={() => changePlentyResource(resource, 1)}
-                        size="sm"
+                        disabled={cannotAdd}
+                        onClick={() => changePlentyResource(resource, 1)}
+                        size="icon-sm"
                         variant="ghost"
                       >
                         +
@@ -175,7 +168,7 @@ export function DevelopmentCardDialog({
             })}
           </div>
 
-          <footer className={styles.footer}>
+          <footer className={""}>
             <span aria-live="polite">
               {isMonopoly
                 ? monopolyResource
@@ -185,23 +178,26 @@ export function DevelopmentCardDialog({
             </span>
             <div>
               <Button
-                className={styles.cancelButton}
-                isDisabled={pending}
-                onPress={onClose}
+                className={""}
+                disabled={pending}
+                onClick={onClose}
                 variant="secondary"
               >
                 Cancel
               </Button>
               <Button
-                className={styles.playButton}
-                isDisabled={
-                  pending || (isMonopoly ? monopolyResource === null : selectedCount !== 2)
-                }
-                isPending={pending}
-                onPress={play}
-                variant="primary"
+                className={""}
+                disabled={pending || (isMonopoly ? monopolyResource === null : selectedCount !== 2)}
+                onClick={play}
+                variant="default"
               >
-                Play card
+                {pending ? (
+                  <>
+                    <Spinner data-icon="inline-start" /> Playing…
+                  </>
+                ) : (
+                  "Play card"
+                )}
               </Button>
             </div>
           </footer>
@@ -214,7 +210,7 @@ export function DevelopmentCardDialog({
 function ResourceCard({ resource, selected }: { resource: ResourceType; selected: number }) {
   return (
     <>
-      <span className={styles.cardFace}>
+      <span className={""}>
         <Image
           alt=""
           draggable={false}
@@ -224,7 +220,7 @@ function ResourceCard({ resource, selected }: { resource: ResourceType; selected
           width={128}
         />
         {selected > 0 ? (
-          <span aria-hidden="true" className={styles.quantityChip}>
+          <span aria-hidden="true" className={""}>
             {selected}
           </span>
         ) : null}

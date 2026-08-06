@@ -2,16 +2,16 @@ import type { Metadata, Viewport } from "next";
 import { DM_Sans, Inter } from "next/font/google";
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { HexclaveProvider, HexclaveTheme } from "@hexclave/next";
+import { hexclaveServerApp } from "@/hexclave/server";
+import Providers from "@/components/Providers";
 
 import { DEFAULT_THEME, THEME_STORAGE_KEY } from "@/lib/theme";
 
 import "./styles.css";
-import "./liquid-glass.css";
-import "./reference-screens.css";
-import "./game-footer.css";
 import { cn } from "@/lib/utils";
 
-const inter = Inter({subsets:['latin'],variable:'--font-sans'});
+const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
 export const metadata: Metadata = {
   description: "A friendly real-time island-building board game.",
@@ -36,7 +36,9 @@ const themeInitializationScript = `try {
   root.dataset.theme = theme;
 } catch {}`;
 
-export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
+export default function RootLayout({
+  children,
+}: Readonly<{ children: ReactNode }>) {
   return (
     <html
       className={cn("light", dmSans.variable, "font-sans", inter.variable)}
@@ -45,13 +47,18 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
       suppressHydrationWarning
     >
       <head>
-        <script dangerouslySetInnerHTML={{ __html: themeInitializationScript }} />
+        <script
+          dangerouslySetInnerHTML={{ __html: themeInitializationScript }}
+        />
       </head>
       <body className="bg-background text-foreground">
-        <Link className="skip-link" href="#main-content">
-          Skip to Game
-        </Link>
-        {children}
+        <HexclaveProvider app={hexclaveServerApp}>
+          <HexclaveTheme />
+          <Link className="skip-link" href="#main-content">
+            Skip to Game
+          </Link>
+          <Providers>{children}</Providers>
+        </HexclaveProvider>
       </body>
     </html>
   );

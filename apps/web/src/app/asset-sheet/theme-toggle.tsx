@@ -3,7 +3,7 @@
 import moonIcon from "@iconify-icons/solar/moon-bold-duotone";
 import sunIcon from "@iconify-icons/solar/sun-bold-duotone";
 import { Icon } from "@iconify/react";
-import { Button } from "@heroui/react";
+import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 
 import {
@@ -14,7 +14,6 @@ import {
   type Theme,
 } from "@/lib/theme";
 
-import styles from "./asset-sheet.module.css";
 
 export function ThemeToggle() {
   const [theme, setTheme] = useState<Theme>(DEFAULT_THEME);
@@ -39,10 +38,9 @@ export function ThemeToggle() {
   return (
     <Button
       aria-label={`Switch to ${isLight ? "dark" : "light"} theme`}
-      className={styles.themeToggle}
-      isIconOnly
-      onPress={toggleTheme}
-      size="sm"
+      className={""}
+      onClick={toggleTheme}
+      size="icon-sm"
       variant="secondary"
     >
       <Icon aria-hidden="true" icon={isLight ? moonIcon : sunIcon} width={18} />

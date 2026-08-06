@@ -23,7 +23,7 @@ import { ActionTile } from "@/components/game/action-tile";
 import { GameScreen } from "@/components/game/game-screen";
 import { HomeScreen } from "@/components/home/home-screen";
 import { FullPageStatus } from "@/components/ui/full-page-status";
-import { LiquidGlass } from "@/components/ui/liquid-glass";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   ACTION_CARD_ASSET_PATHS,
   DEVELOPMENT_CARD_BACK_ASSET_PATH,
@@ -185,27 +185,21 @@ function GamePreview({
 
 function ActionPresetPreview() {
   return (
-    <main className="action-preset-preview reference-game" id="main-content">
-      <LiquidGlass
-        as="section"
-        aria-labelledby="action-preset-title"
-        className="action-preset-preview__panel"
-        kind="panel"
-        radius="lg"
-      >
-        <header className="action-preset-preview__heading">
+    <main className="flex min-h-dvh items-center justify-center bg-background p-6" id="main-content">
+      <Card>
+        <header className="space-y-1 text-center">
           <p>Reusable UI preset</p>
           <h1 id="action-preset-title">Action cards</h1>
           <span>The same component scales from the live dock to this poster treatment.</span>
         </header>
-        <div className="action-preset-preview__row">
+        <div className="flex flex-wrap justify-center gap-3">
           {ACTION_PRESET_TILES.map((tile) => (
             <ActionTile
               ariaLabel={`${tile.title} action-card preset`}
               art={
                 <Image
                   alt=""
-                  className="action-art action-card-art"
+                  className="h-16 w-16 object-contain"
                   draggable={false}
                   height={512}
                   loading="eager"
@@ -227,7 +221,7 @@ function ActionPresetPreview() {
             />
           ))}
         </div>
-      </LiquidGlass>
+      </Card>
     </main>
   );
 }

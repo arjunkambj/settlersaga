@@ -7,7 +7,6 @@ import {
 } from "@/constants/game/board-assets";
 import { BOARD_CANVAS, createBoardLayout, getTilePoint } from "@/lib/game/board-layout";
 
-import styles from "./asset-sheet.module.css";
 
 const TERRAIN_PREVIEW_BOARD = createBoard("base", "terrain-atlas-browser-preview");
 const TERRAIN_PREVIEW_LAYOUT = createBoardLayout(TERRAIN_PREVIEW_BOARD.tiles);
@@ -20,8 +19,8 @@ export function TerrainBoardPreview() {
     .sort((first, second) => first.point.y - second.point.y);
 
   return (
-    <figure className={styles.terrainBoardFigure}>
-      <div className={styles.terrainBoardHeader}>
+    <figure className={""}>
+      <div className={""}>
         <div>
           <h3>Masked board preview</h3>
           <p>Live 19-tile render using production atlas frames and board coordinates.</p>
@@ -29,10 +28,10 @@ export function TerrainBoardPreview() {
         <span>Actual fit</span>
       </div>
 
-      <div className={styles.terrainBoardViewport} data-testid="terrain-board-preview">
+      <div className={""} data-testid="terrain-board-preview">
         <svg
           aria-label="Terrain atlas clipped into the base 19-tile board"
-          className={styles.terrainBoardSvg}
+          className={""}
           role="img"
           viewBox={`0 0 ${BOARD_CANVAS.width} ${BOARD_CANVAS.height}`}
         >
@@ -73,10 +72,10 @@ export function TerrainBoardPreview() {
               TERRAIN_PREVIEW_LAYOUT.tileRadius - 1,
             );
             return (
-              <g className={styles.terrainPreviewBorder} key={`border-${tile.id}`}>
-                <polygon className={styles.terrainPreviewBorderOuter} points={points} />
-                <polygon className={styles.terrainPreviewBorderMiddle} points={points} />
-                <polygon className={styles.terrainPreviewBorderHighlight} points={points} />
+              <g className={""} key={`border-${tile.id}`}>
+                <polygon className={""} points={points} />
+                <polygon className={""} points={points} />
+                <polygon className={""} points={points} />
               </g>
             );
           })}
@@ -86,7 +85,7 @@ export function TerrainBoardPreview() {
               ? []
               : [
                   <g
-                    className={styles.terrainPreviewToken}
+                    className={""}
                     key={`token-${tile.id}`}
                     transform={`translate(${point.x} ${point.y + TERRAIN_PREVIEW_LAYOUT.tileSize * 0.11 + 2})`}
                   >

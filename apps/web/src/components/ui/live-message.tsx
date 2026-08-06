@@ -1,11 +1,5 @@
-interface LiveMessageProps {
-  message: string;
-}
-
+interface LiveMessageProps { message: string; }
 export function LiveMessage({ message }: LiveMessageProps) {
-  return (
-    <p aria-live="polite" className={message ? "form-message is-error" : "form-message"}>
-      {message}
-    </p>
-  );
+  if (!message) return null;
+  return <p aria-live="polite" className="text-sm text-destructive">{message}</p>;
 }

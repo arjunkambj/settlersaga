@@ -32,7 +32,6 @@ import {
   type BoardBuildMode,
   type BoardCanvasTargetModel,
 } from "@/lib/game/board-canvas-model";
-import { liquidGlassClassName } from "@/components/ui/liquid-glass";
 import { BoardCanvas, type BoardCanvasTarget } from "./board-canvas";
 import { BoardInspectorDockPortal } from "./hand-dock";
 import { RESOURCE_LABELS, ResourceIcon } from "./resource-icon";
@@ -535,11 +534,7 @@ function BoardInspector({ inspection }: { inspection: BoardInspection | null }) 
   return (
     <aside
       aria-label="Board inspector"
-      className={liquidGlassClassName({
-        className: "game-purple-glass board-inspector",
-        kind: "panel",
-        radius: "md",
-      })}
+      className={"rounded-md border bg-card"}
     >
       <span className="board-inspector-kicker">{inspection.kicker}</span>
       <span className="board-inspector-title-row">

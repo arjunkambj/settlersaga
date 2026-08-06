@@ -1,6 +1,15 @@
 "use client";
 
-import { AlertDialog, Button } from "@heroui/react";
+import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface ConfirmationDialogProps {
   busy: boolean;
@@ -20,49 +29,47 @@ export function ConfirmationDialog({
   title,
 }: ConfirmationDialogProps) {
   return (
-    <AlertDialog>
-      <AlertDialog.Backdrop
-        className="confirmation-dialog"
-        isDismissable={!busy}
-        isKeyboardDismissDisabled={busy}
-        isOpen
-        onOpenChange={(isOpen) => {
-          if (!isOpen && !busy) {
-            onCancel();
-          }
-        }}
-      >
-        <AlertDialog.Container>
-          <AlertDialog.Dialog className="confirmation-dialog-card">
-            <AlertDialog.Header className="confirmation-dialog-header">
-              <div>
-                <p className="eyebrow">Please Confirm</p>
-                <AlertDialog.Heading>{title}</AlertDialog.Heading>
-              </div>
-            </AlertDialog.Header>
-            <AlertDialog.Body className="confirmation-dialog-body">{description}</AlertDialog.Body>
-            <AlertDialog.Footer className="confirmation-dialog-footer">
-              <Button
-                className="button-secondary"
-                isDisabled={busy}
-                onPress={onCancel}
-                variant="secondary"
-              >
-                Go Back
-              </Button>
-              <Button
-                className="button-danger"
-                isDisabled={busy}
-                isPending={busy}
-                onPress={onConfirm}
-                variant="danger"
-              >
-                {busy ? "Working…" : confirmLabel}
-              </Button>
-            </AlertDialog.Footer>
-          </AlertDialog.Dialog>
-        </AlertDialog.Container>
-      </AlertDialog.Backdrop>
+    <AlertDialog
+      open
+      onOpenChange={(open) => {
+        if (!open && !busy) onCancel();
+      }}
+    >
+      <AlertDialogContent className="confirmation-dialog-card">
+        <AlertDialogHeader className="confirmation-dialog-header">
+          <div>
+            <p className="eyebrow">Please Confirm</p>
+            <AlertDialogTitle>{title}</AlertDialogTitle>
+          </div>
+        </AlertDialogHeader>
+        <AlertDialogDescription className="confirmation-dialog-body">
+          {description}
+        </AlertDialogDescription>
+        <AlertDialogFooter className="confirmation-dialog-footer">
+          <Button
+            className="button-secondary"
+            disabled={busy}
+            onClick={onCancel}
+            variant="secondary"
+          >
+            Go Back
+          </Button>
+          <Button
+            className="button-danger"
+            disabled={busy}
+            onClick={onConfirm}
+            variant="destructive"
+          >
+            {busy ? (
+              <>
+                <Spinner data-icon="inline-start" /> Working…
+              </>
+            ) : (
+              confirmLabel
+            )}
+          </Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
     </AlertDialog>
   );
 }

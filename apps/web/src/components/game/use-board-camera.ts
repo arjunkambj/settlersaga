@@ -97,7 +97,7 @@ export function useBoardCamera(): BoardCamera {
   const wheelIdleTimerRef = useRef<number | null>(null);
   const suppressedBuildTargetRef = useRef<Element | null>(null);
   const suppressedClickTimerRef = useRef<number | null>(null);
-  const gamePageRef = useRef<Element | null>(null);
+  const shellRef = useRef<Element | null>(null);
   const defaultViewportModeRef = useRef<"compact" | "regular" | null>(null);
   const refreshStageBoundsRef = useRef<() => void>(() => undefined);
 
@@ -144,8 +144,8 @@ export function useBoardCamera(): BoardCamera {
     shell?.classList.toggle("is-interacting", isInteracting);
     shell?.classList.toggle("is-dragging", draggingRef.current);
 
-    const gamePage = gamePageRef.current ?? shell?.closest(".game-page") ?? null;
-    gamePageRef.current = gamePage;
+    const gamePage = shellRef.current ?? shell?.closest("[data-game-shell]") ?? null;
+    shellRef.current = gamePage;
     gamePage?.classList.toggle("is-board-interacting", isInteracting);
   }, []);
 
@@ -448,7 +448,7 @@ export function useBoardCamera(): BoardCamera {
       return;
     }
 
-    gamePageRef.current = shell.closest(".game-page");
+    shellRef.current = shell.closest("[data-game-shell]");
     const updateStageBounds = () => {
       const rect = stage.getBoundingClientRect();
       stageBoundsRef.current = {
@@ -508,8 +508,8 @@ export function useBoardCamera(): BoardCamera {
       draggingRef.current = false;
       suppressedBuildTargetRef.current = null;
       shell.classList.remove("is-interacting", "is-dragging");
-      gamePageRef.current?.classList.remove("is-board-interacting");
-      gamePageRef.current = null;
+      shellRef.current?.classList.remove("is-board-interacting");
+      shellRef.current = null;
     };
   }, [
     commitViewport,

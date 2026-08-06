@@ -8,7 +8,7 @@ import {
   type ResourceInventory,
   type ResourceType,
 } from "@settersaga/game";
-import { Button } from "@heroui/react";
+import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import {
   type AnimationEvent,
@@ -21,11 +21,8 @@ import {
 
 import { DEVELOPMENT_CARD_ASSETS, RESOURCE_CARD_ASSET_PATHS } from "@/constants/game/card-assets";
 import { getResourceCardChanges, type ResourceCardChange } from "@/lib/game/resource-card-changes";
-import { liquidGlassClassName } from "@/components/ui/liquid-glass";
-
 import { HAND_DOCK_ROOT_ID, useHandDock } from "./hand-dock";
 import { RESOURCE_LABELS } from "./resource-icon";
-import styles from "./resource-hand.module.css";
 
 interface ResourceAnimation extends ResourceCardChange {
   id: string;
@@ -188,15 +185,11 @@ export function ResourceHand({
   return (
     <section
       aria-label="Your cards"
-      className={liquidGlassClassName({
-        className: `game-purple-glass resource-hand ${styles.resourceHandHost}`,
-        kind: "card",
-        radius: "md",
-      })}
+      className={"rounded-md border bg-card"}
     >
       {notice}
-      <div className={styles.actionOverlayRoot} id={HAND_DOCK_ROOT_ID} />
-      <div className={styles.cardViewport}>
+      <div className={""} id={HAND_DOCK_ROOT_ID} />
+      <div className={""}>
         <ul
           aria-label={
             resourceListOverflows
@@ -227,8 +220,8 @@ export function ResourceHand({
                   "resource-card",
                   "resource-card-face",
                   `resource-${resource}`,
-                  selected > 0 && !preserveHandAppearance ? styles.selectedCard : "",
-                  interaction && interactionMatchesSource ? styles.selectableCard : "",
+                  selected > 0 && !preserveHandAppearance ? "" : "",
+                  interaction && interactionMatchesSource ? "" : "",
                 ]
                   .filter(Boolean)
                   .join(" ")}
@@ -246,20 +239,20 @@ export function ResourceHand({
                     sizes="4.5rem"
                   />
                 </span>
-                <span aria-hidden="true" className={styles.cardCount}>
+                <span aria-hidden="true" className={""}>
                   {displayedCount}
                 </span>
                 {selected > 0 && !preserveHandAppearance ? (
-                  <span aria-hidden="true" className={styles.selectedCount}>
+                  <span aria-hidden="true" className={""}>
                     {selected} selected
                   </span>
                 ) : null}
                 {interaction && interactionMatchesSource ? (
                   <Button
                     aria-label={`Move one ${RESOURCE_LABELS[resource]} from your hand to ${interaction.label}`}
-                    className={styles.handCardSelector}
-                    isDisabled={interaction.disabled || available === 0}
-                    onPress={() => interaction.onSelect(resource)}
+                    className={""}
+                    disabled={interaction.disabled || available === 0}
+                    onClick={() => interaction.onSelect(resource)}
                     variant="ghost"
                   >
                     <span className="sr-only">
@@ -271,7 +264,7 @@ export function ResourceHand({
             );
           })}
           {developmentCardCounts.length > 0 ? (
-            <li aria-hidden="true" className={`mx-1 ${styles.cardSectionDivider}`} />
+            <li aria-hidden="true" className={`mx-1 ${""}`} />
           ) : null}
           {developmentCardCounts.map((card) => {
             const playable =
@@ -281,7 +274,7 @@ export function ResourceHand({
                 aria-label={`${card.label} development cards: ${card.count}. ${card.description}`}
                 className={[
                   "resource-card resource-card-face development-card-face",
-                  playable ? styles.selectableCard : "",
+                  playable ? "" : "",
                 ]
                   .filter(Boolean)
                   .join(" ")}
@@ -299,7 +292,7 @@ export function ResourceHand({
                     width={512}
                   />
                 </span>
-                <span aria-hidden="true" className={styles.cardCount}>
+                <span aria-hidden="true" className={""}>
                   {card.count}
                 </span>
                 <DevelopmentCardButton
@@ -315,13 +308,13 @@ export function ResourceHand({
             );
           })}
         </ul>
-        <div aria-hidden="true" className={styles.flightLayer}>
+        <div aria-hidden="true" className={""}>
           {resourceAnimations.map((animation) => {
             const column = RESOURCE_ORDER.indexOf(animation.resource) + 1;
 
             return (
               <span
-                className={styles.flightAnchor}
+                className={""}
                 key={animation.id}
                 style={{
                   ...RESOURCE_FLIGHT_STYLES[animation.resource],
@@ -329,17 +322,17 @@ export function ResourceHand({
                 }}
               >
                 <span
-                  className={`${styles.resourceFlight} ${
-                    animation.direction === "receive" ? styles.receive : styles.spend
+                  className={`${""} ${
+                    animation.direction === "receive" ? "" : ""
                   }`}
                   onAnimationEnd={(event) => finishAnimation(animation.id, event)}
                 >
                   <GameCardArtwork
-                    className={styles.flightImage}
+                    className={""}
                     path={RESOURCE_CARD_ASSET_PATHS[animation.resource]}
                     sizes="2.65rem"
                   />
-                  <span className={styles.changeBadge}>
+                  <span className={""}>
                     {animation.direction === "receive" ? "+" : "−"}
                     {animation.amount}
                   </span>
@@ -381,9 +374,9 @@ function DevelopmentCardButton({
   return (
     <Button
       aria-label={`${label} development cards: ${count}. ${description} ${status}`}
-      className={styles.handCardSelector}
-      isDisabled={pending || !playable}
-      onPress={() => {
+      className={""}
+      disabled={pending || !playable}
+      onClick={() => {
         if (card !== "victory-point") {
           onPlayDevelopmentCard(card);
         }

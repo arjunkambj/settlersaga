@@ -1,12 +1,11 @@
 "use client";
 
-import { Button } from "@heroui/react";
+import { Button } from "@/components/ui/button";
 import pauseIcon from "@iconify-icons/solar/pause-bold-duotone";
 import playIcon from "@iconify-icons/solar/play-bold-duotone";
 import { Icon } from "@iconify/react";
 import { useRef, useState } from "react";
 
-import styles from "./asset-sheet.module.css";
 
 export function AudioPlayButton({ name, src }: { name: string; src: string }) {
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -31,8 +30,8 @@ export function AudioPlayButton({ name, src }: { name: string; src: string }) {
       <Button
         aria-label={isPlaying ? `Pause ${name}` : `Play ${name}`}
         aria-pressed={isPlaying}
-        className={styles.audioPlayButton}
-        onPress={togglePlayback}
+        className={""}
+        onClick={togglePlayback}
         size="sm"
         variant="secondary"
       >

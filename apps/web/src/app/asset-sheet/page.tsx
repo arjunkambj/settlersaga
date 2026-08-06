@@ -8,7 +8,6 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { getPieceAssetPath } from "@/components/game/piece-icon";
-import { LiquidGlass } from "@/components/ui/liquid-glass";
 import {
   ACTION_CARD_ASSET_PATHS,
   DEVELOPMENT_CARD_ASSETS,
@@ -27,7 +26,6 @@ import {
 import { SOUND_EFFECT_PATHS, type SoundEffect } from "@/lib/game/audio-cues";
 
 import { AssetCard, type AssetCardItem } from "./asset-card";
-import styles from "./asset-sheet.module.css";
 import { TerrainBoardPreview } from "./terrain-board-preview";
 import { ThemeToggle } from "./theme-toggle";
 
@@ -491,23 +489,23 @@ const assetTotals = ASSET_CATEGORIES.reduce(
 
 export default function AssetSheetPage() {
   return (
-    <main className={styles.page} id="main-content">
-      <div className={styles.shell}>
-        <header className={styles.header}>
-          <div className={styles.headerActions}>
-            <Link className={styles.backLink} href="/">
+    <main className={""} id="main-content">
+      <div className={""}>
+        <header className={""}>
+          <div className={""}>
+            <Link className={""} href="/">
               <Icon aria-hidden="true" icon={arrowLeftIcon} width={16} />
               Back to game
             </Link>
             <ThemeToggle />
           </div>
 
-          <div className={styles.headerCopy}>
-            <p className={styles.eyebrow}>Production inventory</p>
+          <div className={""}>
+            <p className={""}>Production inventory</p>
             <h1>Game asset sheet</h1>
           </div>
 
-          <div className={styles.summary} aria-label="Asset totals">
+          <div className={""} aria-label="Asset totals">
             <SummaryItem
               icon={<Icon aria-hidden="true" icon={checkIcon} />}
               label="Generated"
@@ -529,7 +527,7 @@ export default function AssetSheetPage() {
           </div>
         </header>
 
-        <div className={styles.categories}>
+        <div className={""}>
           {ASSET_CATEGORIES.map((category) => (
             <AssetCategoryRow category={category} key={category.name} />
           ))}
@@ -551,13 +549,13 @@ function SummaryItem({
   value: number;
 }) {
   return (
-    <LiquidGlass className={styles.summaryItem} data-tone={tone} kind="control" radius="sm">
-      <span className={styles.summaryIcon}>{icon}</span>
+    <div className="rounded-md border bg-card p-3">
+      <span className={""}>{icon}</span>
       <span>
         <strong>{value}</strong>
         <small>{label}</small>
       </span>
-    </LiquidGlass>
+    </div>
   );
 }
 
@@ -568,28 +566,28 @@ function AssetCategoryRow({ category }: { category: AssetCategory }) {
   return (
     <section
       aria-labelledby={`category-${toId(category.name)}`}
-      className={styles.category}
+      className={""}
       data-live-preview={category.name === "Terrain tiles" || undefined}
     >
-      <div className={styles.categoryHeader}>
+      <div className={""}>
         <h2 id={`category-${toId(category.name)}`}>{category.name}</h2>
-        <span className={styles.categoryCount}>
+        <span className={""}>
           {generatedCount}/{assets.length} ready
         </span>
       </div>
 
       {category.subcategories ? (
-        <div className={styles.assetSubcategories}>
+        <div className={""}>
           {category.subcategories.map((subcategory) => (
             <section
               aria-labelledby={`subcategory-${toId(category.name)}-${toId(subcategory.name)}`}
-              className={styles.assetSubcategory}
+              className={""}
               key={subcategory.name}
             >
               <h3 id={`subcategory-${toId(category.name)}-${toId(subcategory.name)}`}>
                 {subcategory.name}
               </h3>
-              <div className={styles.assetRow}>
+              <div className={""}>
                 {subcategory.assets.map((asset) => (
                   <AssetCard asset={asset} key={`${subcategory.name}-${asset.name}`} />
                 ))}
@@ -599,7 +597,7 @@ function AssetCategoryRow({ category }: { category: AssetCategory }) {
         </div>
       ) : (
         <>
-          <div className={styles.assetRow}>
+          <div className={""}>
             {assets.map((asset) => (
               <AssetCard asset={asset} key={`${category.name}-${asset.name}`} />
             ))}

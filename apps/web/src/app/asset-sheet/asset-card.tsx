@@ -1,12 +1,13 @@
 "use client";
 
-import { Card, Chip, Modal } from "@heroui/react";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import musicIcon from "@iconify-icons/solar/music-note-2-bold-duotone";
 import sparkleIcon from "@iconify-icons/solar/stars-bold-duotone";
 import { Icon } from "@iconify/react";
 
 import { AudioPlayButton } from "./audio-play-button";
-import styles from "./asset-sheet.module.css";
 
 export type AssetKind = "audio" | "brand" | "image";
 
@@ -27,25 +28,25 @@ export function AssetCard({ asset }: { asset: AssetCardItem }) {
   const canPreview = Boolean(asset.path && asset.kind !== "audio");
 
   return (
-    <Card className={styles.assetCard} data-status={asset.status} variant="transparent">
-      <Card.Content className={styles.cardContent}>
-        <div className={styles.preview} data-fit={asset.fit ?? "contain"}>
+    <Card className={""} data-status={asset.status}>
+      <CardContent className={""}>
+        <div className={""} data-fit={asset.fit ?? "contain"}>
           {asset.kind === "brand" ? (
-            <div className={styles.brandPreview}>
+            <div className={""}>
               {asset.swatches ? (
-                <div aria-hidden="true" className={styles.swatchRow}>
+                <div aria-hidden="true" className={""}>
                   {asset.swatches.map((swatch) => (
-                    <span className={styles.swatch} key={swatch} style={{ background: swatch }} />
+                    <span className={""} key={swatch} style={{ background: swatch }} />
                   ))}
                 </div>
               ) : null}
               {asset.previewText ? <span>{asset.previewText}</span> : null}
             </div>
           ) : canPreview ? (
-            <Modal>
-              <Modal.Trigger
+            <Dialog>
+              <DialogTrigger
                 aria-label={`Open ${asset.name} preview`}
-                className={styles.previewButton}
+                className={""}
               >
                 <img
                   alt={`${asset.name} asset preview`}
@@ -54,28 +55,24 @@ export function AssetCard({ asset }: { asset: AssetCardItem }) {
                   loading="lazy"
                   src={asset.path}
                 />
-              </Modal.Trigger>
-              <Modal.Backdrop variant="blur">
-                <Modal.Container size="cover">
-                  <Modal.Dialog
-                    aria-label={`${asset.name} preview`}
-                    className={styles.assetPreviewDialog}
-                  >
-                    <Modal.CloseTrigger />
-                    <Modal.Body className={styles.assetPreviewDialogBody}>
-                      <img alt={asset.name} src={asset.path} />
-                    </Modal.Body>
-                  </Modal.Dialog>
-                </Modal.Container>
-              </Modal.Backdrop>
-            </Modal>
+              </DialogTrigger>
+              <DialogContent
+                aria-label={`${asset.name} preview`}
+                className={""}
+              >
+                <DialogTitle className="sr-only">{asset.name} preview</DialogTitle>
+                <div className={""}>
+                  <img alt={asset.name} src={asset.path} />
+                </div>
+              </DialogContent>
+            </Dialog>
           ) : asset.path && asset.kind === "audio" ? (
-            <div className={styles.audioPreview}>
+            <div className={""}>
               <Icon aria-hidden="true" icon={musicIcon} />
               <AudioPlayButton name={asset.name} src={asset.path} />
             </div>
           ) : (
-            <div className={styles.placeholder}>
+            <div className={""}>
               {asset.kind === "audio" ? (
                 <Icon aria-hidden="true" icon={musicIcon} />
               ) : (
@@ -86,15 +83,15 @@ export function AssetCard({ asset }: { asset: AssetCardItem }) {
           )}
         </div>
 
-        <div className={styles.cardBody}>
-          <Chip color={isGenerated ? "success" : "warning"} size="sm" variant="soft">
-            <Chip.Label>{isGenerated ? "Generated" : "Pending production"}</Chip.Label>
-          </Chip>
+        <div className={""}>
+          <Badge variant={isGenerated ? "default" : "secondary"}>
+            {isGenerated ? "Generated" : "Pending production"}
+          </Badge>
           <h3>{asset.name}</h3>
           {asset.description ? <p>{asset.description}</p> : null}
           {asset.format ? <small>{asset.format}</small> : null}
         </div>
-      </Card.Content>
+      </CardContent>
     </Card>
   );
 }

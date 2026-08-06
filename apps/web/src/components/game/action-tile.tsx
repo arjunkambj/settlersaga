@@ -1,6 +1,6 @@
 "use client";
 
-import { Button } from "@heroui/react";
+import { Button } from "@/components/ui/button";
 import type { ReactNode } from "react";
 
 export type ActionTileSize = "dock" | "poster";
@@ -18,7 +18,8 @@ export interface ActionTileProps {
   disabled?: boolean;
   kind: string;
   meta?: ReactNode;
-  onPress(): void;
+  onPress?(event: React.MouseEvent<HTMLButtonElement>): void;
+  onClick?(): void;
   pressed?: boolean;
   size?: ActionTileSize;
   title: string;
@@ -38,12 +39,14 @@ export function ActionTile({
   disabled = false,
   kind,
   meta,
+  onClick,
   onPress,
   pressed,
   size = "dock",
   title,
   unavailable = false,
 }: ActionTileProps) {
+  const handleClick = onPress ?? onClick;
   return (
     <Button
       aria-controls={ariaControls}
@@ -64,8 +67,8 @@ export function ActionTile({
         .filter(Boolean)
         .join(" ")}
       data-action-kind={kind}
-      isDisabled={disabled || unavailable}
-      onPress={onPress}
+      disabled={disabled || unavailable}
+      onClick={handleClick}
       variant="secondary"
     >
       {count === undefined ? null : (

@@ -13,7 +13,9 @@ import {
   type PrivatePlayerState,
   type ResourceInventory,
 } from "@settersaga/game";
-import { Button, Modal } from "@heroui/react";
+import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import botIcon from "@iconify-icons/game-icons/robot-golem";
 import crownIcon from "@iconify-icons/game-icons/crown";
 import hammerIcon from "@iconify-icons/game-icons/hammer-nails";
@@ -27,7 +29,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { GameAudio } from "@/components/audio/game-audio";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
-import { liquidGlassClassName } from "@/components/ui/liquid-glass";
 import {
   ACTION_CARD_ASSET_PATHS,
   DEVELOPMENT_CARD_BACK_ASSET_PATH,
@@ -147,7 +148,7 @@ export function GameScreen({
 
   const restorePlacementFocus = useCallback((mode: BoardTargetMode) => {
     const buildAction = document.querySelector<HTMLButtonElement>(
-      `.game-footer [data-action-kind="${mode}"]`,
+      `[data-game-footer] [data-action-kind="${mode}"]`,
     );
 
     if (buildAction && !buildAction.disabled) {
@@ -306,19 +307,11 @@ export function GameScreen({
       setConfirming(false);
     }
   };
-  const gameMetaPillClassName = liquidGlassClassName({
-    className: "game-meta-pill game-purple-glass",
-    kind: "card",
-    radius: "sm",
-  });
-  const gameHeaderActionClassName = liquidGlassClassName({
-    className: "icon-button game-purple-glass",
-    kind: "control",
-    radius: "pill",
-  });
+  const gameMetaPillClassName = "inline-flex items-center gap-1 rounded-full border bg-card px-2.5 py-1 text-xs font-medium";
+  const gameHeaderActionClassName = "rounded-full border bg-card";
 
   return (
-    <main className="game-page reference-game" id="main-content">
+    <main data-game-shell className="min-h-dvh bg-background" id="main-content">
       <GameAudio
         activePlayerId={game.activePlayerId}
         events={events}
@@ -327,24 +320,23 @@ export function GameScreen({
         viewerPlayerId={me.id}
         winnerPlayerId={game.winnerPlayerId}
       />
-      <header className="game-header">
-        <div className="game-room-meta">
+      <header className="flex items-center justify-between border-b bg-card px-3 py-2">
+        <div className="flex items-center gap-2">
           <span className={gameMetaPillClassName}>Turn {game.turnNumber}</span>
           <span className={`${gameMetaPillClassName} victory-target-pill`}>
             <Icon aria-hidden="true" icon={trophyIcon} /> First to {game.settings.victoryPoints} VP
           </span>
         </div>
-        <div className="game-header-actions">
+        <div className="flex items-center gap-1">
           {isHost && game.status !== "completed" ? (
             <Button
               aria-label={isPaused ? "Resume game" : "Pause game"}
               aria-pressed={isPaused}
               className={`${gameHeaderActionClassName} game-pause-button`}
-              isDisabled={pauseChangePending}
-              isIconOnly
-              isPending={pauseChangePending}
-              onPress={() => void changePauseState(!isPaused)}
-              size="md"
+              disabled={pauseChangePending}
+              data-icon-only
+              onClick={() => void changePauseState(!isPaused)}
+              size="icon"
               variant="ghost"
             >
               <Icon aria-hidden="true" icon={isPaused ? "hugeicons:play" : "hugeicons:pause"} />
@@ -356,9 +348,9 @@ export function GameScreen({
             aria-haspopup="dialog"
             aria-label="Open game help"
             className={`${gameHeaderActionClassName} game-help-button`}
-            isIconOnly
-            onPress={() => setIsHelpOpen(true)}
-            size="md"
+            data-icon-only
+            onClick={() => setIsHelpOpen(true)}
+            size="icon"
             variant="ghost"
           >
             <Icon aria-hidden="true" icon="hugeicons:help-circle" />
@@ -366,9 +358,9 @@ export function GameScreen({
           <Button
             aria-label="Leave game"
             className={`${gameHeaderActionClassName} player-menu-button`}
-            isIconOnly
-            onPress={() => setConfirmation({ kind: "leave" })}
-            size="md"
+            data-icon-only
+            onClick={() => setConfirmation({ kind: "leave" })}
+            size="icon"
             variant="ghost"
           >
             <Icon aria-hidden="true" icon="hugeicons:logout-01" />
@@ -377,8 +369,8 @@ export function GameScreen({
       </header>
 
       <HandDockProvider>
-        <aside aria-label="Table status" className="game-sidebar">
-          <div className="game-sidebar-panels">
+        <aside aria-label="Table status" className="space-y-3">
+          <div className="grid gap-3 lg:grid-cols-2">
             <EventLog events={events} />
             <BankPanel bank={game.bank} developmentCardSupply={game.developmentCardSupply} />
           </div>
@@ -408,7 +400,7 @@ export function GameScreen({
         </aside>
 
         <div
-          className="board-inspector-dock board-inspector-dock-standalone"
+          className="hidden"
           id={BOARD_INSPECTOR_DOCK_ROOT_ID}
         />
 
@@ -421,7 +413,7 @@ export function GameScreen({
           pending={pendingCommand !== null}
         />
 
-        <footer className="game-footer game-footer--three-sections">
+        <footer className="grid gap-3 border-t bg-card p-3 lg:grid-cols-3">
           <ResourceHand
             actionNumber={game.actionNumber}
             me={me}
@@ -430,11 +422,7 @@ export function GameScreen({
                 <div
                   aria-atomic="true"
                   aria-live="polite"
-                  className={liquidGlassClassName({
-                    className: "game-purple-glass pause-status-banner",
-                    kind: "control",
-                    radius: "sm",
-                  })}
+                  className="flex items-center gap-2 rounded-md border bg-muted p-2 text-sm"
                   role="status"
                 >
                   <Icon aria-hidden="true" icon="hugeicons:pause" />
@@ -451,19 +439,15 @@ export function GameScreen({
             playableDevelopmentCards={game.legalActions.playableDevelopmentCards}
           />
 
-          <div className="action-dock-stack">
+          <div className="space-y-2">
             <section
               aria-labelledby="phase-title"
-              className={liquidGlassClassName({
-                className: `game-purple-glass player-turn-summary player-${activePlayerTheme}${isViewerTurn && game.lastDiceRoll ? " has-roll" : ""}`,
-                kind: "control",
-                radius: "sm",
-              })}
+              className="flex items-center gap-2 rounded-md border bg-card p-3"
             >
-              <span aria-hidden="true" className="player-turn-summary-avatar">
+              <span aria-hidden="true" className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">
                 <Icon icon={playerIcon} />
               </span>
-              <div className="player-turn-summary-copy">
+              <div className="flex-1">
                 <h1 id="phase-title" ref={phaseHeadingRef} tabIndex={-1}>
                   {phaseCopy.title}
                 </h1>
@@ -490,7 +474,7 @@ export function GameScreen({
             />
           </div>
 
-          <div className="turn-control-stack">
+          <div className="space-y-2">
             {game.legalActions.discardCount === null ? (
               <TurnClock
                 botThinking={botThinking}
@@ -546,14 +530,14 @@ export function GameScreen({
         />
       ) : null}
 
-      <div aria-atomic="true" aria-live="polite" className="game-live-region">
+      <div aria-atomic="true" aria-live="polite" className="sr-only">
         {phaseLiveMessage}
       </div>
-      <div aria-atomic="true" aria-live="polite" className="game-command-live-region">
+      <div aria-atomic="true" aria-live="polite" className="sr-only">
         {announcement}
       </div>
       {error ? (
-        <div aria-atomic="true" className="toast toast-error" role="alert">
+        <div aria-atomic="true" className="fixed bottom-4 left-1/2 -translate-x-1/2 rounded-md bg-destructive px-4 py-2 text-sm text-destructive-foreground" role="alert">
           {error}
         </div>
       ) : null}
@@ -648,11 +632,7 @@ function PlayerStrip({
         return (
           <li
             aria-current={isActive ? "true" : undefined}
-            className={liquidGlassClassName({
-              className: `player-summary player-${theme}${isActive ? " is-active" : ""}${player.isViewer ? " is-viewer" : ""}${isActive && !player.isViewer && lastDiceRoll ? " has-side-dice" : ""}`,
-              kind: "card",
-              radius: "md",
-            })}
+            className={`player-summary player-${theme}${isActive ? " is-active" : ""}${player.isViewer ? " is-viewer" : ""}${isActive && !player.isViewer && lastDiceRoll ? " has-side-dice" : ""}`}
             data-player-id={player.id}
             key={player.id}
           >
@@ -782,8 +762,8 @@ function PlayerStrip({
               <Button
                 aria-label={`Replace ${player.displayName} with a bot`}
                 className="player-replace"
-                isDisabled={pendingReplacementId !== null}
-                onPress={() => onReplacePlayer(player.id)}
+                disabled={pendingReplacementId !== null}
+                onClick={() => onReplacePlayer(player.id)}
                 variant="secondary"
               >
                 <Icon aria-hidden="true" icon={botIcon} />
@@ -846,11 +826,7 @@ function BankPanel({
   return (
     <section
       aria-label="Resource market"
-      className={liquidGlassClassName({
-        className: "game-purple-glass side-card market-card-strip",
-        kind: "card",
-        radius: "md",
-      })}
+      className={"rounded-md border bg-card"}
     >
       <ul className="bank-grid">
         {RESOURCE_ORDER.map((resource) => (
@@ -893,11 +869,7 @@ function EventLog({ events }: { events: RoomEventView[] }) {
 
   return (
     <section
-      className={liquidGlassClassName({
-        className: "game-purple-glass side-card event-card",
-        kind: "card",
-        radius: "md",
-      })}
+      className={"rounded-md border bg-card"}
       aria-labelledby="events-title"
     >
       <div className="side-card-title">
@@ -995,9 +967,9 @@ function ActionDock({
             return (
               <Button
                 className="action-button"
-                isDisabled={pending}
+                disabled={pending}
                 key={playerId}
-                onPress={() =>
+                onClick={() =>
                   onCommand({ kind: "steal", victimPlayerId: playerId }, "Resource stolen.")
                 }
                 variant="secondary"
@@ -1136,11 +1108,7 @@ function BuildingActionsDock({
   return (
     <section
       aria-labelledby="building-actions-title"
-      className={liquidGlassClassName({
-        className: "game-purple-glass action-dock action-dock-tile-layout building-actions-dock",
-        kind: "card",
-        radius: "md",
-      })}
+      className={"rounded-md border bg-card"}
     >
       <div className="action-heading">
         <strong id="building-actions-title">Build & Trade</strong>
@@ -1160,7 +1128,7 @@ function BuildingActionsDock({
       <div className="action-group build-actions">
         <DevelopmentCardAction
           disabledReason={developmentCardDisabledReason}
-          onPress={() => onCommand({ kind: "buy_development_card" }, "Development card purchased.")}
+          onClick={() => onCommand({ kind: "buy_development_card" }, "Development card purchased.")}
           resources={me.resources}
           supply={game.developmentCardSupply}
         />
@@ -1171,7 +1139,7 @@ function BuildingActionsDock({
           cost={BUILD_COSTS.road}
           disabledReason={roadDisabledReason}
           label="Road"
-          onPress={() => onBuildMode(buildMode === "road" ? null : "road")}
+          onClick={() => onBuildMode(buildMode === "road" ? null : "road")}
           resources={me.resources}
         />
         <BuildAction
@@ -1181,7 +1149,7 @@ function BuildingActionsDock({
           cost={BUILD_COSTS.settlement}
           disabledReason={settlementDisabledReason}
           label="Settlement"
-          onPress={() => onBuildMode(buildMode === "settlement" ? null : "settlement")}
+          onClick={() => onBuildMode(buildMode === "settlement" ? null : "settlement")}
           resources={me.resources}
         />
         <BuildAction
@@ -1191,7 +1159,7 @@ function BuildingActionsDock({
           cost={BUILD_COSTS.city}
           disabledReason={cityDisabledReason}
           label="City"
-          onPress={() => onBuildMode(buildMode === "city" ? null : "city")}
+          onClick={() => onBuildMode(buildMode === "city" ? null : "city")}
           resources={me.resources}
         />
       </div>
@@ -1214,7 +1182,7 @@ function TurnControl({
     isRequiredActor: legal.isRequiredActor,
     phaseKind: game.phase.kind,
   });
-  const turnControlClassName = "game-purple-glass turn-control";
+  const turnControlClassName = "rounded-md border bg-card";
 
   if (controlKind === "roll") {
     return (
@@ -1224,12 +1192,19 @@ function TurnControl({
           <DieFace value={5} />
         </div>
         <Button
-          className="button button-primary dice-button"
-          isDisabled={pending}
-          isPending={pending}
-          onPress={() => onCommand({ kind: "roll" }, "Dice rolled.")}
+          className=""
+          disabled={pending}
+          onClick={() => onCommand({ kind: "roll" }, "Dice rolled.")}
         >
-          <span>{pending ? "Rolling…" : "Roll Dice"}</span>
+          <span className="inline-flex items-center gap-2">
+            {pending ? (
+              <>
+                <Spinner data-icon="inline-start" /> Rolling…
+              </>
+            ) : (
+              "Roll Dice"
+            )}
+          </span>
         </Button>
       </section>
     );
@@ -1240,12 +1215,19 @@ function TurnControl({
       <section className={`${turnControlClassName} is-end-turn`} aria-label="Turn control">
         <Button
           aria-label="End Turn"
-          className="button button-primary turn-control-action"
-          isDisabled={pending || !legal.canEndTurn}
-          isPending={pending}
-          onPress={() => onCommand({ kind: "end_turn" }, "Turn ended.")}
+          className=""
+          disabled={pending || !legal.canEndTurn}
+          onClick={() => onCommand({ kind: "end_turn" }, "Turn ended.")}
         >
-          <span>{pending ? "Ending…" : "End Turn"}</span>
+          <span className="inline-flex items-center gap-2">
+            {pending ? (
+              <>
+                <Spinner data-icon="inline-start" /> Ending…
+              </>
+            ) : (
+              "End Turn"
+            )}
+          </span>
         </Button>
       </section>
     );
@@ -1296,13 +1278,13 @@ function UnavailablePlayerView({ onLeave }: { onLeave(): Promise<void> }) {
 
   return (
     <>
-      <main className="centered-page notice-page" id="main-content">
+      <main className="flex min-h-dvh items-center justify-center bg-background p-6" id="main-content">
         <section className="notice-card">
           <h1>Player View Unavailable</h1>
           <p>Your private seat could not be matched to this game. Refresh to reconnect.</p>
           <Button
-            className="button button-secondary"
-            onPress={() => setShowConfirmation(true)}
+            className=""
+            onClick={() => setShowConfirmation(true)}
             variant="secondary"
           >
             Leave Game
@@ -1325,15 +1307,18 @@ function UnavailablePlayerView({ onLeave }: { onLeave(): Promise<void> }) {
 
 function DevelopmentCardAction({
   disabledReason,
+  onClick,
   onPress,
   resources,
   supply,
 }: {
   disabledReason: string | null;
-  onPress(): void;
+  onClick?(): void;
+  onPress?(): void;
   resources: Readonly<ResourceInventory>;
   supply: number;
 }) {
+  const handlePress = onClick ?? onPress ?? (() => {});
   const descriptionId = "buy-development-card-description";
   const costResources = getCostResources(DEVELOPMENT_CARD_COST);
 
@@ -1362,7 +1347,7 @@ function DevelopmentCardAction({
         count={supply}
         kind="development-card"
         meta={<CostSummary cost={DEVELOPMENT_CARD_COST} resources={resources} />}
-        onPress={onPress}
+        onClick={handlePress}
         title="Dev Card"
         unavailable={disabledReason !== null}
       />
@@ -1384,6 +1369,7 @@ function BuildAction({
   cost,
   disabledReason,
   label,
+  onClick,
   onPress,
   resources,
 }: {
@@ -1393,9 +1379,11 @@ function BuildAction({
   cost: Readonly<ResourceInventory>;
   disabledReason: string | null;
   label: string;
-  onPress(): void;
+  onClick?(): void;
+  onPress?(): void;
   resources: Readonly<ResourceInventory>;
 }) {
+  const handlePress = onClick ?? onPress ?? (() => {});
   const descriptionId = `build-${asset}-description`;
   const status =
     disabledReason === "Action in progress…"
@@ -1438,7 +1426,7 @@ function BuildAction({
         count={count}
         kind={asset}
         meta={<CostSummary cost={cost} resources={resources} />}
-        onPress={onPress}
+        onClick={handlePress}
         pressed={active}
         title={label}
         unavailable={disabledReason !== null}
@@ -1672,160 +1660,156 @@ function WinOverlay({
     : getPlayerPortraitPath("purple");
 
   return (
-    <Modal>
-      <Modal.Backdrop
-        className="win-overlay"
-        isDismissable={false}
-        isKeyboardDismissDisabled
-        isOpen
+    <Dialog open>
+      <DialogContent
+        showCloseButton={false}
+        className={`win-overlay !fixed !inset-0 !grid !max-w-none !max-h-none !translate-x-0 !translate-y-0 bg-transparent border-0 p-0 shadow-none !place-items-center`}
       >
-        <Modal.Container>
-          <Modal.Dialog className={`win-card player-${featuredTheme}`}>
-            <Modal.Header className="win-card-header">
-              <Image
-                alt=""
-                aria-hidden="true"
-                className="win-flourish"
-                draggable={false}
-                height={512}
-                priority
-                sizes="(max-width: 700px) 88vw, 42rem"
-                src="/game-assets/results/victory-flourish.png"
-                width={1536}
-              />
-              <div className="win-hero">
-                <span className="win-avatar" aria-hidden="true">
-                  <img alt="" draggable={false} height={256} src={featuredPortrait} width={256} />
-                  <span className="win-crown">
-                    <Icon icon={crownIcon} />
-                  </span>
+        <div className={`win-card player-${featuredTheme}`}>
+          <DialogHeader className="win-card-header">
+            <Image
+              alt=""
+              aria-hidden="true"
+              className="win-flourish"
+              draggable={false}
+              height={512}
+              priority
+              sizes="(max-width: 700px) 88vw, 42rem"
+              src="/game-assets/results/victory-flourish.png"
+              width={1536}
+            />
+            <div className="win-hero">
+              <span className="win-avatar" aria-hidden="true">
+                <img alt="" draggable={false} height={256} src={featuredPortrait} width={256} />
+                <span className="win-crown">
+                  <Icon icon={crownIcon} />
                 </span>
-                <div className="win-hero-copy">
-                  <p className="eyebrow">{isDraw ? "Match Complete" : "Island Conquered"}</p>
-                  <Modal.Heading id="win-title">
-                    {isDraw
-                      ? "The Island Rests in a Draw"
-                      : isViewer
-                        ? "You Rule the Island!"
-                        : `${winner?.displayName ?? "A Player"} Wins!`}
-                  </Modal.Heading>
-                  <p>
-                    {isDraw
-                      ? `No player reached ${game.settings.victoryPoints} victory points.`
-                      : `${winner?.displayName ?? "The winner"} claimed the island in ${game.turnNumber} turns.`}
-                  </p>
-                </div>
+              </span>
+              <div className="win-hero-copy">
+                <p className="eyebrow">{isDraw ? "Match Complete" : "Island Conquered"}</p>
+                <DialogTitle id="win-title">
+                  {isDraw
+                    ? "The Island Rests in a Draw"
+                    : isViewer
+                      ? "You Rule the Island!"
+                      : `${winner?.displayName ?? "A Player"} Wins!`}
+                </DialogTitle>
+                <p>
+                  {isDraw
+                    ? `No player reached ${game.settings.victoryPoints} victory points.`
+                    : `${winner?.displayName ?? "The winner"} claimed the island in ${game.turnNumber} turns.`}
+                </p>
               </div>
-            </Modal.Header>
-            <Modal.Body className="win-card-body">
-              <section aria-labelledby="score-breakdown-title" className="win-score-panel">
-                <div className="win-score-heading">
-                  <div>
-                    <p className="eyebrow">{isDraw ? "Top Score" : "Final Score"}</p>
-                    <h3 id="score-breakdown-title">Victory point breakdown</h3>
-                  </div>
-                  <strong className="win-total-score">
-                    <span>{featuredScore}</span>
-                    <small>VP</small>
-                  </strong>
+            </div>
+          </DialogHeader>
+          <div className="win-card-body">
+            <section aria-labelledby="score-breakdown-title" className="win-score-panel">
+              <div className="win-score-heading">
+                <div>
+                  <p className="eyebrow">{isDraw ? "Top Score" : "Final Score"}</p>
+                  <h3 id="score-breakdown-title">Victory point breakdown</h3>
                 </div>
-                <ul className="win-point-breakdown">
-                  {pointBreakdown.map((source) => (
-                    <li className="win-point-source" key={source.label}>
-                      <span className="win-point-source-art" aria-hidden="true">
-                        <Image
-                          alt=""
-                          draggable={false}
-                          height={source.assetHeight}
-                          sizes="3.25rem"
-                          src={source.asset}
-                          width={source.assetWidth}
-                        />
-                      </span>
-                      <span>
-                        <strong>{source.label}</strong>
-                        <small>{source.detail}</small>
-                      </span>
-                      <b>{source.points}</b>
-                    </li>
-                  ))}
-                </ul>
-                {featuredPlayer ? (
-                  <div aria-label="Match statistics" className="win-match-stats">
-                    <span>
-                      <small>Turns</small>
-                      <strong>{game.turnNumber}</strong>
+                <strong className="win-total-score">
+                  <span>{featuredScore}</span>
+                  <small>VP</small>
+                </strong>
+              </div>
+              <ul className="win-point-breakdown">
+                {pointBreakdown.map((source) => (
+                  <li className="win-point-source" key={source.label}>
+                    <span className="win-point-source-art" aria-hidden="true">
+                      <Image
+                        alt=""
+                        draggable={false}
+                        height={source.assetHeight}
+                        sizes="3.25rem"
+                        src={source.asset}
+                        width={source.assetWidth}
+                      />
                     </span>
                     <span>
-                      <small>Longest road</small>
-                      <strong>{longestRoad}</strong>
+                      <strong>{source.label}</strong>
+                      <small>{source.detail}</small>
                     </span>
-                    <span>
-                      <small>Knights played</small>
-                      <strong>
-                        {
-                          featuredPlayer.playedDevelopmentCards.filter((card) => card === "knight")
-                            .length
-                        }
-                      </strong>
-                    </span>
-                  </div>
-                ) : null}
-              </section>
+                    <b>{source.points}</b>
+                  </li>
+                ))}
+              </ul>
+              {featuredPlayer ? (
+                <div aria-label="Match statistics" className="win-match-stats">
+                  <span>
+                    <small>Turns</small>
+                    <strong>{game.turnNumber}</strong>
+                  </span>
+                  <span>
+                    <small>Longest road</small>
+                    <strong>{longestRoad}</strong>
+                  </span>
+                  <span>
+                    <small>Knights played</small>
+                    <strong>
+                      {
+                        featuredPlayer.playedDevelopmentCards.filter((card) => card === "knight")
+                          .length
+                      }
+                    </strong>
+                  </span>
+                </div>
+              ) : null}
+            </section>
 
-              <section aria-labelledby="final-standings-title" className="win-standings">
-                <div className="win-standings-heading">
-                  <p className="eyebrow">Final Standings</p>
-                  <h3 id="final-standings-title">The table</h3>
-                </div>
-                <ol>
-                  {standings.map(({ player, score }, index) => {
-                    const theme = getPlayerTheme(player);
-                    return (
-                      <li
-                        className={`player-${theme}${player.id === game.winnerPlayerId ? " is-winner" : ""}`}
-                        key={player.id}
-                      >
-                        <span className="win-rank">{index + 1}</span>
-                        <img
-                          alt=""
-                          aria-hidden="true"
-                          draggable={false}
-                          height={96}
-                          src={getResultPortraitPath(player, viewerProfileImageUrl)}
-                          width={96}
-                        />
-                        <span className="win-standing-name">
-                          <strong>{player.displayName}</strong>
-                          <small>
-                            {player.id === game.winnerPlayerId
-                              ? "Island champion"
-                              : player.isViewer
-                                ? "You"
-                                : player.isBot
-                                  ? "Bot"
-                                  : "Explorer"}
-                          </small>
-                        </span>
-                        <strong className="win-standing-score">
-                          {score}
-                          <small> VP</small>
-                        </strong>
-                      </li>
-                    );
-                  })}
-                </ol>
-              </section>
-            </Modal.Body>
-            <Modal.Footer className="win-card-footer">
-              <Button className="button win-home-button" onPress={onLeave}>
-                Return Home
-              </Button>
-            </Modal.Footer>
-          </Modal.Dialog>
-        </Modal.Container>
-      </Modal.Backdrop>
-    </Modal>
+            <section aria-labelledby="final-standings-title" className="win-standings">
+              <div className="win-standings-heading">
+                <p className="eyebrow">Final Standings</p>
+                <h3 id="final-standings-title">The table</h3>
+              </div>
+              <ol>
+                {standings.map(({ player, score }, index) => {
+                  const theme = getPlayerTheme(player);
+                  return (
+                    <li
+                      className={`player-${theme}${player.id === game.winnerPlayerId ? " is-winner" : ""}`}
+                      key={player.id}
+                    >
+                      <span className="win-rank">{index + 1}</span>
+                      <img
+                        alt=""
+                        aria-hidden="true"
+                        draggable={false}
+                        height={96}
+                        src={getResultPortraitPath(player, viewerProfileImageUrl)}
+                        width={96}
+                      />
+                      <span className="win-standing-name">
+                        <strong>{player.displayName}</strong>
+                        <small>
+                          {player.id === game.winnerPlayerId
+                            ? "Island champion"
+                            : player.isViewer
+                              ? "You"
+                              : player.isBot
+                                ? "Bot"
+                                : "Explorer"}
+                        </small>
+                      </span>
+                      <strong className="win-standing-score">
+                        {score}
+                        <small> VP</small>
+                      </strong>
+                    </li>
+                  );
+                })}
+              </ol>
+            </section>
+          </div>
+          <div className="win-card-footer">
+            <Button className="button win-home-button" onClick={onLeave}>
+              Return Home
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 

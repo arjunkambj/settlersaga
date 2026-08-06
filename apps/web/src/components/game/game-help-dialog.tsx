@@ -1,6 +1,6 @@
 "use client";
 
-import { Button } from "@heroui/react";
+import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { useState } from "react";
 
@@ -8,7 +8,6 @@ import { ACTION_CARD_ASSET_PATHS } from "@/constants/game/card-assets";
 import { END_TURN_ICON_ASSET_PATH } from "@/constants/game/ui-assets";
 
 import { GameDialog } from "./game-dialog";
-import styles from "./game-help-dialog.module.css";
 
 interface GameHelpDialogProps {
   onClose(): void;
@@ -194,25 +193,25 @@ export function GameHelpDialog({ onClose }: GameHelpDialogProps) {
       ariaLabel="How to play"
       footer={
         <>
-          <div aria-label="Guide pages" className={styles.dots} role="group">
+          <div aria-label="Guide pages" className="flex justify-center gap-1.5" role="group">
             {GUIDE_PAGES.map((guidePage, index) => (
               <button
                 aria-label={`Go to page ${index + 1}: ${guidePage.eyebrow}`}
                 aria-pressed={index === pageIndex}
-                className={index === pageIndex ? styles.activeDot : styles.dot}
+                className={index === pageIndex ? "h-2 w-2 rounded-full bg-primary" : "h-2 w-2 rounded-full bg-muted"}
                 key={guidePage.eyebrow}
                 onClick={() => setPageIndex(index)}
                 type="button"
               />
             ))}
           </div>
-          <div className={styles.actions}>
+          <div className="flex justify-between gap-2">
             {!isFirstPage && (
-              <Button className={styles.backButton} onPress={showPreviousPage} variant="ghost">
+              <Button className="" onClick={showPreviousPage} variant="ghost">
                 Back
               </Button>
             )}
-            <Button className={styles.nextButton} onPress={showNextPage} variant="primary">
+            <Button className={""} onClick={showNextPage} variant="default">
               {isLastPage ? "Start playing" : "Next"}
               {!isLastPage && <span aria-hidden="true">→</span>}
             </Button>
@@ -224,13 +223,13 @@ export function GameHelpDialog({ onClose }: GameHelpDialogProps) {
       onClose={onClose}
       title="How to Play"
     >
-      <article aria-live="polite" className={styles.page} key={page.eyebrow}>
-        <div className={styles.visual} data-page={pageIndex + 1}>
-          <div className={styles.artGroup}>
+      <article aria-live="polite" className="grid gap-4 sm:grid-cols-2" key={page.eyebrow}>
+        <div className="flex items-center justify-center rounded-md border bg-muted p-6" data-page={pageIndex + 1}>
+          <div className="flex items-center justify-center">
             {page.art.map((asset) => (
               <Image
                 alt={asset.alt}
-                className={styles.art}
+                className="max-w-full object-contain"
                 draggable={false}
                 height={asset.height}
                 key={asset.path}
@@ -241,18 +240,18 @@ export function GameHelpDialog({ onClose }: GameHelpDialogProps) {
               />
             ))}
           </div>
-          <span className={styles.pageNumber}>
+          <span className="text-xs text-muted-foreground">
             {pageIndex + 1} / {GUIDE_PAGES.length}
           </span>
         </div>
 
-        <div className={styles.copy}>
-          <p className={styles.pageEyebrow}>{page.eyebrow}</p>
+        <div className="space-y-3">
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">{page.eyebrow}</p>
           <h3>{page.title}</h3>
-          <ul className={styles.tips}>
+          <ul className="space-y-2">
             {page.tips.map((tip) => (
               <li key={tip.title}>
-                <span aria-hidden="true" className={styles.check}>
+                <span aria-hidden="true" className="text-primary">
                   ✓
                 </span>
                 <div>

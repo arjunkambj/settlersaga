@@ -9,16 +9,15 @@ import {
   type ResourceInventory,
   type ResourceType,
 } from "@settersaga/game";
-import { Button } from "@heroui/react";
+import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
 
-import { liquidGlassClassName } from "@/components/ui/liquid-glass";
 import { RESOURCE_CARD_ASSET_PATHS } from "@/constants/game/card-assets";
 
 import { HandDockPortal, useHandDock } from "./hand-dock";
 import { RESOURCE_LABELS } from "./resource-icon";
-import styles from "./discard-panel.module.css";
 import { useActionCountdown } from "./use-action-countdown";
 
 export function DiscardPanel({
@@ -114,44 +113,40 @@ export function DiscardPanel({
     <HandDockPortal>
       <section
         aria-labelledby="discard-tray-title"
-        className={liquidGlassClassName({
-          className: `game-purple-glass ${styles.discardTray}`,
-          kind: "card",
-          radius: "md",
-        })}
+        className={"rounded-md border bg-card"}
         id="discard-tray"
       >
-        <header className={styles.trayHeader}>
+        <header className={""}>
           <h2 id="discard-tray-title">Discard {count}</h2>
         </header>
 
-        <div aria-label="Cards selected to discard" className={styles.selectedCards} role="list">
+        <div aria-label="Cards selected to discard" className={""} role="list">
           {selectedResources.length === 0 ? (
             <span className="sr-only">No cards selected</span>
           ) : (
             selectedResources.map((resource) => (
-              <div className={styles.selectedCard} key={resource} role="listitem">
-                <div className={styles.cardFace}>
+              <div className={""} key={resource} role="listitem">
+                <div className={""}>
                   <Image
                     alt=""
-                    className={styles.cardImage}
+                    className={""}
                     draggable={false}
                     height={768}
                     sizes="2.5rem"
                     src={RESOURCE_CARD_ASSET_PATHS[resource]}
                     width={512}
                   />
-                  <span aria-hidden="true" className={styles.quantity}>
+                  <span aria-hidden="true" className={""}>
                     {selection[resource]}
                   </span>
                 </div>
                 <Button
                   aria-label={`Remove one ${RESOURCE_LABELS[resource]} from the discard selection`}
-                  className={styles.removeButton}
-                  isDisabled={pending}
-                  isIconOnly
-                  onPress={() => removeResource(resource)}
-                  variant="tertiary"
+                  className={""}
+                  disabled={pending}
+                  onClick={() => removeResource(resource)}
+                  size="icon-sm"
+                  variant="ghost"
                 >
                   ×
                 </Button>
@@ -160,7 +155,7 @@ export function DiscardPanel({
           )}
         </div>
 
-        <div className={styles.trayActions}>
+        <div className={""}>
           {isPaused || nextActionAt ? (
             <div
               aria-label={
@@ -175,7 +170,7 @@ export function DiscardPanel({
                       : `Cards will be selected and discarded automatically in ${seconds} seconds`
               }
               aria-live="off"
-              className={styles.autoDiscardTimer}
+              className={""}
               data-expired={isExpired || undefined}
               role="timer"
             >
@@ -195,14 +190,19 @@ export function DiscardPanel({
           </p>
           <Button
             aria-describedby="discard-tray-status"
-            className={styles.confirmButton}
-            isDisabled={pending || selectedCount !== count}
-            isPending={pending}
-            onPress={() =>
+            className={""}
+            disabled={pending || selectedCount !== count}
+            onClick={() =>
               onCommand({ kind: "discard", resources: selection }, "Resources discarded.")
             }
           >
-            {pending ? "Discarding…" : "Discard"}
+            {pending ? (
+              <>
+                <Spinner data-icon="inline-start" /> Discarding…
+              </>
+            ) : (
+              "Discard"
+            )}
           </Button>
         </div>
       </section>

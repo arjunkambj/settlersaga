@@ -1,7 +1,16 @@
 "use client";
 
 import { DEFAULT_BASE_GAME_SETTINGS } from "@settersaga/game";
-import { Button, Input, Label, Modal, TextField } from "@heroui/react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Spinner } from "@/components/ui/spinner";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Field, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
+import { Icon } from "@iconify/react";
+import Image from "next/image";
+import { useState } from "react";
 import botIcon from "@iconify-icons/game-icons/robot-golem";
 import diceIcon from "@iconify-icons/game-icons/rolling-dice-cup";
 import houseIcon from "@iconify-icons/game-icons/house";
@@ -9,26 +18,15 @@ import closeIcon from "@iconify-icons/solar/close-circle-outline";
 import logoutIcon from "@iconify-icons/solar/logout-2-outline";
 import settingsIcon from "@iconify-icons/solar/settings-minimalistic-outline";
 import usersIcon from "@iconify-icons/solar/users-group-rounded-outline";
-import { Icon } from "@iconify/react";
-import Image from "next/image";
-import { useState } from "react";
 
 import { LobbySettings, type LobbySettingsValue } from "@/components/lobby/lobby-settings";
 import { AudioSettingsControls } from "@/components/audio/audio-settings-controls";
-import { AppScenery } from "@/components/ui/app-scenery";
-import { Brand } from "@/components/ui/brand";
 import { LiveMessage } from "@/components/ui/live-message";
-import { VoyageCard } from "@/components/ui/voyage-card";
 import { cleanDisplayName } from "@/lib/app/display-name";
 import type { PendingAction } from "@/lib/app/pending-action";
 import type { AudioSettings } from "@/lib/audio-settings";
 import { toBotCount } from "@/lib/lobby/lobby-settings-model";
 import { isRoomCode, normalizeRoomCode } from "@/lib/session";
-
-import botSetupStyles from "./bot-game-setup.module.css";
-import setupShellStyles from "./game-setup-shell.module.css";
-import joinRoomStyles from "./join-room.module.css";
-import playerSettingsStyles from "./player-settings.module.css";
 
 export interface HomeScreenProps {
   accountLabel: string;
@@ -79,404 +77,147 @@ export function HomeScreen({
     setAudioSettingsAtOpen(audioSettings);
     setShowPlayerSettings(true);
   };
-
-  const savePlayerSettings = () => {
-    onDisplayNameChange(cleanDisplayName(displayNameDraft));
-    setShowPlayerSettings(false);
-  };
-
-  const cancelPlayerSettings = () => {
-    onAudioSettingsChange(audioSettingsAtOpen);
-    setShowPlayerSettings(false);
-  };
-
-  const updateAudioSettingsDraft = (settings: AudioSettings) => {
-    setAudioSettingsDraft(settings);
-    onAudioSettingsChange(settings);
-  };
+  const savePlayerSettings = () => { onDisplayNameChange(cleanDisplayName(displayNameDraft)); setShowPlayerSettings(false); };
+  const cancelPlayerSettings = () => { onAudioSettingsChange(audioSettingsAtOpen); setShowPlayerSettings(false); };
+  const updateAudioSettingsDraft = (settings: AudioSettings) => { setAudioSettingsDraft(settings); onAudioSettingsChange(settings); };
 
   return (
-    <main className="home-page voyage-home" id="main-content">
-      <AppScenery />
-
-      <header className="site-header voyage-header">
-        <Brand />
-        <div className="voyage-header__tools">
-          <Button
-            aria-controls="player-settings-dialog"
-            aria-expanded={showPlayerSettings}
-            aria-haspopup="dialog"
-            aria-label="Open player settings"
-            className="button voyage-header__tool"
-            isDisabled={isPending}
-            isIconOnly
-            onPress={openPlayerSettings}
-            variant="ghost"
-          >
-            <span className="voyage-header__icon">
-              <Icon aria-hidden="true" icon={settingsIcon} />
-            </span>
+    <main className="min-h-dvh bg-background" id="main-content">
+      <header className="flex items-center justify-between border-b bg-card px-4 py-3">
+        <div className="flex items-center gap-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground text-sm font-bold">S</div>
+          <div>
+            <p className="text-sm font-bold leading-none">SetterSaga</p>
+            <p className="text-xs text-muted-foreground">Catan Saga</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="icon" aria-label="Open player settings" disabled={isPending} onClick={openPlayerSettings}>
+            <Icon icon={settingsIcon} />
           </Button>
-
-          <section aria-label={`Player profile for ${displayName}`} className="voyage-profile">
-            <span aria-hidden="true" className="voyage-profile__avatar">
-              <Image
-                alt=""
-                className="voyage-profile__avatar-image"
-                height={128}
-                src={profileImageUrl ?? "/game-assets/players/red-navigator.png"}
-                width={128}
-              />
-            </span>
-            <span className="voyage-profile__copy">
-              <strong>{displayName}</strong>
-              <small>{accountLabel}</small>
-            </span>
-            <Button
-              aria-label="Sign out"
-              className="button voyage-profile__sign-out"
-              isDisabled={isPending && pendingAction !== "signout"}
-              isIconOnly
-              isPending={pendingAction === "signout"}
-              onPress={() => void onSignOut()}
-              variant="ghost"
-            >
-              <Icon aria-hidden="true" icon={logoutIcon} />
+          <div className="flex items-center gap-2 rounded-full border bg-background px-2 py-1">
+            <Image alt="" height={28} width={28} className="h-7 w-7 rounded-full object-cover" src={profileImageUrl ?? "/game-assets/players/red-navigator.png"} />
+            <div className="hidden sm:block text-left">
+              <p className="text-xs font-semibold leading-none">{displayName}</p>
+              <p className="text-xs text-muted-foreground leading-none">{accountLabel}</p>
+            </div>
+            <Button variant="ghost" size="icon-sm" aria-label="Sign out" disabled={isPending && pendingAction !== "signout"} onClick={() => void onSignOut()}>
+              <Icon icon={logoutIcon} />
             </Button>
-          </section>
+          </div>
         </div>
       </header>
 
-      <section aria-labelledby="voyage-heading" className="voyage-stage">
-        <h1 className="sr-only" id="voyage-heading">
-          Choose your voyage
-        </h1>
-        <div aria-label="Ways to play" className="voyage-card-grid" role="group">
-          <VoyageCard
-            actionLabel="Set up a quick match"
-            badge={<Icon icon={diceIcon} />}
-            description="Play instantly with bots or players"
-            disabled={isPending || !displayName.trim()}
-            imageSrc="/home-assets/menu/quick-match-v2.png"
-            onPress={() => setShowBotSetup(true)}
-            pending={pendingAction === "quick"}
-            title="Quick Match"
-            tone="quick"
-          />
-          <VoyageCard
-            actionLabel="Create a private room"
-            badge={<Icon icon={houseIcon} />}
-            description="Invite friends to a private island"
-            disabled={isPending || !displayName.trim()}
-            imageSrc="/home-assets/menu/host-island-v2.png"
-            onPress={() => void onCreateRoom()}
-            pending={pendingAction === "create"}
-            title="Host Island"
-            tone="host"
-          />
-          <VoyageCard
-            actionLabel="Enter a friend room code"
-            badge={<Icon icon={usersIcon} />}
-            description="Jump in with a friend code"
-            disabled={isPending || !displayName.trim()}
-            imageSrc="/home-assets/menu/join-crew-v2.png"
-            onPress={() => setShowJoinRoom(true)}
-            pending={pendingAction === "join"}
-            title="Join Crew"
-            tone="join"
-          />
+      <div className="mx-auto max-w-5xl p-4 sm:p-6">
+        <div className="mb-4 text-center">
+          <h1 className="text-2xl font-bold">Choose your voyage</h1>
+          <p className="text-sm text-muted-foreground">Pick how you want to play</p>
         </div>
-        <LiveMessage message={error} />
-      </section>
 
-      <Modal>
-        <Modal.Backdrop
-          className={`setup-backdrop ${setupShellStyles.backdrop}`}
-          isDismissable={!isPending}
-          isKeyboardDismissDisabled={isPending}
-          isOpen={showJoinRoom}
-          onOpenChange={(isOpen) => {
-            if (!isOpen && !isPending) {
-              setShowJoinRoom(false);
-            }
-          }}
-        >
-          <Modal.Container>
-            <Modal.Dialog
-              aria-describedby="join-room-description"
-              className={`setup-dialog join-room-dialog ${setupShellStyles.dialog} ${joinRoomStyles.dialog}`}
-              id="join-room-dialog"
-            >
-              <Modal.Header className={`setup-dialog-header ${setupShellStyles.header}`}>
-                <span className={setupShellStyles.icon} aria-hidden="true">
-                  <Icon icon={usersIcon} />
-                </span>
-                <div>
-                  <p className="eyebrow">Join Crew</p>
-                  <Modal.Heading>Enter a Friend Code</Modal.Heading>
-                  <p id="join-room-description">
-                    Ask the host for their six-character room code, then meet them at the island.
-                  </p>
-                </div>
-                <Button
-                  aria-label="Close join room"
-                  className={`setup-close ${setupShellStyles.close} ${joinRoomStyles.close}`}
-                  isDisabled={isPending}
-                  isIconOnly
-                  onPress={() => setShowJoinRoom(false)}
-                  variant="ghost"
-                >
-                  <Icon aria-hidden="true" icon={closeIcon} />
-                </Button>
-              </Modal.Header>
-              <Modal.Body className={`${setupShellStyles.body} ${joinRoomStyles.body}`}>
-                <form
-                  className={`join-code-form ${joinRoomStyles.form}`}
-                  id="join-room-form"
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    void onJoinRoom(joinCode);
-                  }}
-                >
-                  <TextField
-                    aria-describedby="room-code-help"
-                    className={joinRoomStyles.field}
-                    fullWidth
-                    name="roomCode"
-                    onChange={(value) => setJoinCode(normalizeRoomCode(value))}
-                    value={joinCode}
-                  >
-                    <Label className={`field-label ${joinRoomStyles.label}`}>
-                      Friend room code
-                    </Label>
-                    <Input
-                      autoComplete="off"
-                      autoCapitalize="characters"
-                      autoFocus
-                      className={`text-input code-input ${joinRoomStyles.input}`}
-                      id="room-code"
-                      inputMode="text"
-                      maxLength={6}
-                      placeholder="ABC123"
-                      spellCheck={false}
-                    />
-                    <div className={joinRoomStyles.codeProgress} aria-hidden="true">
-                      {Array.from({ length: 6 }, (_, index) => (
-                        <span
-                          className={index < joinCode.length ? joinRoomStyles.filledCharacter : ""}
-                          key={index}
-                        />
-                      ))}
-                    </div>
-                    <p className={joinRoomStyles.help} id="room-code-help">
-                      {joinCode.length === 0
-                        ? "Codes contain six letters or numbers."
-                        : isRoomCode(joinCode)
-                          ? "Code ready — you can join the crew."
-                          : `${6 - joinCode.length} ${6 - joinCode.length === 1 ? "character" : "characters"} remaining.`}
-                    </p>
-                  </TextField>
-                </form>
-              </Modal.Body>
-              <Modal.Footer className={`${setupShellStyles.footer} ${joinRoomStyles.footer}`}>
-                <Button
-                  className={`button ${setupShellStyles.secondaryAction} ${joinRoomStyles.cancel}`}
-                  isDisabled={isPending}
-                  onPress={() => setShowJoinRoom(false)}
-                  variant="ghost"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  className={`button ${setupShellStyles.primaryAction} ${joinRoomStyles.join}`}
-                  form="join-room-form"
-                  isDisabled={isPending || !isRoomCode(joinCode) || !displayName.trim()}
-                  isPending={pendingAction === "join"}
-                  type="submit"
-                >
-                  {pendingAction === "join" ? "Joining…" : "Join Crew"}
-                </Button>
-              </Modal.Footer>
-            </Modal.Dialog>
-          </Modal.Container>
-        </Modal.Backdrop>
-      </Modal>
+        <div className="grid gap-4 sm:grid-cols-3">
+          <Card className="flex flex-col">
+            <CardHeader>
+              <div className="flex h-10 w-10 items-center justify-center rounded-md bg-muted"><Icon icon={diceIcon} /></div>
+              <CardTitle className="text-base">Quick Match</CardTitle>
+              <CardDescription>Play instantly with bots or players</CardDescription>
+            </CardHeader>
+            <CardContent className="mt-auto">
+              <Button className="w-full" disabled={isPending || !displayName.trim()} onClick={() => setShowBotSetup(true)}>
+                {pendingAction === "quick" ? (<><Spinner data-icon="inline-start" /> Starting...</>) : ("Quick Match")}
+              </Button>
+            </CardContent>
+          </Card>
+          <Card className="flex flex-col">
+            <CardHeader>
+              <div className="flex h-10 w-10 items-center justify-center rounded-md bg-muted"><Icon icon={houseIcon} /></div>
+              <CardTitle className="text-base">Host Island</CardTitle>
+              <CardDescription>Invite friends to a private island</CardDescription>
+            </CardHeader>
+            <CardContent className="mt-auto">
+              <Button className="w-full" disabled={isPending || !displayName.trim()} onClick={() => void onCreateRoom()}>
+                {pendingAction === "create" ? (<><Spinner data-icon="inline-start" /> Creating...</>) : ("Host Island")}
+              </Button>
+            </CardContent>
+          </Card>
+          <Card className="flex flex-col">
+            <CardHeader>
+              <div className="flex h-10 w-10 items-center justify-center rounded-md bg-muted"><Icon icon={usersIcon} /></div>
+              <CardTitle className="text-base">Join Crew</CardTitle>
+              <CardDescription>Jump in with a friend code</CardDescription>
+            </CardHeader>
+            <CardContent className="mt-auto">
+              <Button className="w-full" variant="secondary" disabled={isPending || !displayName.trim()} onClick={() => setShowJoinRoom(true)}>
+                {pendingAction === "join" ? (<><Spinner data-icon="inline-start" /> Joining...</>) : ("Join Crew")}
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
 
-      <Modal>
-        <Modal.Backdrop
-          className={`setup-backdrop ${setupShellStyles.backdrop}`}
-          isDismissable={!isPending}
-          isKeyboardDismissDisabled={isPending}
-          isOpen={showPlayerSettings}
-          onOpenChange={(isOpen) => {
-            if (!isOpen && !isPending) {
-              cancelPlayerSettings();
-            }
-          }}
-        >
-          <Modal.Container>
-            <Modal.Dialog
-              aria-describedby="player-settings-description"
-              className={`setup-dialog ${setupShellStyles.dialog} ${playerSettingsStyles.dialog}`}
-              id="player-settings-dialog"
-            >
-              <Modal.Header
-                className={`setup-dialog-header ${setupShellStyles.header} ${playerSettingsStyles.header}`}
-              >
-                <div>
-                  <p className="eyebrow">Player Settings</p>
-                  <Modal.Heading>Player &amp; Audio</Modal.Heading>
-                  <p id="player-settings-description">
-                    Choose the name other players see and set each part of the game audio.
-                  </p>
-                </div>
-                <Button
-                  aria-label="Close player settings"
-                  className={`setup-close ${setupShellStyles.close} ${playerSettingsStyles.close}`}
-                  isDisabled={isPending}
-                  isIconOnly
-                  onPress={cancelPlayerSettings}
-                  variant="ghost"
-                >
-                  <Icon aria-hidden="true" icon={closeIcon} />
-                </Button>
-              </Modal.Header>
-              <Modal.Body className={`${setupShellStyles.body} ${playerSettingsStyles.body}`}>
-                <form
-                  className={playerSettingsStyles.form}
-                  id="player-settings-form"
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    savePlayerSettings();
-                  }}
-                >
-                  <TextField
-                    className={playerSettingsStyles.field}
-                    fullWidth
-                    name="displayName"
-                    onChange={setDisplayNameDraft}
-                    value={displayNameDraft}
-                  >
-                    <Label className={playerSettingsStyles.label}>Display Name</Label>
-                    <Input
-                      autoComplete="off"
-                      autoFocus
-                      className={playerSettingsStyles.input}
-                      maxLength={24}
-                      placeholder="Example: River Fox…"
-                      spellCheck={false}
-                    />
-                  </TextField>
+        {error ? <div className="mt-4 flex justify-center"><LiveMessage message={error} /></div> : null}
+      </div>
 
-                  <AudioSettingsControls
-                    onChange={updateAudioSettingsDraft}
-                    settings={audioSettingsDraft}
-                  />
-                </form>
-              </Modal.Body>
-              <Modal.Footer className={`${setupShellStyles.footer} ${playerSettingsStyles.footer}`}>
-                <Button
-                  className={`button ${playerSettingsStyles.cancel}`}
-                  isDisabled={isPending}
-                  onPress={cancelPlayerSettings}
-                  variant="ghost"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  className={`button ${playerSettingsStyles.save}`}
-                  form="player-settings-form"
-                  isDisabled={isPending || !displayNameDraft.trim()}
-                  type="submit"
-                >
-                  Save Settings
-                </Button>
-              </Modal.Footer>
-            </Modal.Dialog>
-          </Modal.Container>
-        </Modal.Backdrop>
-      </Modal>
+      <Dialog open={showJoinRoom} onOpenChange={(open) => { if (!open && !isPending) setShowJoinRoom(false); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Enter a Friend Code</DialogTitle>
+            <DialogDescription>Ask the host for their six-character room code, then meet them at the island.</DialogDescription>
+          </DialogHeader>
+          <form id="join-room-form" onSubmit={(event) => { event.preventDefault(); void onJoinRoom(joinCode); }} className="space-y-4">
+            <Field>
+              <FieldLabel htmlFor="room-code">Friend room code</FieldLabel>
+              <Input id="room-code" autoComplete="off" autoCapitalize="characters" autoFocus maxLength={6} placeholder="ABC123" spellCheck={false} value={joinCode} onChange={(e) => setJoinCode(normalizeRoomCode(e.target.value))} />
+              <p className="text-xs text-muted-foreground">{joinCode.length === 0 ? "Codes contain six letters or numbers." : isRoomCode(joinCode) ? "Code ready — you can join the crew." : `${6 - joinCode.length} characters remaining.`}</p>
+            </Field>
+          </form>
+          <DialogFooter>
+            <Button variant="ghost" disabled={isPending} onClick={() => setShowJoinRoom(false)}>Cancel</Button>
+            <Button form="join-room-form" type="submit" disabled={isPending || !isRoomCode(joinCode) || !displayName.trim()}>{pendingAction === "join" ? (<><Spinner data-icon="inline-start" /> Joining...</>) : ("Join Crew")}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-      <Modal>
-        <Modal.Backdrop
-          className={`setup-backdrop ${setupShellStyles.backdrop} ${botSetupStyles.backdrop}`}
-          isDismissable={!isPending}
-          isKeyboardDismissDisabled={isPending}
-          isOpen={showBotSetup}
-          onOpenChange={(isOpen) => {
-            if (!isOpen && !isPending) {
-              setShowBotSetup(false);
-            }
-          }}
-        >
-          <Modal.Container>
-            <Modal.Dialog
-              aria-describedby="bot-setup-description"
-              className={`setup-dialog ${setupShellStyles.dialog} ${botSetupStyles.dialog}`}
-              id="bot-setup-dialog"
-            >
-              <Modal.Header
-                className={`setup-dialog-header ${setupShellStyles.header} ${botSetupStyles.header}`}
-              >
-                <span aria-hidden="true" className={setupShellStyles.icon}>
-                  <Icon icon={botIcon} />
-                </span>
-                <div>
-                  <p className="eyebrow">Quick Match</p>
-                  <Modal.Heading id="bot-setup-title">Set Up Your Table</Modal.Heading>
-                  <p id="bot-setup-description">
-                    Pick the standard rules and bot challenge before the island is built.
-                  </p>
-                </div>
-                <Button
-                  aria-label="Close bot game setup"
-                  className={`setup-close ${setupShellStyles.close} ${botSetupStyles.close}`}
-                  isDisabled={isPending}
-                  isIconOnly
-                  onPress={() => setShowBotSetup(false)}
-                  variant="ghost"
-                >
-                  <Icon aria-hidden="true" icon={closeIcon} />
-                </Button>
-              </Modal.Header>
-              <Modal.Body
-                className={`setup-dialog-body ${setupShellStyles.body} ${botSetupStyles.body}`}
-              >
-                <LobbySettings
-                  botCount={quickSettings.botCount}
-                  botDifficulty={quickSettings.botDifficulty}
-                  disabled={isPending}
-                  humanCount={1}
-                  minBotCount={toBotCount(quickSettings.settings.maxPlayers - 1)}
-                  onChange={(value) => setQuickSettings(normalizeQuickSettings(value))}
-                  settings={quickSettings.settings}
-                />
-              </Modal.Body>
-              <p className={`setup-note ${botSetupStyles.note}`}>
-                Quick matches fill every open seat with bots for the selected board.
-              </p>
-              <Modal.Footer className={`${setupShellStyles.footer} ${botSetupStyles.footer}`}>
-                <Button
-                  className={`button button-large setup-start ${setupShellStyles.primaryAction} ${botSetupStyles.start}`}
-                  isDisabled={isPending}
-                  isPending={pendingAction === "quick"}
-                  onPress={() => void onQuickPlay(quickSettings)}
-                >
-                  <Icon aria-hidden="true" icon={botIcon} />
-                  {pendingAction === "quick" ? "Building the Island…" : "Start Quick Match"}
-                </Button>
-              </Modal.Footer>
-            </Modal.Dialog>
-          </Modal.Container>
-        </Modal.Backdrop>
-      </Modal>
+      <Dialog open={showPlayerSettings} onOpenChange={(open) => { if (!open && !isPending) cancelPlayerSettings(); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Player & Audio</DialogTitle>
+            <DialogDescription>Choose the name other players see and set each part of the game audio.</DialogDescription>
+          </DialogHeader>
+          <form id="player-settings-form" onSubmit={(event) => { event.preventDefault(); savePlayerSettings(); }} className="space-y-4">
+            <Field>
+              <FieldLabel htmlFor="display-name-input">Display Name</FieldLabel>
+              <Input id="display-name-input" autoComplete="off" autoFocus maxLength={24} placeholder="Example: River Fox..." value={displayNameDraft} onChange={(e) => setDisplayNameDraft(e.target.value)} />
+            </Field>
+            <Separator />
+            <AudioSettingsControls onChange={updateAudioSettingsDraft} settings={audioSettingsDraft} />
+          </form>
+          <DialogFooter>
+            <Button variant="ghost" disabled={isPending} onClick={cancelPlayerSettings}>Cancel</Button>
+            <Button form="player-settings-form" type="submit" disabled={isPending || !displayNameDraft.trim()}>Save Settings</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showBotSetup} onOpenChange={(open) => { if (!open && !isPending) setShowBotSetup(false); }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Set Up Your Table</DialogTitle>
+            <DialogDescription>Pick the standard rules and bot challenge before the island is built.</DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[60vh] overflow-auto">
+            <LobbySettings botCount={quickSettings.botCount} botDifficulty={quickSettings.botDifficulty} disabled={isPending} humanCount={1} minBotCount={toBotCount(quickSettings.settings.maxPlayers - 1)} onChange={(value) => setQuickSettings(normalizeQuickSettings(value))} settings={quickSettings.settings} />
+          </div>
+          <p className="text-xs text-muted-foreground">Quick matches fill every open seat with bots for the selected board.</p>
+          <DialogFooter>
+            <Button disabled={isPending} onClick={() => void onQuickPlay(quickSettings)} className="w-full sm:w-auto">
+              <Icon icon={botIcon} />{pendingAction === "quick" ? (<><Spinner data-icon="inline-start" /> Building the Island...</>) : ("Start Quick Match")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </main>
   );
 }
 
 function normalizeQuickSettings(next: LobbySettingsValue): LobbySettingsValue {
-  return {
-    ...next,
-    botCount: toBotCount(next.settings.maxPlayers - 1),
-  };
+  return { ...next, botCount: toBotCount(next.settings.maxPlayers - 1) };
 }

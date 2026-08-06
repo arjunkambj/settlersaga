@@ -1,11 +1,9 @@
 "use client";
 
-import { Button, Modal } from "@heroui/react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { ReactNode } from "react";
-
-import { liquidGlassClassName } from "@/components/ui/liquid-glass";
-
-import styles from "./game-dialog.module.css";
 
 interface GameDialogProps {
   ariaLabel: string;
@@ -21,17 +19,11 @@ interface GameDialogProps {
   title: string;
 }
 
-function joinClassNames(...classNames: (string | undefined)[]) {
-  return classNames.filter(Boolean).join(" ");
-}
-
 export function GameDialog({
   ariaLabel,
   bodyClassName,
   children,
-  dialogClassName,
   footer,
-  footerClassName,
   id,
   isBusy = false,
   kicker,
@@ -39,54 +31,15 @@ export function GameDialog({
   title,
 }: GameDialogProps) {
   return (
-    <Modal>
-      <Modal.Backdrop
-        className={styles.backdrop}
-        isDismissable={!isBusy}
-        isKeyboardDismissDisabled={isBusy}
-        isOpen
-        onOpenChange={(isOpen) => {
-          if (!isOpen && !isBusy) {
-            onClose();
-          }
-        }}
-        variant="blur"
-      >
-        <Modal.Container>
-          <Modal.Dialog
-            aria-label={ariaLabel}
-            className={liquidGlassClassName({
-              className: joinClassNames(styles.dialog, dialogClassName),
-              kind: "panel",
-              radius: "md",
-            })}
-            id={id}
-          >
-            <Modal.Header className={styles.header}>
-              <div>
-                <p className={styles.kicker}>{kicker}</p>
-                <Modal.Heading>{title}</Modal.Heading>
-              </div>
-              <Button
-                aria-label={`Close ${title}`}
-                className={styles.closeButton}
-                isDisabled={isBusy}
-                isIconOnly
-                onPress={onClose}
-                variant="ghost"
-              >
-                ×
-              </Button>
-            </Modal.Header>
-            <Modal.Body className={joinClassNames(styles.body, bodyClassName)}>
-              {children}
-            </Modal.Body>
-            <Modal.Footer className={joinClassNames(styles.footer, footerClassName)}>
-              {footer}
-            </Modal.Footer>
-          </Modal.Dialog>
-        </Modal.Container>
-      </Modal.Backdrop>
-    </Modal>
+    <Dialog open onOpenChange={(open) => { if (!open && !isBusy) onClose(); }}>
+      <DialogContent aria-label={ariaLabel} id={id} className="sm:max-w-2xl max-h-[90vh] overflow-auto">
+        <DialogHeader>
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">{kicker}</p>
+          <DialogTitle>{title}</DialogTitle>
+        </DialogHeader>
+        <div className={bodyClassName}>{children}</div>
+        <div className="flex justify-end gap-2 border-t pt-4">{footer}</div>
+      </DialogContent>
+    </Dialog>
   );
 }
