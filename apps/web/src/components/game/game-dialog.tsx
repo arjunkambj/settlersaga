@@ -1,7 +1,5 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { ReactNode } from "react";
 
@@ -31,10 +29,21 @@ export function GameDialog({
   title,
 }: GameDialogProps) {
   return (
-    <Dialog open onOpenChange={(open) => { if (!open && !isBusy) onClose(); }}>
-      <DialogContent aria-label={ariaLabel} id={id} className="sm:max-w-2xl max-h-[90vh] overflow-auto">
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open && !isBusy) onClose();
+      }}
+    >
+      <DialogContent
+        aria-label={ariaLabel}
+        id={id}
+        className="sm:max-w-2xl max-h-[90vh] overflow-auto"
+      >
         <DialogHeader>
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">{kicker}</p>
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+            {kicker}
+          </p>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
         <div className={bodyClassName}>{children}</div>

@@ -38,7 +38,6 @@ export interface TradeCenterProps {
 
 type TradeDirection = "give" | "receive";
 
-
 function MinusGlyph() {
   return (
     <svg aria-hidden="true" viewBox="0 0 24 24">
@@ -335,11 +334,7 @@ function TradeComposer({
         <legend className="sr-only">Offer recipients</legend>
         <div className={""}>
           {opponents.map((player) => (
-            <label
-              key={player.id}
-              htmlFor={`trade-recipient-${player.id}`}
-              className={""}
-            >
+            <label key={player.id} htmlFor={`trade-recipient-${player.id}`} className={""}>
               <Checkbox
                 id={`trade-recipient-${player.id}`}
                 checked={recipientPlayerIds.includes(player.id)}

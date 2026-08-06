@@ -198,7 +198,11 @@ export function GameHelpDialog({ onClose }: GameHelpDialogProps) {
               <button
                 aria-label={`Go to page ${index + 1}: ${guidePage.eyebrow}`}
                 aria-pressed={index === pageIndex}
-                className={index === pageIndex ? "h-2 w-2 rounded-full bg-primary" : "h-2 w-2 rounded-full bg-muted"}
+                className={
+                  index === pageIndex
+                    ? "h-2 w-2 rounded-full bg-primary"
+                    : "h-2 w-2 rounded-full bg-muted"
+                }
                 key={guidePage.eyebrow}
                 onClick={() => setPageIndex(index)}
                 type="button"
@@ -224,7 +228,10 @@ export function GameHelpDialog({ onClose }: GameHelpDialogProps) {
       title="How to Play"
     >
       <article aria-live="polite" className="grid gap-4 sm:grid-cols-2" key={page.eyebrow}>
-        <div className="flex items-center justify-center rounded-md border bg-muted p-6" data-page={pageIndex + 1}>
+        <div
+          className="flex items-center justify-center rounded-md border bg-muted p-6"
+          data-page={pageIndex + 1}
+        >
           <div className="flex items-center justify-center">
             {page.art.map((asset) => (
               <Image
@@ -246,7 +253,9 @@ export function GameHelpDialog({ onClose }: GameHelpDialogProps) {
         </div>
 
         <div className="space-y-3">
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">{page.eyebrow}</p>
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+            {page.eyebrow}
+          </p>
           <h3>{page.title}</h3>
           <ul className="space-y-2">
             {page.tips.map((tip) => (

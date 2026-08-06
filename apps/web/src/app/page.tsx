@@ -1,7 +1,8 @@
 import { Suspense } from "react";
 
 import { AppProviders } from "@/components/app/app-providers";
-import { SetterSagaApp } from "@/components/app/settersaga-app";
+import { AppSessionProvider } from "@/components/app/app-session-context";
+import { HomePageContent } from "@/components/home/home-page-content";
 import { FullPageStatus } from "@/components/ui/full-page-status";
 
 export default function HomePage() {
@@ -12,7 +13,9 @@ export default function HomePage() {
         hexclaveProjectId={process.env.NEXT_PUBLIC_HEXCLAVE_PROJECT_ID}
         hexclavePublishableClientKey={process.env.NEXT_PUBLIC_HEXCLAVE_PUBLISHABLE_CLIENT_KEY}
       >
-        <SetterSagaApp />
+        <AppSessionProvider>
+          <HomePageContent />
+        </AppSessionProvider>
       </AppProviders>
     </Suspense>
   );

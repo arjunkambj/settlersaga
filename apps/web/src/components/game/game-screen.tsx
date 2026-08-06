@@ -279,7 +279,6 @@ export function GameScreen({
 
   const isViewerTurn = activePlayer.id === me.id;
   const phaseCopy = getPhaseCopy(game.phase, isViewerTurn, activePlayer.displayName);
-  const activePlayerTheme = getPlayerTheme(activePlayer);
   const latestEvent = events.at(-1)?.text;
   const phaseLiveMessage = `${phaseCopy.title}. ${phaseCopy.detail}${latestEvent ? ` Latest table event: ${latestEvent}.` : ""}`;
   const changeBuildMode = (mode: BuildMode) => {
@@ -307,7 +306,8 @@ export function GameScreen({
       setConfirming(false);
     }
   };
-  const gameMetaPillClassName = "inline-flex items-center gap-1 rounded-full border bg-card px-2.5 py-1 text-xs font-medium";
+  const gameMetaPillClassName =
+    "inline-flex items-center gap-1 rounded-full border bg-card px-2.5 py-1 text-xs font-medium";
   const gameHeaderActionClassName = "rounded-full border bg-card";
 
   return (
@@ -399,10 +399,7 @@ export function GameScreen({
           />
         </aside>
 
-        <div
-          className="hidden"
-          id={BOARD_INSPECTOR_DOCK_ROOT_ID}
-        />
+        <div className="hidden" id={BOARD_INSPECTOR_DOCK_ROOT_ID} />
 
         <GameBoard
           buildMode={buildMode}
@@ -444,7 +441,10 @@ export function GameScreen({
               aria-labelledby="phase-title"
               className="flex items-center gap-2 rounded-md border bg-card p-3"
             >
-              <span aria-hidden="true" className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">
+              <span
+                aria-hidden="true"
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-muted"
+              >
                 <Icon icon={playerIcon} />
               </span>
               <div className="flex-1">
@@ -537,7 +537,11 @@ export function GameScreen({
         {announcement}
       </div>
       {error ? (
-        <div aria-atomic="true" className="fixed bottom-4 left-1/2 -translate-x-1/2 rounded-md bg-destructive px-4 py-2 text-sm text-destructive-foreground" role="alert">
+        <div
+          aria-atomic="true"
+          className="fixed bottom-4 left-1/2 -translate-x-1/2 rounded-md bg-destructive px-4 py-2 text-sm text-destructive-foreground"
+          role="alert"
+        >
           {error}
         </div>
       ) : null}
@@ -824,10 +828,7 @@ function BankPanel({
   developmentCardSupply: number;
 }) {
   return (
-    <section
-      aria-label="Resource market"
-      className={"rounded-md border bg-card"}
-    >
+    <section aria-label="Resource market" className={"rounded-md border bg-card"}>
       <ul className="bank-grid">
         {RESOURCE_ORDER.map((resource) => (
           <li
@@ -868,10 +869,7 @@ function EventLog({ events }: { events: RoomEventView[] }) {
   const timeFormatter = showLocalTime ? LOCAL_EVENT_TIME_FORMATTER : UTC_EVENT_TIME_FORMATTER;
 
   return (
-    <section
-      className={"rounded-md border bg-card"}
-      aria-labelledby="events-title"
-    >
+    <section className={"rounded-md border bg-card"} aria-labelledby="events-title">
       <div className="side-card-title">
         <h2 id="events-title">Game Log</h2>
         <Icon aria-hidden="true" icon={scrollIcon} />
@@ -1106,10 +1104,7 @@ function BuildingActionsDock({
       supply: game.developmentCardSupply,
     });
   return (
-    <section
-      aria-labelledby="building-actions-title"
-      className={"rounded-md border bg-card"}
-    >
+    <section aria-labelledby="building-actions-title" className={"rounded-md border bg-card"}>
       <div className="action-heading">
         <strong id="building-actions-title">Build & Trade</strong>
         <span>
@@ -1278,15 +1273,14 @@ function UnavailablePlayerView({ onLeave }: { onLeave(): Promise<void> }) {
 
   return (
     <>
-      <main className="flex min-h-dvh items-center justify-center bg-background p-6" id="main-content">
+      <main
+        className="flex min-h-dvh items-center justify-center bg-background p-6"
+        id="main-content"
+      >
         <section className="notice-card">
           <h1>Player View Unavailable</h1>
           <p>Your private seat could not be matched to this game. Refresh to reconnect.</p>
-          <Button
-            className=""
-            onClick={() => setShowConfirmation(true)}
-            variant="secondary"
-          >
+          <Button className="" onClick={() => setShowConfirmation(true)} variant="secondary">
             Leave Game
           </Button>
         </section>

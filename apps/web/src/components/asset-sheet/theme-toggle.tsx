@@ -14,7 +14,6 @@ import {
   type Theme,
 } from "@/lib/theme";
 
-
 export function ThemeToggle() {
   const [theme, setTheme] = useState<Theme>(DEFAULT_THEME);
 
@@ -38,7 +37,7 @@ export function ThemeToggle() {
   return (
     <Button
       aria-label={`Switch to ${isLight ? "dark" : "light"} theme`}
-      className={""}
+      className="h-9 w-9 p-0 rounded-full"
       onClick={toggleTheme}
       size="icon-sm"
       variant="secondary"

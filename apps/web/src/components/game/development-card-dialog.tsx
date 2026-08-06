@@ -177,12 +177,7 @@ export function DevelopmentCardDialog({
                 : `${selectedCount} of 2 cards selected`}
             </span>
             <div>
-              <Button
-                className={""}
-                disabled={pending}
-                onClick={onClose}
-                variant="secondary"
-              >
+              <Button className={""} disabled={pending} onClick={onClose} variant="secondary">
                 Cancel
               </Button>
               <Button

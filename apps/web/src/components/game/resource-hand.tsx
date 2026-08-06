@@ -183,10 +183,7 @@ export function ResourceHand({
   };
 
   return (
-    <section
-      aria-label="Your cards"
-      className={"rounded-md border bg-card"}
-    >
+    <section aria-label="Your cards" className={"rounded-md border bg-card"}>
       {notice}
       <div className={""} id={HAND_DOCK_ROOT_ID} />
       <div className={""}>
@@ -322,9 +319,7 @@ export function ResourceHand({
                 }}
               >
                 <span
-                  className={`${""} ${
-                    animation.direction === "receive" ? "" : ""
-                  }`}
+                  className={`${""} ${animation.direction === "receive" ? "" : ""}`}
                   onAnimationEnd={(event) => finishAnimation(animation.id, event)}
                 >
                   <GameCardArtwork

@@ -23,7 +23,7 @@ import { ActionTile } from "@/components/game/action-tile";
 import { GameScreen } from "@/components/game/game-screen";
 import { HomeScreen } from "@/components/home/home-screen";
 import { FullPageStatus } from "@/components/ui/full-page-status";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import {
   ACTION_CARD_ASSET_PATHS,
   DEVELOPMENT_CARD_BACK_ASSET_PATH,
@@ -185,7 +185,10 @@ function GamePreview({
 
 function ActionPresetPreview() {
   return (
-    <main className="flex min-h-dvh items-center justify-center bg-background p-6" id="main-content">
+    <main
+      className="flex min-h-dvh items-center justify-center bg-background p-6"
+      id="main-content"
+    >
       <Card>
         <header className="space-y-1 text-center">
           <p>Reusable UI preset</p>

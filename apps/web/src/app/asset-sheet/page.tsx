@@ -6,6 +6,7 @@ import { Icon } from "@iconify/react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { cn } from "@/lib/utils";
 
 import { getPieceAssetPath } from "@/components/game/piece-icon";
 import {
@@ -25,9 +26,9 @@ import {
 } from "@/constants/game/board-assets";
 import { SOUND_EFFECT_PATHS, type SoundEffect } from "@/lib/game/audio-cues";
 
-import { AssetCard, type AssetCardItem } from "./asset-card";
-import { TerrainBoardPreview } from "./terrain-board-preview";
-import { ThemeToggle } from "./theme-toggle";
+import { AssetCard, type AssetCardItem } from "@/components/asset-sheet/asset-card";
+import { TerrainBoardPreview } from "@/components/asset-sheet/terrain-board-preview";
+import { ThemeToggle } from "@/components/asset-sheet/theme-toggle";
 
 export const metadata: Metadata = {
   description: "A category-by-category inventory of SetterSaga's generated and planned assets.",
@@ -489,23 +490,30 @@ const assetTotals = ASSET_CATEGORIES.reduce(
 
 export default function AssetSheetPage() {
   return (
-    <main className={""} id="main-content">
-      <div className={""}>
-        <header className={""}>
-          <div className={""}>
-            <Link className={""} href="/">
+    <main className="min-h-screen bg-background text-foreground overflow-y-auto" id="main-content">
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 space-y-8">
+        <header className="border-b border-border pb-6 space-y-6">
+          <div className="flex items-center justify-between">
+            <Link
+              className="inline-flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors"
+              href="/"
+            >
               <Icon aria-hidden="true" icon={arrowLeftIcon} width={16} />
               Back to game
             </Link>
             <ThemeToggle />
           </div>
 
-          <div className={""}>
-            <p className={""}>Production inventory</p>
-            <h1>Game asset sheet</h1>
+          <div className="space-y-1">
+            <p className="text-xs font-bold uppercase tracking-widest text-amber-500">
+              Production inventory
+            </p>
+            <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl lg:text-5xl">
+              Game asset sheet
+            </h1>
           </div>
 
-          <div className={""} aria-label="Asset totals">
+          <div className="flex flex-wrap gap-4" aria-label="Asset totals">
             <SummaryItem
               icon={<Icon aria-hidden="true" icon={checkIcon} />}
               label="Generated"
@@ -527,7 +535,7 @@ export default function AssetSheetPage() {
           </div>
         </header>
 
-        <div className={""}>
+        <div className="space-y-4">
           {ASSET_CATEGORIES.map((category) => (
             <AssetCategoryRow category={category} key={category.name} />
           ))}
@@ -549,11 +557,20 @@ function SummaryItem({
   value: number;
 }) {
   return (
-    <div className="rounded-md border bg-card p-3">
-      <span className={""}>{icon}</span>
-      <span>
-        <strong>{value}</strong>
-        <small>{label}</small>
+    <div className="flex items-center gap-3.5 rounded-xl border border-border bg-card p-4 shadow-none min-w-[140px]">
+      <span
+        className={cn(
+          "flex h-9 w-9 items-center justify-center rounded-lg text-lg",
+          tone === "ready" && "text-emerald-500 bg-emerald-500/10",
+          tone === "needed" && "text-amber-500 bg-amber-500/10",
+          tone === "neutral" && "text-muted-foreground bg-muted",
+        )}
+      >
+        {icon}
+      </span>
+      <span className="flex flex-col">
+        <strong className="text-xl font-bold leading-none">{value}</strong>
+        <small className="text-xs text-muted-foreground font-medium mt-1">{label}</small>
       </span>
     </div>
   );
@@ -566,28 +583,36 @@ function AssetCategoryRow({ category }: { category: AssetCategory }) {
   return (
     <section
       aria-labelledby={`category-${toId(category.name)}`}
-      className={""}
+      className="py-6 border-b border-border last:border-b-0 space-y-4"
       data-live-preview={category.name === "Terrain tiles" || undefined}
     >
-      <div className={""}>
-        <h2 id={`category-${toId(category.name)}`}>{category.name}</h2>
-        <span className={""}>
+      <div className="flex items-center justify-between gap-4">
+        <h2
+          id={`category-${toId(category.name)}`}
+          className="text-xl sm:text-2xl font-bold tracking-tight"
+        >
+          {category.name}
+        </h2>
+        <span className="rounded-full border border-border px-3 py-1 text-xs font-semibold text-muted-foreground whitespace-nowrap">
           {generatedCount}/{assets.length} ready
         </span>
       </div>
 
       {category.subcategories ? (
-        <div className={""}>
+        <div className="space-y-6">
           {category.subcategories.map((subcategory) => (
             <section
               aria-labelledby={`subcategory-${toId(category.name)}-${toId(subcategory.name)}`}
-              className={""}
+              className="space-y-3"
               key={subcategory.name}
             >
-              <h3 id={`subcategory-${toId(category.name)}-${toId(subcategory.name)}`}>
+              <h3
+                id={`subcategory-${toId(category.name)}-${toId(subcategory.name)}`}
+                className="text-xs font-bold uppercase tracking-wider text-muted-foreground"
+              >
                 {subcategory.name}
               </h3>
-              <div className={""}>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
                 {subcategory.assets.map((asset) => (
                   <AssetCard asset={asset} key={`${subcategory.name}-${asset.name}`} />
                 ))}
@@ -597,7 +622,7 @@ function AssetCategoryRow({ category }: { category: AssetCategory }) {
         </div>
       ) : (
         <>
-          <div className={""}>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {assets.map((asset) => (
               <AssetCard asset={asset} key={`${category.name}-${asset.name}`} />
             ))}

@@ -13,11 +13,7 @@ export interface AppProvidersProps {
   hexclavePublishableClientKey?: string;
 }
 
-export function AppProviders({
-  children,
-  convexUrl,
-  hexclaveProjectId,
-}: AppProvidersProps) {
+export function AppProviders({ children, convexUrl, hexclaveProjectId }: AppProvidersProps) {
   const searchParams = useSearchParams();
   const previewMode = searchParams.get("preview");
   const previewSeed = searchParams.get("seed")?.trim() || undefined;
@@ -32,7 +28,7 @@ export function AppProviders({
   // so we don't duplicate provider instantiation.
   const isConfigured = Boolean(
     (convexUrl ?? process.env.NEXT_PUBLIC_CONVEX_URL) &&
-      (hexclaveProjectId ?? process.env.NEXT_PUBLIC_HEXCLAVE_PROJECT_ID),
+    (hexclaveProjectId ?? process.env.NEXT_PUBLIC_HEXCLAVE_PROJECT_ID),
   );
 
   if (!isConfigured) return <SetupRequired />;
@@ -42,13 +38,16 @@ export function AppProviders({
 
 function SetupRequired() {
   return (
-    <main className="flex min-h-dvh items-center justify-center bg-background p-6" id="main-content">
+    <main
+      className="flex min-h-dvh items-center justify-center bg-background p-6"
+      id="main-content"
+    >
       <Card className="w-full max-w-lg">
         <CardHeader>
           <CardTitle>Connect SetterSaga</CardTitle>
           <CardDescription>
-            Add the Convex deployment URL and Hexclave project ID to <code>apps/web/.env.local</code>,
-            then restart the web server.
+            Add the Convex deployment URL and Hexclave project ID to{" "}
+            <code>apps/web/.env.local</code>, then restart the web server.
           </CardDescription>
         </CardHeader>
         <CardContent>

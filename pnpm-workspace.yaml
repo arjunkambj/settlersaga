@@ -12,7 +12,7 @@ catalog:
   "@types/react-dom": ^19.2.3
   tailwind-merge: ^3.6.0
 minimumReleaseAgeExclude:
-  - '@hexclave/next@1.0.80'
-  - '@hexclave/sc@1.0.80'
-  - '@hexclave/shared@1.0.80'
-  - '@hexclave/ui@1.0.80'
+  - "@hexclave/next@1.0.80"
+  - "@hexclave/sc@1.0.80"
+  - "@hexclave/shared@1.0.80"
+  - "@hexclave/ui@1.0.80"

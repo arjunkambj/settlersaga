@@ -6,7 +6,6 @@ import playIcon from "@iconify-icons/solar/play-bold-duotone";
 import { Icon } from "@iconify/react";
 import { useRef, useState } from "react";
 
-
 export function AudioPlayButton({ name, src }: { name: string; src: string }) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -30,7 +29,7 @@ export function AudioPlayButton({ name, src }: { name: string; src: string }) {
       <Button
         aria-label={isPlaying ? `Pause ${name}` : `Play ${name}`}
         aria-pressed={isPlaying}
-        className={""}
+        className="gap-1.5 px-3 py-1 h-8 text-xs font-semibold rounded-lg"
         onClick={togglePlayback}
         size="sm"
         variant="secondary"
