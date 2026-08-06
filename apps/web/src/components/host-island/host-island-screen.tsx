@@ -8,12 +8,13 @@ import backIcon from "@iconify-icons/solar/arrow-left-linear";
 import userIcon from "@iconify-icons/solar/user-bold-duotone";
 import { useMutation } from "convex/react";
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { useAppSession } from "@/components/app/app-session-context";
 import { LobbySettings, type LobbySettingsValue } from "@/components/lobby/lobby-settings";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { LiveMessage } from "@/components/ui/live-message";
 import { Spinner } from "@/components/ui/spinner";
 import { toActionableError } from "@/lib/app/action-errors";
@@ -67,14 +68,13 @@ export function HostIslandScreen() {
     <main className="min-h-dvh bg-background flex flex-col" id="main-content">
       <div className="flex items-center justify-between gap-3 px-4 pt-4">
         <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="icon-sm"
+          <Link
             aria-label="Return home"
-            onClick={() => router.push("/")}
+            className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
+            href="/"
           >
             <Icon icon={backIcon} className="h-5 w-5" />
-          </Button>
+          </Link>
           <span aria-hidden="true" className="text-lg font-black leading-none tracking-tight">
             S
           </span>
