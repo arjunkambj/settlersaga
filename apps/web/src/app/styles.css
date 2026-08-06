@@ -4,77 +4,95 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Congress Blue — dark only. Light mode removed. */
 :root {
+  color-scheme: dark;
   --font-ui:
     var(--font-dm-sans), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
     sans-serif;
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
   font-family: var(--font-ui);
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
+
+  /* Congress Blue palette */
+  --congress-50: #eff4ff;
+  --congress-100: #dfeeff;
+  --congress-200: #b7ddff;
+  --congress-300: #77c1ff;
+  --congress-400: #2fa3ff;
+  --congress-500: #0489f3;
+  --congress-600: #006ed0;
+  --congress-700: #0057a9;
+  --congress-800: #014a8e;
+  --congress-900: #073d73;
+  --congress-950: #05264c;
+
+  --background: #01519c;
+  --foreground: #eff4ff;
+  --card: #0057a9;
+  --card-foreground: #eff4ff;
+  --popover: #0057a9;
+  --popover-foreground: #eff4ff;
+  --primary: #77c1ff;
+  --primary-foreground: #05264c;
+  --secondary: #006ed0;
+  --secondary-foreground: #eff4ff;
+  --muted: #006ed0;
+  --muted-foreground: #eff4ff;
+  --accent: #b7ddff;
+  --accent-foreground: #05264c;
+  --destructive: oklch(0.62 0.21 25);
+  --border: rgba(183, 221, 255, 0.14);
+  --input: rgba(183, 221, 255, 0.14);
+  --ring: #77c1ff;
+  --chart-1: #b7ddff;
+  --chart-2: #77c1ff;
+  --chart-3: #dfeeff;
+  --chart-4: #2fa3ff;
+  --chart-5: #0489f3;
+  --radius: 0.625rem;
+  --sidebar: #014a8e;
+  --sidebar-foreground: #eff4ff;
+  --sidebar-primary: #77c1ff;
+  --sidebar-primary-foreground: #05264c;
+  --sidebar-accent: #006ed0;
+  --sidebar-accent-foreground: #eff4ff;
+  --sidebar-border: rgba(183, 221, 255, 0.14);
+  --sidebar-ring: #77c1ff;
 }
 
+/* Keep .dark identical — app is dark-only (Congress Blue) */
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  color-scheme: dark;
+  --background: #01519c;
+  --foreground: #eff4ff;
+  --card: #0057a9;
+  --card-foreground: #eff4ff;
+  --popover: #0057a9;
+  --popover-foreground: #eff4ff;
+  --primary: #77c1ff;
+  --primary-foreground: #05264c;
+  --secondary: #006ed0;
+  --secondary-foreground: #eff4ff;
+  --muted: #006ed0;
+  --muted-foreground: #eff4ff;
+  --accent: #b7ddff;
+  --accent-foreground: #05264c;
+  --destructive: oklch(0.62 0.21 25);
+  --border: rgba(183, 221, 255, 0.14);
+  --input: rgba(183, 221, 255, 0.14);
+  --ring: #77c1ff;
+  --chart-1: #b7ddff;
+  --chart-2: #77c1ff;
+  --chart-3: #dfeeff;
+  --chart-4: #2fa3ff;
+  --chart-5: #0489f3;
+  --sidebar: #014a8e;
+  --sidebar-foreground: #eff4ff;
+  --sidebar-primary: #77c1ff;
+  --sidebar-primary-foreground: #05264c;
+  --sidebar-accent: #006ed0;
+  --sidebar-accent-foreground: #eff4ff;
+  --sidebar-border: rgba(183, 221, 255, 0.14);
+  --sidebar-ring: #77c1ff;
 }
 
 * {

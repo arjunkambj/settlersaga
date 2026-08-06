@@ -6,8 +6,6 @@ import { HexclaveProvider, HexclaveTheme } from "@hexclave/next";
 import { hexclaveServerApp } from "@/hexclave/server";
 import Providers from "@/components/Providers";
 
-import { DEFAULT_THEME, THEME_STORAGE_KEY } from "@/lib/theme";
-
 import "./styles.css";
 import { cn } from "@/lib/utils";
 
@@ -28,25 +26,13 @@ const dmSans = DM_Sans({
   variable: "--font-dm-sans",
 });
 
-const themeInitializationScript = `try {
-  const theme = localStorage.getItem("${THEME_STORAGE_KEY}") === "dark" ? "dark" : "${DEFAULT_THEME}";
-  const root = document.documentElement;
-  root.classList.remove("light", "dark");
-  root.classList.add(theme);
-  root.dataset.theme = theme;
-} catch {}`;
-
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <html
-      className={cn("light", dmSans.variable, "font-sans", inter.variable)}
-      data-theme="light"
+      className={cn("dark", dmSans.variable, "font-sans", inter.variable)}
+      data-theme="dark"
       lang="en"
-      suppressHydrationWarning
     >
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: themeInitializationScript }} />
-      </head>
       <body className="bg-background text-foreground">
         <HexclaveProvider app={hexclaveServerApp}>
           <HexclaveTheme />

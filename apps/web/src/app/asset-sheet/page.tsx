@@ -28,7 +28,6 @@ import { SOUND_EFFECT_PATHS, type SoundEffect } from "@/lib/game/audio-cues";
 
 import { AssetCard, type AssetCardItem } from "@/components/asset-sheet/asset-card";
 import { TerrainBoardPreview } from "@/components/asset-sheet/terrain-board-preview";
-import { ThemeToggle } from "@/components/asset-sheet/theme-toggle";
 
 export const metadata: Metadata = {
   description: "A category-by-category inventory of SetterSaga's generated and planned assets.",
@@ -437,22 +436,13 @@ const ASSET_CATEGORIES = [
         status: "generated",
       },
       {
-        name: "Parchment light palette",
+        name: "Supercell palette",
         description:
-          "Warm parchment, aubergine ink, royal purple, and token gold mirror the development-card materials and action hierarchy.",
-        format: "#FFF7ED · #43284B · #824193 · #E5A72E",
+          "Congress Blue canvas and deck. #014A8E canvas (800), #0057A9 card (700), #05264C deep, #FFC92C coin gold.",
+        format: "#014A8E · #0057A9 · #05264C · #FFC92C",
         kind: "brand",
         status: "generated",
-        swatches: ["#FFF7ED", "#43284B", "#824193", "#E5A72E"],
-      },
-      {
-        name: "Royal purple dark palette",
-        description:
-          "Deep aubergine, parchment type, token gold, and bright amethyst carry the same card-table atmosphere into dark play.",
-        format: "#2A1234 · #FFF7ED · #F2B83F · #C078CB",
-        kind: "brand",
-        status: "generated",
-        swatches: ["#2A1234", "#FFF7ED", "#F2B83F", "#C078CB"],
+        swatches: ["#014A8E", "#0057A9", "#05264C", "#FFC92C"],
       },
       {
         name: "Player seat colors",
@@ -493,19 +483,16 @@ export default function AssetSheetPage() {
     <main className="min-h-screen bg-background text-foreground overflow-y-auto" id="main-content">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 space-y-8">
         <header className="border-b border-border pb-6 space-y-6">
-          <div className="flex items-center justify-between">
-            <Link
-              className="inline-flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors"
-              href="/"
-            >
-              <Icon aria-hidden="true" icon={arrowLeftIcon} width={16} />
-              Back to game
-            </Link>
-            <ThemeToggle />
-          </div>
+          <Link
+            className="inline-flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors"
+            href="/"
+          >
+            <Icon aria-hidden="true" icon={arrowLeftIcon} width={16} />
+            Back to game
+          </Link>
 
           <div className="space-y-1">
-            <p className="text-xs font-bold uppercase tracking-widest text-amber-500">
+            <p className="text-xs font-bold uppercase tracking-widest text-brand-accent">
               Production inventory
             </p>
             <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl lg:text-5xl">
@@ -557,12 +544,12 @@ function SummaryItem({
   value: number;
 }) {
   return (
-    <div className="flex items-center gap-3.5 rounded-xl border border-border bg-card p-4 shadow-none min-w-[140px]">
+    <div className="flex items-center gap-3.5 rounded-xl border border-border bg-card text-card-foreground p-4 shadow-none min-w-[140px]">
       <span
         className={cn(
           "flex h-9 w-9 items-center justify-center rounded-lg text-lg",
-          tone === "ready" && "text-emerald-500 bg-emerald-500/10",
-          tone === "needed" && "text-amber-500 bg-amber-500/10",
+          tone === "ready" && "text-signal-success bg-signal-success/12",
+          tone === "needed" && "text-signal-warning bg-signal-warning/12",
           tone === "neutral" && "text-muted-foreground bg-muted",
         )}
       >
