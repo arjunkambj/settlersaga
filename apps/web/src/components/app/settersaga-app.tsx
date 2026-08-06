@@ -1,7 +1,7 @@
 "use client";
 
-import { api } from "@colonistsaga/backend/convex/_generated/api";
-import type { GameCommand } from "@colonistsaga/game";
+import { api } from "@settersaga/backend/convex/_generated/api";
+import type { GameCommand } from "@settersaga/game";
 import { type CurrentUser, useHexclaveApp } from "@hexclave/next";
 import { useMutation, useQuery } from "convex/react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -40,7 +40,7 @@ const getParsedPlayerView = createCachedValue(
   parsePlayerView,
 );
 
-export function ColonistSagaApp() {
+export function SetterSagaApp() {
   const hexclave = useHexclaveApp();
   const [user, setUser] = useState<CurrentUser | null>();
   const [userLoadFailed, setUserLoadFailed] = useState(false);

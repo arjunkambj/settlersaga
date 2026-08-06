@@ -4,7 +4,7 @@ import {
   type PixelCoordinate,
   type PlayerColor,
   type PlayerGameView,
-} from "@colonistsaga/game";
+} from "@settersaga/game";
 
 import { getEdgePlacement, getTilePoint, getVertexPoint, type BoardLayout } from "./board-layout";
 

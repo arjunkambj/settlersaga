@@ -12,7 +12,7 @@ import {
   type PlayerGameView,
   type PrivatePlayerState,
   type ResourceInventory,
-} from "@colonistsaga/game";
+} from "@settersaga/game";
 import { Button, Modal } from "@heroui/react";
 import botIcon from "@iconify-icons/game-icons/robot-golem";
 import crownIcon from "@iconify-icons/game-icons/crown";

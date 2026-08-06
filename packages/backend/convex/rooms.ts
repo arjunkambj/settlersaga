@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import type { GameState } from "@colonistsaga/game";
+import type { GameState } from "@settersaga/game";
 
 import { internalMutation, mutation, query } from "./_generated/server";
 import { requireCurrentHexclaveUser } from "./hexclave/auth";

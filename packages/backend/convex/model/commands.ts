@@ -1,4 +1,4 @@
-import type { GameCommand, GameState, ResourceInventory } from "@colonistsaga/game";
+import type { GameCommand, GameState, ResourceInventory } from "@settersaga/game";
 
 import { MAX_SEATS } from "./constants";
 import { fail } from "./errors";

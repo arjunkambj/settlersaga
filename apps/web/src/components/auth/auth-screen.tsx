@@ -52,7 +52,7 @@ export function AuthScreenView({
 
         <div className="auth-reference-copy">
           <h1 className="auth-reference-title" id="auth-title">
-            Welcome to ColonistSaga!
+            Welcome to SetterSaga!
           </h1>
           <p className="auth-reference-subtitle">Play, build, and explore new worlds.</p>
         </div>

@@ -7,7 +7,7 @@ const nextConfig: NextConfig = {
   },
   output: "export",
   reactCompiler: true,
-  transpilePackages: ["@colonistsaga/backend", "@colonistsaga/game"],
+  transpilePackages: ["@settersaga/backend", "@settersaga/game"],
 };
 
 export default nextConfig;

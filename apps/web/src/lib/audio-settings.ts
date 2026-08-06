@@ -8,7 +8,7 @@ export const DEFAULT_AUDIO_SETTINGS: AudioSettings = {
   soundEffectsVolume: 65,
 };
 
-const AUDIO_SETTINGS_STORAGE_KEY = "colonistsaga:audio-settings";
+const AUDIO_SETTINGS_STORAGE_KEY = "settersaga:audio-settings";
 
 function normalizeVolume(value: unknown, fallback: number): number {
   if (typeof value !== "number" || !Number.isFinite(value)) {

@@ -5,8 +5,8 @@ import {
   applyCommand,
   chooseAutomatedCommand,
   createDefaultGame,
-} from "@colonistsaga/game";
-import type { GameState } from "@colonistsaga/game";
+} from "@settersaga/game";
+import type { GameState } from "@settersaga/game";
 
 import {
   resumeAutomatedActionSchedule,

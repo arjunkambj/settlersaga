@@ -1,5 +1,5 @@
-import { axialToPixel, getBoardTopology } from "@colonistsaga/game";
-import type { AxialCoordinate, BoardTopology, PixelCoordinate } from "@colonistsaga/game";
+import { axialToPixel, getBoardTopology } from "@settersaga/game";
+import type { AxialCoordinate, BoardTopology, PixelCoordinate } from "@settersaga/game";
 
 import { BOARD_TILE, PORT_BOAT_RENDER_SIZE } from "@/constants/game/board-assets";
 

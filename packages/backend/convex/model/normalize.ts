@@ -1,5 +1,5 @@
-import { GAME_MAP_IDS, type BaseGameSettings, type GameMapId } from "@colonistsaga/game";
-import { getGameMapDefinition, mapSupportsPlayerCount } from "@colonistsaga/game/maps";
+import { GAME_MAP_IDS, type BaseGameSettings, type GameMapId } from "@settersaga/game";
+import { getGameMapDefinition, mapSupportsPlayerCount } from "@settersaga/game/maps";
 
 import type { StoredBaseGameSettings } from "../schema";
 import { ROOM_CODE_LENGTH } from "./constants";
@@ -40,7 +40,7 @@ export function createPrivateGameSeed(): string {
   const randomParts = Array.from({ length: 4 }, () =>
     Math.floor(Math.random() * Number.MAX_SAFE_INTEGER).toString(36),
   );
-  return `colonistsaga-game-v1:${randomParts.join(":")}`;
+  return `settersaga-game-v1:${randomParts.join(":")}`;
 }
 
 export function validateActionNumber(value: number): number {

@@ -1,4 +1,4 @@
-import { applyCommand, chooseAutomatedCommand } from "@colonistsaga/game";
+import { applyCommand, chooseAutomatedCommand } from "@settersaga/game";
 import { v } from "convex/values";
 
 import { isScheduledActionCurrentAndDue, logicalTurnId } from "../lib/game-scheduling";

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { createDefaultGame, type GameCommand, type GameState } from "@colonistsaga/game";
+import { createDefaultGame, type GameCommand, type GameState } from "@settersaga/game";
 
 import { commandEventKind, commandText, parseCommandKind } from "../convex/model/commands";
 import { commandValidator } from "../convex/model/validators";

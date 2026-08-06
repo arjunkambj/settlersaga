@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { DEFAULT_BASE_GAME_SETTINGS } from "@colonistsaga/game";
+import { DEFAULT_BASE_GAME_SETTINGS } from "@settersaga/game";
 
 import { fitWaitingSeatsToSettings, setWaitingBotCount } from "../convex/model/gameState";
 import type { RoomRecord, SeatRecord } from "../convex/model/types";

@@ -1,4 +1,4 @@
-import { createBoard } from "@colonistsaga/game";
+import { createBoard } from "@settersaga/game";
 
 import {
   TERRAIN_ATLAS,

@@ -1,6 +1,6 @@
 "use client";
 
-import type { ResourceInventory, ResourceType } from "@colonistsaga/game";
+import type { ResourceInventory, ResourceType } from "@settersaga/game";
 import {
   createContext,
   type ReactNode,

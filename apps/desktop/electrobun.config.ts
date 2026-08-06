@@ -4,8 +4,8 @@ const webBuildDir = "../web/out";
 
 export default {
   app: {
-    name: "ColonistSaga",
-    identifier: "dev.bettertstack.colonistsaga.desktop",
+    name: "SetterSaga",
+    identifier: "dev.bettertstack.settersaga.desktop",
     version: "0.0.1",
   },
   runtime: {

@@ -1,4 +1,4 @@
-import type { ResourceType } from "@colonistsaga/game";
+import type { ResourceType } from "@settersaga/game";
 
 import { getResourceCardAssetPath } from "@/constants/game/card-assets";
 

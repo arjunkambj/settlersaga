@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { DEFAULT_BASE_GAME_SETTINGS } from "@colonistsaga/game";
+import { DEFAULT_BASE_GAME_SETTINGS } from "@settersaga/game";
 import type { RegisteredMutation } from "convex/server";
 import { ConvexError, type Infer } from "convex/values";
 

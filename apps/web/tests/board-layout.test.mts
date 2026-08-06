@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { createBoard, type GameMapId } from "@colonistsaga/game";
+import { createBoard, type GameMapId } from "@settersaga/game";
 
 import { PORT_BOAT_RENDER_SIZE } from "../src/constants/game/board-assets";
 import {

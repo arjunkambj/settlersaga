@@ -1,4 +1,4 @@
-import { PLAYER_COLORS, type PlayerColor } from "@colonistsaga/game";
+import { PLAYER_COLORS, type PlayerColor } from "@settersaga/game";
 
 export const PLAYER_PORTRAIT_PATHS: Readonly<Record<PlayerColor, string>> = {
   blue: "/game-assets/players/blue-cartographer.png",

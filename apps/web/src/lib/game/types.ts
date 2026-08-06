@@ -1,5 +1,5 @@
-import type { api } from "@colonistsaga/backend/convex/_generated/api";
-import { assertPlayerGameView, type PlayerGameView } from "@colonistsaga/game";
+import type { api } from "@settersaga/backend/convex/_generated/api";
+import { assertPlayerGameView, type PlayerGameView } from "@settersaga/game";
 import type { FunctionReturnType } from "convex/server";
 
 export type RoomView = NonNullable<FunctionReturnType<typeof api.rooms.getRoom>>;

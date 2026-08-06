@@ -4,8 +4,8 @@ import {
   type BaseGameSettings,
   type GameMapId,
   type PlayerColor,
-} from "@colonistsaga/game";
-import { getGameMapDefinition } from "@colonistsaga/game/maps";
+} from "@settersaga/game";
+import { getGameMapDefinition } from "@settersaga/game/maps";
 
 export type BotCount = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
 

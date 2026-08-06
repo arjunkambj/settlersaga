@@ -1,7 +1,7 @@
 "use client";
 
-import type { BaseGameSettings, BotDifficulty, GameMapId } from "@colonistsaga/game";
-import { AVAILABLE_GAME_MAPS, getGameMapDefinition } from "@colonistsaga/game/maps";
+import type { BaseGameSettings, BotDifficulty, GameMapId } from "@settersaga/game";
+import { AVAILABLE_GAME_MAPS, getGameMapDefinition } from "@settersaga/game/maps";
 import { Description, Label, ListBox, NumberField, Select, Switch } from "@heroui/react";
 import { useId } from "react";
 import type { CSSProperties } from "react";

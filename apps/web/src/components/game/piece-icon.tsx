@@ -1,4 +1,4 @@
-import type { PlayerColor } from "@colonistsaga/game";
+import type { PlayerColor } from "@settersaga/game";
 import type { CSSProperties } from "react";
 
 export type PieceAsset = "city" | "road" | "settlement";

@@ -72,7 +72,7 @@ function SetupRequired() {
         C
       </div>
       <p className="eyebrow">One Last Step</p>
-      <h1>Connect ColonistSaga</h1>
+      <h1>Connect SetterSaga</h1>
       <p>
         Add the Convex deployment URL and Hexclave project ID to
         <code> apps/web/.env.local</code>, then restart the web server.

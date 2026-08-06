@@ -1,4 +1,4 @@
-import { PLAYER_COLORS, type BotDifficulty } from "@colonistsaga/game";
+import { PLAYER_COLORS, type BotDifficulty } from "@settersaga/game";
 
 export const MAX_SEATS = PLAYER_COLORS.length;
 export const DEFAULT_BOT_DIFFICULTY: BotDifficulty = "medium";

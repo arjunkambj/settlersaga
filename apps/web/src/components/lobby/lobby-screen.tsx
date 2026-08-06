@@ -1,7 +1,7 @@
 "use client";
 
-import type { BaseGameSettings } from "@colonistsaga/game";
-import { getGameMapDefinition } from "@colonistsaga/game/maps";
+import type { BaseGameSettings } from "@settersaga/game";
+import { getGameMapDefinition } from "@settersaga/game/maps";
 import { Button } from "@heroui/react";
 import botIcon from "@iconify-icons/game-icons/robot-golem";
 import crownIcon from "@iconify-icons/game-icons/crown";

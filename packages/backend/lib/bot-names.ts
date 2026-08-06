@@ -1,4 +1,4 @@
-import { chooseBotName } from "@colonistsaga/game";
+import { chooseBotName } from "@settersaga/game";
 
 import type { RoomId, SeatDoc } from "../convex/model/types";
 

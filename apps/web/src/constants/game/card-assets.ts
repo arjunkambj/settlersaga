@@ -1,4 +1,4 @@
-import type { ResourceType } from "@colonistsaga/game";
+import type { ResourceType } from "@settersaga/game";
 
 export const RESOURCE_CARD_ASSET_PATHS: Readonly<Record<ResourceType, string>> = {
   brick: "/game-assets/cards/resources/brick-card.png",

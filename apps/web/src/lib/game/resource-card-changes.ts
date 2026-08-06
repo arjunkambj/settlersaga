@@ -1,4 +1,4 @@
-import { RESOURCE_ORDER, type ResourceInventory, type ResourceType } from "@colonistsaga/game";
+import { RESOURCE_ORDER, type ResourceInventory, type ResourceType } from "@settersaga/game";
 
 export interface ResourceCardChange {
   amount: number;

@@ -14,7 +14,7 @@ import {
   type GamePlayerInput,
   type GameState,
   type ResourceInventory,
-} from "@colonistsaga/game";
+} from "@settersaga/game";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 

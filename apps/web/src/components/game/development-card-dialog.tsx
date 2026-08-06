@@ -7,7 +7,7 @@ import {
   type GameCommand,
   type ResourceInventory,
   type ResourceType,
-} from "@colonistsaga/game";
+} from "@settersaga/game";
 import { Button } from "@heroui/react";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";

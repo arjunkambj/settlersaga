@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { DM_Sans } from "next/font/google";
+import { DM_Sans, Inter } from "next/font/google";
 import type { ReactNode } from "react";
 import Link from "next/link";
 
@@ -9,10 +9,13 @@ import "./styles.css";
 import "./liquid-glass.css";
 import "./reference-screens.css";
 import "./game-footer.css";
+import { cn } from "@/lib/utils";
+
+const inter = Inter({subsets:['latin'],variable:'--font-sans'});
 
 export const metadata: Metadata = {
   description: "A friendly real-time island-building board game.",
-  title: "ColonistSaga",
+  title: "SetterSaga",
 };
 
 export const viewport: Viewport = {
@@ -36,7 +39,7 @@ const themeInitializationScript = `try {
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <html
-      className={`${dmSans.variable} light`}
+      className={cn("light", dmSans.variable, "font-sans", inter.variable)}
       data-theme="light"
       lang="en"
       suppressHydrationWarning

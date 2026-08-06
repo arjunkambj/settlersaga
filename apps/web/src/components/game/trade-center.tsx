@@ -8,7 +8,7 @@ import {
   type PrivatePlayerState,
   type ResourceInventory,
   type ResourceType,
-} from "@colonistsaga/game";
+} from "@settersaga/game";
 import { Button, Checkbox } from "@heroui/react";
 import handshakeIcon from "@iconify-icons/game-icons/shaking-hands";
 import storeIcon from "@iconify-icons/game-icons/shop";

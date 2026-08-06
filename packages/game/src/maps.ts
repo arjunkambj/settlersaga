@@ -59,7 +59,7 @@ export const GAME_MAP_DEFINITIONS: Readonly<Record<GameMapId, GameMapDefinition>
     tileCount: 30,
   }),
   "extended-8": Object.freeze({
-    description: "37 terrain tiles and 2 deserts — Colonist's 7–8 player board size.",
+    description: "37 terrain tiles and 2 deserts — Setter's 7–8 player board size.",
     id: "extended-8",
     label: "7–8 player map",
     numberTokens: Object.freeze(EXTENDED_8_NUMBER_TOKENS),

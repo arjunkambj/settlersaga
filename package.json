@@ -1,5 +1,5 @@
 {
-  "name": "colonistsaga",
+  "name": "settersaga",
   "private": true,
   "workspaces": [
     "apps/*",
@@ -14,18 +14,18 @@
     "dev:desktop": "turbo run dev:hmr -F desktop",
     "build:desktop": "turbo run build:stable -F desktop",
     "build:desktop:canary": "turbo run build:canary -F desktop",
-    "dev:server": "turbo run dev -F @colonistsaga/backend",
-    "dev:setup": "turbo run dev:setup -F @colonistsaga/backend",
+    "dev:server": "turbo run dev -F @settersaga/backend",
+    "dev:setup": "turbo run dev:setup -F @settersaga/backend",
     "test": "bun test packages/game/tests packages/backend/tests apps/web/tests",
     "check": "oxlint && oxfmt --write"
   },
   "dependencies": {
-    "@colonistsaga/env": "workspace:*",
+    "@settersaga/env": "workspace:*",
     "dotenv": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@colonistsaga/config": "workspace:*",
+    "@settersaga/config": "workspace:*",
     "@hexclave/next": "^1.0.51",
     "@types/bun": "^1.3.14",
     "@types/node": "^22.13.14",

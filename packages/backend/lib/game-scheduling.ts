@@ -1,4 +1,4 @@
-import type { BaseGameSettings, GameState } from "@colonistsaga/game";
+import type { BaseGameSettings, GameState } from "@settersaga/game";
 
 export const BOT_ACTION_DELAY_MS = 950;
 

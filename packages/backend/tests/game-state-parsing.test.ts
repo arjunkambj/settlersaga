@@ -5,7 +5,7 @@ import {
   getBoardTopology,
   type DevelopmentCardType,
   type ResourceInventory,
-} from "@colonistsaga/game";
+} from "@settersaga/game";
 
 import { parseGameState, serializeGameState } from "../convex/model/gameState";
 

@@ -12,7 +12,7 @@ import {
   LONGEST_ROAD_VICTORY_POINTS,
   getRequiredPlayerIds,
   toPlayerView,
-} from "@colonistsaga/game";
+} from "@settersaga/game";
 import type {
   BaseGameSettings,
   BotDifficulty,
@@ -20,7 +20,7 @@ import type {
   GameCommand,
   GamePlayerInput,
   GameState,
-} from "@colonistsaga/game";
+} from "@settersaga/game";
 
 import {
   logicalTurnId,

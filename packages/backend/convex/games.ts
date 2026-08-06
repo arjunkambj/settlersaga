@@ -1,5 +1,5 @@
-import { DEFAULT_BASE_GAME_SETTINGS, applyCommand as applyGameCommand } from "@colonistsaga/game";
-import type { GameCommand } from "@colonistsaga/game";
+import { DEFAULT_BASE_GAME_SETTINGS, applyCommand as applyGameCommand } from "@settersaga/game";
+import type { GameCommand } from "@settersaga/game";
 import { ConvexError, v } from "convex/values";
 
 import { mutation } from "./_generated/server";

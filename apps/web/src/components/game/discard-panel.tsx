@@ -8,7 +8,7 @@ import {
   type PrivatePlayerState,
   type ResourceInventory,
   type ResourceType,
-} from "@colonistsaga/game";
+} from "@settersaga/game";
 import { Button } from "@heroui/react";
 import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";

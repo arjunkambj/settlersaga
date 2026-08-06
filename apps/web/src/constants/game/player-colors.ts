@@ -1,4 +1,4 @@
-import type { PlayerColor } from "@colonistsaga/game";
+import type { PlayerColor } from "@settersaga/game";
 
 /**
  * Canonical player palette for canvas and other non-CSS renderers.

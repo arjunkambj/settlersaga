@@ -1,6 +1,6 @@
 "use client";
 
-import { DEFAULT_BASE_GAME_SETTINGS } from "@colonistsaga/game";
+import { DEFAULT_BASE_GAME_SETTINGS } from "@settersaga/game";
 import { Button, Input, Label, Modal, TextField } from "@heroui/react";
 import botIcon from "@iconify-icons/game-icons/robot-golem";
 import diceIcon from "@iconify-icons/game-icons/rolling-dice-cup";

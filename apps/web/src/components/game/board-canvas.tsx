@@ -6,7 +6,7 @@ import {
   type PlayerColor,
   type PlayerGameView,
   type ResourceType,
-} from "@colonistsaga/game";
+} from "@settersaga/game";
 import {
   memo,
   useEffect,

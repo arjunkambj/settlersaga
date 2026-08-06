@@ -32,8 +32,8 @@ import { TerrainBoardPreview } from "./terrain-board-preview";
 import { ThemeToggle } from "./theme-toggle";
 
 export const metadata: Metadata = {
-  description: "A category-by-category inventory of ColonistSaga's generated and planned assets.",
-  title: "Asset Sheet · ColonistSaga",
+  description: "A category-by-category inventory of SetterSaga's generated and planned assets.",
+  title: "Asset Sheet · SetterSaga",
 };
 
 interface AssetItem extends AssetCardItem {

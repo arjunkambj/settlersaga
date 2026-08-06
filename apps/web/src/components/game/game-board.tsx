@@ -5,7 +5,7 @@ import {
   type PlayerGameView,
   type PlayerViewState,
   type ResourceType,
-} from "@colonistsaga/game";
+} from "@settersaga/game";
 import {
   useEffect,
   useMemo,
