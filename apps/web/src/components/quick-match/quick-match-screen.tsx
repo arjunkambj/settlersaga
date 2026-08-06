@@ -5,6 +5,7 @@ import { DEFAULT_BASE_GAME_SETTINGS } from "@settersaga/game";
 import { Icon } from "@iconify/react";
 import botIcon from "@iconify-icons/game-icons/robot-golem";
 import backIcon from "@iconify-icons/solar/arrow-left-linear";
+import userIcon from "@iconify-icons/solar/user-bold-duotone";
 import { useMutation } from "convex/react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -56,9 +57,36 @@ export function QuickMatchScreen() {
     }
   };
 
+  const applyPreset = (preset: "standard" | "duel" | "conquest") => {
+    if (preset === "standard") {
+      setQuickSettings({
+        botCount: 3,
+        botDifficulty: "medium",
+        settings: { ...DEFAULT_BASE_GAME_SETTINGS, maxPlayers: 4, victoryPoints: 10 },
+      });
+    } else if (preset === "duel") {
+      setQuickSettings({
+        botCount: 2,
+        botDifficulty: "hard",
+        settings: {
+          ...DEFAULT_BASE_GAME_SETTINGS,
+          maxPlayers: 3,
+          turnTimerSeconds: 30,
+          victoryPoints: 10,
+        },
+      });
+    } else if (preset === "conquest") {
+      setQuickSettings({
+        botCount: 3,
+        botDifficulty: "hard",
+        settings: { ...DEFAULT_BASE_GAME_SETTINGS, maxPlayers: 4, victoryPoints: 12 },
+      });
+    }
+  };
+
   return (
-    <main className="min-h-dvh bg-background" id="main-content">
-      <header className="flex items-center justify-between border-b bg-card px-4 py-3">
+    <main className="min-h-dvh bg-background flex flex-col" id="main-content">
+      <header className="sticky top-0 z-20 flex items-center justify-between border-b bg-card/90 backdrop-blur-xs px-4 py-3 shadow-2xs">
         <div className="flex items-center gap-3">
           <Button
             variant="ghost"
@@ -68,37 +96,73 @@ export function QuickMatchScreen() {
           >
             <Icon icon={backIcon} className="h-5 w-5" />
           </Button>
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground text-sm font-bold">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground text-sm font-black shadow-xs">
               S
             </div>
             <div>
-              <p className="text-sm font-bold leading-none">Quick Match</p>
-              <p className="text-xs text-muted-foreground">Instant Bot Matchmaking</p>
+              <p className="text-sm font-bold leading-tight">Quick Match</p>
+              <p className="text-xs text-muted-foreground">Instant Bot Voyage</p>
             </div>
           </div>
         </div>
+
+        <div className="flex items-center gap-2 rounded-full border bg-muted/40 px-3 py-1 text-xs font-semibold text-foreground">
+          <Icon icon={userIcon} className="h-3.5 w-3.5 text-primary" />
+          <span>{displayName || "Explorer"}</span>
+        </div>
       </header>
 
-      <div className="mx-auto max-w-3xl p-4 sm:p-6">
-        <div className="mb-6 flex flex-col sm:flex-row items-center gap-4 rounded-xl border bg-card p-4 shadow-xs">
+      <div className="mx-auto max-w-4xl w-full p-4 sm:p-6 space-y-6 flex-1">
+        <div className="flex flex-col sm:flex-row items-center gap-5 rounded-2xl border bg-card p-5 shadow-xs">
           <Image
             alt="Quick Match Voyage"
-            className="h-24 w-auto object-contain rounded-md"
+            className="h-28 w-auto object-contain shrink-0"
             height={200}
             src="/home-assets/menu/quick-match-v2.png"
             width={320}
           />
-          <div>
-            <h1 className="text-xl font-bold">Quick Match Setup</h1>
-            <p className="text-xs sm:text-sm text-muted-foreground">
-              Fill open seats instantly with AI explorers and jump right onto the island with your
-              custom rules.
+          <div className="space-y-2 text-center sm:text-left">
+            <div className="inline-flex items-center gap-1.5 rounded-md bg-primary/10 px-2.5 py-0.5 text-xs font-bold text-primary">
+              <Icon icon={botIcon} className="h-3.5 w-3.5" /> Singleplayer & Bot AI
+            </div>
+            <h1 className="text-2xl font-bold tracking-tight">Quick Match Voyage</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+              Launch an instant game populated with AI explorers. Customize rules, victory points,
+              and bot difficulty below, or select a preset to begin.
             </p>
           </div>
         </div>
 
-        <div className="rounded-xl border bg-card p-4 sm:p-6 shadow-xs space-y-6">
+        <div className="flex flex-wrap items-center gap-2 bg-muted/30 p-2 rounded-xl border">
+          <span className="text-xs font-bold text-muted-foreground px-2">Presets:</span>
+          <Button
+            size="xs"
+            variant="outline"
+            onClick={() => applyPreset("standard")}
+            className="rounded-lg text-xs"
+          >
+            Standard (4P, Medium)
+          </Button>
+          <Button
+            size="xs"
+            variant="outline"
+            onClick={() => applyPreset("duel")}
+            className="rounded-lg text-xs"
+          >
+            Fast Duel (3P, Hard, Timed)
+          </Button>
+          <Button
+            size="xs"
+            variant="outline"
+            onClick={() => applyPreset("conquest")}
+            className="rounded-lg text-xs"
+          >
+            High VP Conquest (12 VP)
+          </Button>
+        </div>
+
+        <div className="rounded-2xl border bg-card p-5 sm:p-7 shadow-xs space-y-6">
           <LobbySettings
             botCount={quickSettings.botCount}
             botDifficulty={quickSettings.botDifficulty}
@@ -115,27 +179,29 @@ export function QuickMatchScreen() {
           />
 
           {error ? (
-            <div className="flex justify-center">
+            <div className="flex justify-center pt-2">
               <LiveMessage message={error} />
             </div>
           ) : null}
 
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t pt-4">
-            <p className="text-xs text-muted-foreground">
-              Quick matches fill all open seats with bots for the selected map and difficulty.
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t pt-5">
+            <p className="text-xs text-muted-foreground text-center sm:text-left">
+              Quick match reserves all open seats for AI bots and launches immediately into the
+              island.
             </p>
             <Button
-              className="w-full sm:w-auto min-w-[200px]"
+              className="w-full sm:w-auto min-w-[220px] h-11 text-base font-bold rounded-xl shadow-xs"
               disabled={isPending || !displayName.trim()}
               onClick={() => void handleStartQuickMatch()}
             >
-              <Icon icon={botIcon} className="mr-2 h-4 w-4" />
               {pendingAction === "quick" ? (
                 <>
-                  <Spinner data-icon="inline-start" /> Building the Island...
+                  <Spinner data-icon="inline-start" /> Building Island...
                 </>
               ) : (
-                "Start Quick Match"
+                <>
+                  <Icon icon={botIcon} className="mr-2 h-5 w-5" /> Start Quick Match
+                </>
               )}
             </Button>
           </div>

@@ -2,8 +2,6 @@
 
 import type { BaseGameSettings, BotDifficulty, GameMapId } from "@settersaga/game";
 import { AVAILABLE_GAME_MAPS, getGameMapDefinition } from "@settersaga/game/maps";
-import { useId } from "react";
-import type { CSSProperties } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
@@ -51,7 +49,6 @@ const BOT_DIFFICULTY_OPTIONS = [
   value: BotDifficulty;
 }>;
 
-const LIGHT_PANEL_STYLE = { colorScheme: "light" } satisfies CSSProperties;
 export interface LobbySettingsValue {
   readonly botCount: BotCount;
   readonly botDifficulty: BotDifficulty;
@@ -77,7 +74,6 @@ export function LobbySettings({
   onChange,
   settings,
 }: LobbySettingsProps) {
-  const id = useId();
   const botLimit = getBotCapacity(settings.maxPlayers, humanCount);
   const botFloor = toBotCount(Math.min(minBotCount, botLimit));
   const selectedMap = getGameMapDefinition(settings.map);
@@ -106,28 +102,27 @@ export function LobbySettings({
   };
 
   return (
-    <fieldset
-      aria-describedby={`${id}-description`}
-      className="lobby-settings-panel"
-      disabled={disabled}
-      style={LIGHT_PANEL_STYLE}
-    >
-      <legend className="lobby-settings-title">Standard Game Settings</legend>
-      <p className="lobby-settings-intro" id={`${id}-description`}>
-        Configure the standard base game rules, seats, and table options.
-      </p>
+    <fieldset className="space-y-6 border-0 p-0 m-0" disabled={disabled}>
+      <legend className="sr-only">Standard Game Settings</legend>
 
-      <div className="lobby-settings-grid">
-        <section aria-labelledby={`${id}-rules-title`} className="lobby-settings-group">
-          <header className="lobby-settings-group-header">
-            <h2 id={`${id}-rules-title`}>Game Rules</h2>
-            <p>Choose the win target and the limits used during play.</p>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <section
+          aria-labelledby="${id}-rules-title"
+          className="rounded-xl border bg-card/60 p-4 sm:p-5 space-y-4 shadow-xs"
+        >
+          <header className="space-y-1 border-b pb-3">
+            <h2 id="${id}-rules-title" className="text-base font-bold text-foreground">
+              Game Rules
+            </h2>
+            <p className="text-xs text-muted-foreground">
+              Choose the win target and turn limits for play.
+            </p>
           </header>
 
           <NumberSetting
-            description="The first player to reach this total wins."
+            description="First player to reach this total wins."
             disabled={disabled}
-            id={`${id}-victory-points`}
+            id="${id}-victory-points"
             label="Victory Points"
             max={13}
             min={3}
@@ -136,9 +131,9 @@ export function LobbySettings({
           />
 
           <NumberSetting
-            description="Players above this many resource cards discard half after a 7."
+            description="Players with more cards discard half after a 7."
             disabled={disabled}
-            id={`${id}-discard-limit`}
+            id="${id}-discard-limit"
             label="Discard Limit"
             max={20}
             min={5}
@@ -146,8 +141,11 @@ export function LobbySettings({
             value={settings.discardLimit}
           />
 
-          <Field className="lobby-settings-control">
-            <FieldLabel htmlFor={`${id}-turn-timer`} className="lobby-settings-label">
+          <Field className="space-y-1.5">
+            <FieldLabel
+              htmlFor="${id}-turn-timer"
+              className="text-sm font-semibold text-foreground"
+            >
               Turn Timer
             </FieldLabel>
             <Select
@@ -160,27 +158,33 @@ export function LobbySettings({
                 )
               }
             >
-              <SelectTrigger id={`${id}-turn-timer`} className="lobby-settings-select">
+              <SelectTrigger
+                id="${id}-turn-timer"
+                className="w-full h-9 bg-background border rounded-lg px-3 text-sm flex items-center justify-between font-medium"
+              >
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="lobby-settings-popover">
+              <SelectContent>
                 {TURN_TIMER_OPTIONS.map((seconds) => (
                   <SelectItem key={seconds} value={String(seconds)}>
-                    {seconds === 0 ? "Off" : `${seconds} seconds`}
+                    {seconds === 0 ? "Off (Untimed)" : `${seconds} seconds`}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
             <FieldDescription
-              className="lobby-settings-description"
-              id={`${id}-turn-timer-description`}
+              className="text-xs text-muted-foreground"
+              id="${id}-turn-timer-description"
             >
-              Off keeps turns untimed. Timed turns show a shared countdown.
+              Timed turns display a shared turn countdown.
             </FieldDescription>
           </Field>
 
-          <Field className="lobby-settings-control">
-            <FieldLabel htmlFor={`${id}-max-players`} className="lobby-settings-label">
+          <Field className="space-y-1.5">
+            <FieldLabel
+              htmlFor="${id}-max-players"
+              className="text-sm font-semibold text-foreground"
+            >
               Max Players
             </FieldLabel>
             <Select
@@ -196,10 +200,13 @@ export function LobbySettings({
                 );
               }}
             >
-              <SelectTrigger id={`${id}-max-players`} className="lobby-settings-select">
+              <SelectTrigger
+                id="${id}-max-players"
+                className="w-full h-9 bg-background border rounded-lg px-3 text-sm flex items-center justify-between font-medium"
+              >
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="lobby-settings-popover">
+              <SelectContent>
                 {selectedMap.playerCounts.map((playerCount) => (
                   <SelectItem
                     key={playerCount}
@@ -212,29 +219,36 @@ export function LobbySettings({
               </SelectContent>
             </Select>
             <FieldDescription
-              className="lobby-settings-description"
-              id={`${id}-max-players-description`}
+              className="text-xs text-muted-foreground"
+              id="${id}-max-players-description"
             >
               {selectedMap.description}
             </FieldDescription>
           </Field>
         </section>
 
-        <section aria-labelledby={`${id}-bots-title`} className="lobby-settings-group">
-          <header className="lobby-settings-group-header">
-            <h2 id={`${id}-bots-title`}>Bot Players</h2>
-            <p>Reserve open seats for bots and set one shared difficulty.</p>
+        <section
+          aria-labelledby="${id}-bots-title"
+          className="rounded-xl border bg-card/60 p-4 sm:p-5 space-y-4 shadow-xs"
+        >
+          <header className="space-y-1 border-b pb-3">
+            <h2 id="${id}-bots-title" className="text-base font-bold text-foreground">
+              Bot Players
+            </h2>
+            <p className="text-xs text-muted-foreground">
+              Reserve open seats for bots and set difficulty.
+            </p>
           </header>
 
-          <Field className="lobby-settings-control">
-            <FieldLabel htmlFor={`${id}-bot-count`} className="lobby-settings-label">
+          <Field className="space-y-1.5">
+            <FieldLabel htmlFor="${id}-bot-count" className="text-sm font-semibold text-foreground">
               Bot Seats
             </FieldLabel>
-            <div className="lobby-settings-stepper">
+            <div className="flex items-center gap-2">
               <Button
                 type="button"
                 aria-label="Remove one bot seat"
-                className="lobby-settings-step-button"
+                className="h-8 w-8 rounded-lg font-bold shrink-0"
                 disabled={disabled || botCount <= botFloor}
                 onClick={() => emit(settings, toBotCount(botCount - 1))}
                 size="icon-sm"
@@ -243,8 +257,8 @@ export function LobbySettings({
                 −
               </Button>
               <Input
-                id={`${id}-bot-count`}
-                className="lobby-settings-step-value"
+                id="${id}-bot-count"
+                className="h-8 w-14 text-center font-mono font-bold text-sm bg-muted/30 border rounded-lg px-0 shrink-0"
                 disabled={disabled}
                 readOnly
                 value={String(botCount)}
@@ -252,7 +266,7 @@ export function LobbySettings({
               <Button
                 type="button"
                 aria-label="Add one bot seat"
-                className="lobby-settings-step-button"
+                className="h-8 w-8 rounded-lg font-bold shrink-0"
                 disabled={disabled || botCount >= botLimit}
                 onClick={() => emit(settings, toBotCount(botCount + 1))}
                 size="icon-sm"
@@ -262,19 +276,22 @@ export function LobbySettings({
               </Button>
             </div>
             <FieldDescription
-              className="lobby-settings-description"
-              id={`${id}-bot-count-description`}
+              className="text-xs text-muted-foreground"
+              id="${id}-bot-count-description"
             >
               {botLimit === 0
-                ? "No bot seats are available for this table."
+                ? "No bot seats available."
                 : botFloor === botLimit
-                  ? `${botLimit} bot ${botLimit === 1 ? "seat is" : "seats are"} required for this table.`
-                  : `Choose ${botFloor}–${botLimit} bot seats for this table.`}
+                  ? `${botLimit} bot seat${botLimit === 1 ? "" : "s"} required.`
+                  : `Choose ${botFloor}–${botLimit} bot seats.`}
             </FieldDescription>
           </Field>
 
-          <Field className="lobby-settings-control">
-            <FieldLabel htmlFor={`${id}-bot-difficulty`} className="lobby-settings-label">
+          <Field className="space-y-1.5">
+            <FieldLabel
+              htmlFor="${id}-bot-difficulty"
+              className="text-sm font-semibold text-foreground"
+            >
               Bot Difficulty
             </FieldLabel>
             <Select
@@ -282,10 +299,13 @@ export function LobbySettings({
               value={botDifficulty}
               onValueChange={(value) => emit(settings, botCount, value as BotDifficulty)}
             >
-              <SelectTrigger id={`${id}-bot-difficulty`} className="lobby-settings-select">
+              <SelectTrigger
+                id="${id}-bot-difficulty"
+                className="w-full h-9 bg-background border rounded-lg px-3 text-sm flex items-center justify-between font-medium"
+              >
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="lobby-settings-popover">
+              <SelectContent>
                 {BOT_DIFFICULTY_OPTIONS.map((option) => (
                   <SelectItem key={option.value} value={option.value}>
                     {option.label}
@@ -294,23 +314,30 @@ export function LobbySettings({
               </SelectContent>
             </Select>
             <FieldDescription
-              className="lobby-settings-description"
-              id={`${id}-bot-difficulty-description`}
+              className="text-xs text-muted-foreground"
+              id="${id}-bot-difficulty-description"
             >
               {selectedDifficulty.description}
             </FieldDescription>
           </Field>
         </section>
 
-        <section aria-labelledby={`${id}-options-title`} className="lobby-settings-group">
-          <header className="lobby-settings-group-header">
-            <h2 id={`${id}-options-title`}>Table Options</h2>
-            <p>Apply the same optional rules to every player.</p>
+        <section
+          aria-labelledby="${id}-options-title"
+          className="rounded-xl border bg-card/60 p-4 sm:p-5 space-y-4 shadow-xs md:col-span-2"
+        >
+          <header className="space-y-1 border-b pb-3">
+            <h2 id="${id}-options-title" className="text-base font-bold text-foreground">
+              Table Options & Optional Rules
+            </h2>
+            <p className="text-xs text-muted-foreground">
+              Configure map layout and special game rules.
+            </p>
           </header>
 
-          <Field className="lobby-settings-control">
-            <FieldLabel htmlFor={`${id}-map`} className="lobby-settings-label">
-              Map Size
+          <Field className="space-y-1.5">
+            <FieldLabel htmlFor="${id}-map" className="text-sm font-semibold text-foreground">
+              Map Layout
             </FieldLabel>
             <Select
               disabled={disabled}
@@ -329,10 +356,13 @@ export function LobbySettings({
                 );
               }}
             >
-              <SelectTrigger id={`${id}-map`} className="lobby-settings-select">
+              <SelectTrigger
+                id="${id}-map"
+                className="w-full sm:w-72 h-9 bg-background border rounded-lg px-3 text-sm flex items-center justify-between font-medium"
+              >
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="lobby-settings-popover">
+              <SelectContent>
                 {AVAILABLE_GAME_MAPS.map((map) => (
                   <SelectItem
                     key={map.id}
@@ -346,42 +376,39 @@ export function LobbySettings({
                 ))}
               </SelectContent>
             </Select>
-            <FieldDescription className="lobby-settings-description" id={`${id}-map-description`}>
+            <FieldDescription className="text-xs text-muted-foreground" id="${id}-map-description">
               {selectedMap.description}
             </FieldDescription>
           </Field>
 
-          <RuleToggle
-            checked={settings.friendlyRobber}
-            description="The robber cannot target a player with 2 or fewer victory points."
-            disabled={disabled}
-            id={`${id}-friendly-robber`}
-            label="Friendly Robber"
-            name="friendlyRobber"
-            onChange={(checked) => updateSetting("friendlyRobber", checked)}
-          />
-          <RuleToggle
-            checked={settings.balancedDice}
-            description="Reduces short streaks while keeping rolls deterministic and fair."
-            disabled={disabled}
-            id={`${id}-balanced-dice`}
-            label="Balanced Dice"
-            name="balancedDice"
-            onChange={(checked) => updateSetting("balancedDice", checked)}
-          />
-          <RuleToggle
-            checked={settings.hideBankCards}
-            description="Players see each resource type without its exact remaining bank count."
-            disabled={disabled}
-            id={`${id}-hide-bank-counts`}
-            label="Hide Bank Counts"
-            name="hideBankCards"
-            onChange={(checked) => updateSetting("hideBankCards", checked)}
-          />
-          <div className="lobby-settings-static">
-            <span className="lobby-settings-label">Table Access</span>
-            <strong>Invite code only</strong>
-            <small>Private rooms and bot games never enter public matchmaking.</small>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+            <RuleToggle
+              checked={settings.friendlyRobber}
+              description="Robber cannot target players with <=2 VP."
+              disabled={disabled}
+              id="${id}-friendly-robber"
+              label="Friendly Robber"
+              name="friendlyRobber"
+              onChange={(checked) => updateSetting("friendlyRobber", checked)}
+            />
+            <RuleToggle
+              checked={settings.balancedDice}
+              description="Reduces extreme dice roll streaks."
+              disabled={disabled}
+              id="${id}-balanced-dice"
+              label="Balanced Dice"
+              name="balancedDice"
+              onChange={(checked) => updateSetting("balancedDice", checked)}
+            />
+            <RuleToggle
+              checked={settings.hideBankCards}
+              description="Hides exact card counts in bank."
+              disabled={disabled}
+              id="${id}-hide-bank-counts"
+              label="Hide Bank Cards"
+              name="hideBankCards"
+              onChange={(checked) => updateSetting("hideBankCards", checked)}
+            />
           </div>
         </section>
       </div>
@@ -411,15 +438,15 @@ function NumberSetting({
   const decrement = () => onChange(clampInteger(value - 1, min, max));
   const increment = () => onChange(clampInteger(value + 1, min, max));
   return (
-    <Field className="lobby-settings-control">
-      <FieldLabel htmlFor={id} className="lobby-settings-label" id={`${id}-label`}>
+    <Field className="space-y-1.5">
+      <FieldLabel htmlFor={id} className="text-sm font-semibold text-foreground" id="${id}-label">
         {label}
       </FieldLabel>
-      <div className="lobby-settings-stepper">
+      <div className="flex items-center gap-2">
         <Button
           type="button"
           aria-label={`Decrease ${label.toLowerCase()}`}
-          className="lobby-settings-step-button"
+          className="h-8 w-8 rounded-lg font-bold shrink-0"
           disabled={disabled || value <= min}
           onClick={decrement}
           size="icon-sm"
@@ -428,7 +455,7 @@ function NumberSetting({
           −
         </Button>
         <Input
-          className="lobby-settings-step-value"
+          className="h-8 w-14 text-center font-mono font-bold text-sm bg-muted/30 border rounded-lg px-0 shrink-0"
           id={id}
           readOnly
           disabled={disabled}
@@ -437,7 +464,7 @@ function NumberSetting({
         <Button
           type="button"
           aria-label={`Increase ${label.toLowerCase()}`}
-          className="lobby-settings-step-button"
+          className="h-8 w-8 rounded-lg font-bold shrink-0"
           disabled={disabled || value >= max}
           onClick={increment}
           size="icon-sm"
@@ -446,8 +473,8 @@ function NumberSetting({
           +
         </Button>
       </div>
-      <FieldDescription className="lobby-settings-description" id={`${id}-description`}>
-        {description} Choose {min}–{max}.
+      <FieldDescription className="text-xs text-muted-foreground" id="${id}-description">
+        {description} Range: {min}–{max}.
       </FieldDescription>
     </Field>
   );
@@ -471,23 +498,24 @@ function RuleToggle({
   readonly onChange: (checked: boolean) => void;
 }) {
   return (
-    <Field className="lobby-settings-toggle">
-      <div className="lobby-settings-toggle-content flex items-center gap-3">
-        <Switch
-          id={id}
-          checked={checked}
-          disabled={disabled}
-          name={name}
-          onCheckedChange={onChange}
-        />
-        <Label htmlFor={id} className="font-medium">
+    <div className="flex items-start justify-between rounded-lg border bg-card/40 p-3 gap-3 hover:bg-muted/30 transition-colors">
+      <div className="space-y-0.5 min-w-0 flex-1">
+        <Label htmlFor={id} className="text-xs font-semibold text-foreground cursor-pointer block">
           {label}
         </Label>
+        <p className="text-[11px] leading-tight text-muted-foreground" id="${id}-description">
+          {description}
+        </p>
       </div>
-      <FieldDescription className="lobby-settings-description" id={`${id}-description`}>
-        {description}
-      </FieldDescription>
-    </Field>
+      <Switch
+        id={id}
+        checked={checked}
+        disabled={disabled}
+        name={name}
+        onCheckedChange={onChange}
+        className="shrink-0 mt-0.5"
+      />
+    </div>
   );
 }
 

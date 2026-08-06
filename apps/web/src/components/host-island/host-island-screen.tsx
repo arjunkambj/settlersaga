@@ -5,6 +5,7 @@ import { DEFAULT_BASE_GAME_SETTINGS } from "@settersaga/game";
 import { Icon } from "@iconify/react";
 import houseIcon from "@iconify-icons/game-icons/house";
 import backIcon from "@iconify-icons/solar/arrow-left-linear";
+import userIcon from "@iconify-icons/solar/user-bold-duotone";
 import { useMutation } from "convex/react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -46,7 +47,6 @@ export function HostIslandScreen() {
         throw new Error("Invalid room code generated");
       }
 
-      // Apply custom settings if different from standard defaults
       await updateLobbyConfiguration({
         botCount: lobbySettings.botCount,
         botDifficulty: lobbySettings.botDifficulty,
@@ -64,8 +64,8 @@ export function HostIslandScreen() {
   };
 
   return (
-    <main className="min-h-dvh bg-background" id="main-content">
-      <header className="flex items-center justify-between border-b bg-card px-4 py-3">
+    <main className="min-h-dvh bg-background flex flex-col" id="main-content">
+      <header className="sticky top-0 z-20 flex items-center justify-between border-b bg-card/90 backdrop-blur-xs px-4 py-3 shadow-2xs">
         <div className="flex items-center gap-3">
           <Button
             variant="ghost"
@@ -75,37 +75,45 @@ export function HostIslandScreen() {
           >
             <Icon icon={backIcon} className="h-5 w-5" />
           </Button>
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground text-sm font-bold">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground text-sm font-black shadow-xs">
               S
             </div>
             <div>
-              <p className="text-sm font-bold leading-none">Host Island</p>
+              <p className="text-sm font-bold leading-tight">Host Island</p>
               <p className="text-xs text-muted-foreground">Private Room Setup</p>
             </div>
           </div>
         </div>
+
+        <div className="flex items-center gap-2 rounded-full border bg-muted/40 px-3 py-1 text-xs font-semibold text-foreground">
+          <Icon icon={userIcon} className="h-3.5 w-3.5 text-primary" />
+          <span>{displayName || "Explorer"}</span>
+        </div>
       </header>
 
-      <div className="mx-auto max-w-3xl p-4 sm:p-6">
-        <div className="mb-6 flex flex-col sm:flex-row items-center gap-4 rounded-xl border bg-card p-4 shadow-xs">
+      <div className="mx-auto max-w-4xl w-full p-4 sm:p-6 space-y-6 flex-1">
+        <div className="flex flex-col sm:flex-row items-center gap-5 rounded-2xl border bg-card p-5 shadow-xs">
           <Image
             alt="Host Island"
-            className="h-24 w-auto object-contain rounded-md"
+            className="h-28 w-auto object-contain shrink-0"
             height={200}
             src="/home-assets/menu/host-island-v2.png"
             width={320}
           />
-          <div>
-            <h1 className="text-xl font-bold">Host a Private Island</h1>
-            <p className="text-xs sm:text-sm text-muted-foreground">
-              Configure custom player limits, victory points, turn timer, and friendly robber rules
-              for your table.
+          <div className="space-y-2 text-center sm:text-left">
+            <div className="inline-flex items-center gap-1.5 rounded-md bg-primary/10 px-2.5 py-0.5 text-xs font-bold text-primary">
+              <Icon icon={houseIcon} className="h-3.5 w-3.5" /> Multiplayer Private Room
+            </div>
+            <h1 className="text-2xl font-bold tracking-tight">Host a Private Island</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+              Create a custom table, set rules for your crew, and receive a 6-character room code to
+              invite friends or add optional AI bots.
             </p>
           </div>
         </div>
 
-        <div className="rounded-xl border bg-card p-4 sm:p-6 shadow-xs space-y-6">
+        <div className="rounded-2xl border bg-card p-5 sm:p-7 shadow-xs space-y-6">
           <LobbySettings
             botCount={lobbySettings.botCount}
             botDifficulty={lobbySettings.botDifficulty}
@@ -117,28 +125,28 @@ export function HostIslandScreen() {
           />
 
           {error ? (
-            <div className="flex justify-center">
+            <div className="flex justify-center pt-2">
               <LiveMessage message={error} />
             </div>
           ) : null}
 
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t pt-4">
-            <p className="text-xs text-muted-foreground">
-              After creating your room, you will receive a unique 6-character friend code to share
-              with your crew.
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t pt-5">
+            <p className="text-xs text-muted-foreground text-center sm:text-left">
+              After creating your room, share your 6-character friend code with your crew to join.
             </p>
             <Button
-              className="w-full sm:w-auto min-w-[200px]"
+              className="w-full sm:w-auto min-w-[220px] h-11 text-base font-bold rounded-xl shadow-xs"
               disabled={isPending || !displayName.trim()}
               onClick={() => void handleHostIsland()}
             >
-              <Icon icon={houseIcon} className="mr-2 h-4 w-4" />
               {pendingAction === "create" ? (
                 <>
                   <Spinner data-icon="inline-start" /> Hosting Island...
                 </>
               ) : (
-                "Host Island Room"
+                <>
+                  <Icon icon={houseIcon} className="mr-2 h-5 w-5" /> Host Island Room
+                </>
               )}
             </Button>
           </div>
