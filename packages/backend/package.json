@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "@settersaga/game": "workspace:*",
-    "@hexclave/next": "^1.0.51",
+    "@hexclave/next": "^1.0.80",
     "convex": "catalog:",
     "dotenv": "catalog:",
     "zod": "catalog:"
@@ -20,6 +20,6 @@
   "devDependencies": {
     "@settersaga/config": "workspace:*",
     "@types/node": "^24.3.0",
-    "typescript": "^6"
+    "typescript": "^7.0.2"
   }
 }

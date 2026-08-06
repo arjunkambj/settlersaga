@@ -1,13 +1,8 @@
 import hexclaveComponent from "@hexclave/next/convex.config";
-import { defineApp } from "convex/server";
-import { v } from "convex/values";
+import { defineApp, type ComponentDefinition } from "convex/server";
 
-const app = defineApp({
-  env: {
-    HEXCLAVE_PROJECT_ID: v.string(),
-  },
-});
-// Hexclave 1.0.51 ships Convex 1.27 component typings; the runtime definition is compatible.
-app.use(hexclaveComponent as Parameters<typeof app.use>[0]);
+const app = defineApp();
+
+app.use(hexclaveComponent as unknown as ComponentDefinition);
 
 export default app;

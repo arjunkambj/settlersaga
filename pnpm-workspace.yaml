@@ -8,6 +8,11 @@ catalog:
   dotenv: ^17.4.2
   zod: ^4.4.3
   tailwindcss: ^4.3.3
-  convex: ^1.42.3
+  convex: ^1.43.0
   "@types/react-dom": ^19.2.3
   tailwind-merge: ^3.6.0
+minimumReleaseAgeExclude:
+  - '@hexclave/next@1.0.80'
+  - '@hexclave/sc@1.0.80'
+  - '@hexclave/shared@1.0.80'
+  - '@hexclave/ui@1.0.80'

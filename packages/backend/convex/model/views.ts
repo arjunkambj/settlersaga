@@ -7,7 +7,7 @@ import {
   requiredAutomatedActor,
   roomViewStatus,
 } from "./gameState";
-import { migrateWaitingRoomSettings, validateGameSettings } from "./normalize";
+import { validateGameSettings } from "./normalize";
 import type { GameEventView, GameId, ReadCtx, RoomDoc, RoomView, SeatDoc } from "./types";
 
 async function listGameEvents(ctx: ReadCtx, gameId: GameId): Promise<GameEventView[]> {
@@ -31,10 +31,7 @@ export async function toRoomView(
   seat: SeatDoc,
   seats: readonly SeatDoc[],
 ): Promise<RoomView> {
-  const roomSettings =
-    room.status === "waiting"
-      ? migrateWaitingRoomSettings(room.settings)
-      : validateGameSettings(room.settings);
+  const roomSettings = validateGameSettings(room.settings);
   const members = seats.map((member) => ({
     controller: member.kind === "bot" ? ("bot" as const) : ("player" as const),
     displayName: member.displayName,

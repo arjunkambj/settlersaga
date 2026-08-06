@@ -1,4 +1,4 @@
-import { GAME_MAP_IDS, type BaseGameSettings, type GameMapId } from "@settersaga/game";
+import type { BaseGameSettings } from "@settersaga/game";
 import { getGameMapDefinition, mapSupportsPlayerCount } from "@settersaga/game/maps";
 
 import type { StoredBaseGameSettings } from "../schema";
@@ -58,32 +58,8 @@ export function normalizeSeatId(value: string): string {
   return seatId;
 }
 
-function isCurrentGameMapId(map: StoredBaseGameSettings["map"]): map is GameMapId {
-  return GAME_MAP_IDS.some((gameMapId) => gameMapId === map);
-}
-
-export function hasRetiredGameMap(settings: StoredBaseGameSettings): boolean {
-  return !isCurrentGameMapId(settings.map);
-}
-
-export function migrateWaitingRoomSettings(settings: StoredBaseGameSettings): BaseGameSettings {
-  if (isCurrentGameMapId(settings.map)) {
-    return validateGameSettings(settings);
-  }
-
-  const map: GameMapId =
-    settings.maxPlayers <= 4 ? "base" : settings.maxPlayers <= 6 ? "extended-6" : "extended-8";
-  return validateGameSettings({ ...settings, map });
-}
-
 export function validateGameSettings(settings: StoredBaseGameSettings): BaseGameSettings {
-  if (!isCurrentGameMapId(settings.map)) {
-    fail(
-      "LEGACY_GAME_MAP",
-      "This room uses a retired map. Waiting rooms can be migrated; started games must be retired.",
-    );
-  }
-  const currentSettings = { ...settings, map: settings.map };
+  const currentSettings = { ...settings };
   if (
     !Number.isSafeInteger(currentSettings.victoryPoints) ||
     currentSettings.victoryPoints < 3 ||

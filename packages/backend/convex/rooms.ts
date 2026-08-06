@@ -1,10 +1,10 @@
 import { v } from "convex/values";
 import type { GameState } from "@settersaga/game";
 
-import { internalMutation, mutation, query } from "./_generated/server";
+import { mutation, query } from "./_generated/server";
 import { requireCurrentHexclaveUser } from "./hexclave/auth";
 import { fail } from "./model/errors";
-import { createBotDisplayName } from "../lib/bot-names";
+import { createBotDisplayName } from "../lib/bot_names";
 import {
   convertGameSeatToBot,
   createRoomRecord,
@@ -16,8 +16,6 @@ import {
   transferPlayerToBot,
 } from "./model/gameState";
 import {
-  hasRetiredGameMap,
-  migrateWaitingRoomSettings,
   normalizeDisplayName,
   normalizeSeatId,
   normalizeRoomCode,
@@ -35,49 +33,6 @@ import {
 import { botDifficultyValidator, baseGameSettingsValidator } from "./schema";
 import { roomViewValidator } from "./model/validators";
 import { toRoomView } from "./model/views";
-
-const RETIRED_MAP_MIGRATION_BATCH_SIZE = 64;
-
-export const migrateRetiredWaitingRoomMaps = internalMutation({
-  args: { cursor: v.optional(v.string()) },
-  returns: v.object({
-    continueCursor: v.optional(v.string()),
-    isDone: v.boolean(),
-    migrated: v.number(),
-    requiresRetirement: v.number(),
-    requiresRetirementRoomIds: v.array(v.id("rooms")),
-  }),
-  handler: async (ctx, args) => {
-    const result = await ctx.db.query("rooms").paginate({
-      cursor: args.cursor ?? null,
-      numItems: RETIRED_MAP_MIGRATION_BATCH_SIZE,
-    });
-    const retiredRooms = result.page.filter((room) => hasRetiredGameMap(room.settings));
-    const migratableRooms = retiredRooms.filter(
-      (room) => room.status === "waiting" && room.gameId === undefined,
-    );
-    const requiresRetirementRoomIds = retiredRooms
-      .filter((room) => room.status !== "waiting" || room.gameId !== undefined)
-      .map((room) => room._id);
-    const now = Date.now();
-    await Promise.all(
-      migratableRooms.map((room) =>
-        ctx.db.patch("rooms", room._id, {
-          settings: migrateWaitingRoomSettings(room.settings),
-          updatedAt: now,
-        }),
-      ),
-    );
-
-    return {
-      ...(result.isDone ? {} : { continueCursor: result.continueCursor }),
-      isDone: result.isDone,
-      migrated: migratableRooms.length,
-      requiresRetirement: requiresRetirementRoomIds.length,
-      requiresRetirementRoomIds,
-    };
-  },
-});
 
 export const createRoom = mutation({
   args: {

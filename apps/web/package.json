@@ -11,7 +11,7 @@
     "@base-ui/react": "^1.7.0",
     "@heroui/react": "^3.2.2",
     "@heroui/styles": "^3.2.2",
-    "@hexclave/next": "^1.0.51",
+    "@hexclave/next": "^1.0.80",
     "@hugeicons/core-free-icons": "^4.2.3",
     "@hugeicons/react": "^1.1.9",
     "@iconify-icons/game-icons": "^1.2.1",
@@ -22,7 +22,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "convex": "catalog:",
-    "next": "^16.2.11",
+    "next": "^16.3.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "shadcn": "^4.16.1",
@@ -37,6 +37,6 @@
     "@types/react-dom": "catalog:",
     "serve": "^14.2.5",
     "tailwindcss": "catalog:",
-    "typescript": "^6"
+    "typescript": "^7.0.2"
   }
 }

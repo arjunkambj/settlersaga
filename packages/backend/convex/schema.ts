@@ -51,10 +51,7 @@ export const baseGameSettingsValidator = v.object({
   map: gameMapValidator,
 });
 
-export const storedBaseGameSettingsValidator = v.object({
-  ...gameSettingsFields,
-  map: v.union(gameMapValidator, v.literal("extended-10")),
-});
+export const storedBaseGameSettingsValidator = baseGameSettingsValidator;
 
 export type StoredBaseGameSettings = Infer<typeof storedBaseGameSettingsValidator>;
 

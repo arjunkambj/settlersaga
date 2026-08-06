@@ -12,6 +12,6 @@
   },
   "devDependencies": {
     "@settersaga/config": "workspace:*",
-    "typescript": "^6"
+    "typescript": "^7.0.2"
   }
 }
