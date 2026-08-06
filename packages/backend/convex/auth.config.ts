@@ -1,4 +1,4 @@
-import { getConvexProvidersConfig } from "@hexclave/next/convex-auth.config";
+import { getConvexProvidersConfig } from "@hexclave/js/convex-auth.config";
 
 export default {
   providers: getConvexProvidersConfig({

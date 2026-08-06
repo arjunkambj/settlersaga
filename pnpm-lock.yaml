@@ -41,7 +41,7 @@ importers:
     devDependencies:
       '@hexclave/next':
         specifier: ^1.0.80
-        version: 1.0.80(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(next@16.3.0(@opentelemetry/api@1.9.1)(@types/node@22.20.1)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(zod@4.4.3)
+        version: 1.0.80(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(next@16.3.0(@opentelemetry/api@1.9.1)(@types/node@22.20.1)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(tailwindcss@4.3.3)(zod@4.4.3)
       '@settersaga/config':
         specifier: workspace:*
         version: link:packages/config
@@ -96,7 +96,7 @@ importers:
         version: 3.2.2(tailwind-merge@3.6.0)(tailwindcss@4.3.3)
       '@hexclave/next':
         specifier: ^1.0.80
-        version: 1.0.80(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(next@16.3.0(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@types/node@22.20.1)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(tailwindcss@4.3.3)(zod@4.4.3)
+        version: 1.0.80(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(next@16.3.0(@opentelemetry/api@1.9.1)(@types/node@22.20.1)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(tailwindcss@4.3.3)(zod@4.4.3)
       '@hugeicons/core-free-icons':
         specifier: ^4.2.3
         version: 4.2.3
@@ -173,9 +173,9 @@ importers:
 
   packages/backend:
     dependencies:
-      '@hexclave/next':
-        specifier: ^1.0.80
-        version: 1.0.80(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(next@16.3.0(@opentelemetry/api@1.9.1)(@types/node@24.13.3)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(zod@4.4.3)
+      '@hexclave/js':
+        specifier: ^1.0.79
+        version: 1.0.79(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.8(react@19.2.8))(react-hook-form@7.81.0(react@19.2.8))(react@19.2.8)
       '@settersaga/game':
         specifier: workspace:*
         version: link:../game
@@ -716,6 +716,9 @@ packages:
     peerDependencies:
       tailwindcss: '>=4.0.0'
 
+  '@hexclave/js@1.0.79':
+    resolution: {integrity: sha512-n1BagHzPEpQCCkFRS1+F5mkKZJrkLxaWKMzfkFAeEDJb0xznw8rwqNUYe2g+TkAo+RSIscOnz82y/T7myfDNsg==}
+
   '@hexclave/next@1.0.80':
     resolution: {integrity: sha512-9eiybzcs/JvFRF++fNIT/VshfrxYRzeHNbpxAU4AplxCn1PAFqvZaAAmYCtLjQwWwjvhKvrAmDelQWvPfqei+w==}
     peerDependencies:
@@ -742,6 +745,24 @@ packages:
       '@types/react':
         optional: true
       '@types/react-dom':
+        optional: true
+
+  '@hexclave/shared@1.0.79':
+    resolution: {integrity: sha512-WzXh+LKbV2aY5nm7h1YAJKZ0F4c3UIAamYG9vAnrw5oTE1DBz2TGcFIc+m9VG5Hyu1tUujjXddE0Qt7wOhGDvA==}
+    peerDependencies:
+      '@types/react': '>=19.0.0'
+      '@types/react-dom': '>=19.0.0'
+      react: '>=19.0.0'
+      react-dom: '>=19.0.0'
+      yup: ^1.7.1
+    peerDependenciesMeta:
+      '@types/react':
+        optional: true
+      '@types/react-dom':
+        optional: true
+      react:
+        optional: true
+      yup:
         optional: true
 
   '@hexclave/shared@1.0.80':
@@ -5159,45 +5180,31 @@ snapshots:
     transitivePeerDependencies:
       - tailwind-merge
 
-  '@hexclave/next@1.0.80(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(next@16.3.0(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@types/node@22.20.1)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(tailwindcss@4.3.3)(zod@4.4.3)':
+  '@hexclave/js@1.0.79(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.8(react@19.2.8))(react-hook-form@7.81.0(react@19.2.8))(react@19.2.8)':
     dependencies:
-      '@ai-sdk/react': 3.0.230(react@19.2.8)(zod@4.4.3)
-      '@hexclave/sc': 1.0.80(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(next@16.3.0(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@types/node@22.20.1)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
-      '@hexclave/shared': 1.0.80(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(yup@1.7.1)
-      '@hexclave/ui': 1.0.80(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(yup@1.7.1)
+      '@hexclave/shared': 1.0.79(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(yup@1.7.1)
       '@hookform/resolvers': 5.4.0(react-hook-form@7.81.0(react@19.2.8))
       '@oslojs/otp': 1.1.0
       '@simplewebauthn/browser': 13.3.0
-      '@stripe/react-stripe-js': 3.10.0(@stripe/stripe-js@7.9.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
-      '@stripe/stripe-js': 7.9.0
       '@tanstack/react-table': 8.21.3(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
-      ai: 6.0.228(zod@4.4.3)
-      browser-image-compression: 2.0.2
       color: 5.0.3
       cookie: 1.1.1
       jose: 6.2.3
       js-cookie: 3.0.8
-      lucide-react: 0.378.0(react@19.2.8)
-      next: 16.3.0(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@types/node@22.20.1)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       oauth4webapi: 3.8.6
       qrcode: 1.5.4
-      react: 19.2.8
-      react-dom: 19.2.8(react@19.2.8)
-      react-easy-crop: 5.5.7(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
-      react-hook-form: 7.81.0(react@19.2.8)
       rrweb: 1.1.3
-      tailwindcss-animate: 1.0.7(tailwindcss@4.3.3)
       yup: 1.7.1
-    optionalDependencies:
-      '@types/react': 19.2.17
-      '@types/react-dom': 19.2.3(@types/react@19.2.17)
     transitivePeerDependencies:
+      - '@types/react'
+      - '@types/react-dom'
       - buffer
+      - react
+      - react-dom
+      - react-hook-form
       - supports-color
-      - tailwindcss
-      - zod
 
-  '@hexclave/next@1.0.80(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(next@16.3.0(@opentelemetry/api@1.9.1)(@types/node@22.20.1)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(zod@4.4.3)':
+  '@hexclave/next@1.0.80(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(next@16.3.0(@opentelemetry/api@1.9.1)(@types/node@22.20.1)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(tailwindcss@4.3.3)(zod@4.4.3)':
     dependencies:
       '@ai-sdk/react': 3.0.230(react@19.2.8)(zod@4.4.3)
       '@hexclave/sc': 1.0.80(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(next@16.3.0(@opentelemetry/api@1.9.1)(@types/node@22.20.1)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -5216,7 +5223,7 @@ snapshots:
       jose: 6.2.3
       js-cookie: 3.0.8
       lucide-react: 0.378.0(react@19.2.8)
-      next: 16.3.0(@opentelemetry/api@1.9.1)(@types/node@22.20.1)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      next: 16.3.0(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@types/node@22.20.1)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       oauth4webapi: 3.8.6
       qrcode: 1.5.4
       react: 19.2.8
@@ -5235,45 +5242,7 @@ snapshots:
       - tailwindcss
       - zod
 
-  '@hexclave/next@1.0.80(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(next@16.3.0(@opentelemetry/api@1.9.1)(@types/node@24.13.3)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(zod@4.4.3)':
-    dependencies:
-      '@ai-sdk/react': 3.0.230(react@19.2.8)(zod@4.4.3)
-      '@hexclave/sc': 1.0.80(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(next@16.3.0(@opentelemetry/api@1.9.1)(@types/node@24.13.3)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
-      '@hexclave/shared': 1.0.80(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(yup@1.7.1)
-      '@hexclave/ui': 1.0.80(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(yup@1.7.1)
-      '@hookform/resolvers': 5.4.0(react-hook-form@7.81.0(react@19.2.8))
-      '@oslojs/otp': 1.1.0
-      '@simplewebauthn/browser': 13.3.0
-      '@stripe/react-stripe-js': 3.10.0(@stripe/stripe-js@7.9.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
-      '@stripe/stripe-js': 7.9.0
-      '@tanstack/react-table': 8.21.3(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
-      ai: 6.0.228(zod@4.4.3)
-      browser-image-compression: 2.0.2
-      color: 5.0.3
-      cookie: 1.1.1
-      jose: 6.2.3
-      js-cookie: 3.0.8
-      lucide-react: 0.378.0(react@19.2.8)
-      next: 16.3.0(@opentelemetry/api@1.9.1)(@types/node@24.13.3)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
-      oauth4webapi: 3.8.6
-      qrcode: 1.5.4
-      react: 19.2.8
-      react-dom: 19.2.8(react@19.2.8)
-      react-easy-crop: 5.5.7(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
-      react-hook-form: 7.81.0(react@19.2.8)
-      rrweb: 1.1.3
-      tailwindcss-animate: 1.0.7(tailwindcss@4.3.3)
-      yup: 1.7.1
-    optionalDependencies:
-      '@types/react': 19.2.17
-      '@types/react-dom': 19.2.3(@types/react@19.2.17)
-    transitivePeerDependencies:
-      - buffer
-      - supports-color
-      - tailwindcss
-      - zod
-
-  '@hexclave/sc@1.0.80(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(next@16.3.0(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@types/node@22.20.1)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)':
+  '@hexclave/sc@1.0.80(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(next@16.3.0(@opentelemetry/api@1.9.1)(@types/node@22.20.1)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)':
     dependencies:
       next: 16.3.0(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@types/node@22.20.1)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       react: 19.2.8
@@ -5282,23 +5251,34 @@ snapshots:
       '@types/react': 19.2.17
       '@types/react-dom': 19.2.3(@types/react@19.2.17)
 
-  '@hexclave/sc@1.0.80(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(next@16.3.0(@opentelemetry/api@1.9.1)(@types/node@22.20.1)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)':
+  '@hexclave/shared@1.0.79(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(yup@1.7.1)':
     dependencies:
-      next: 16.3.0(@opentelemetry/api@1.9.1)(@types/node@22.20.1)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
-      react: 19.2.8
+      '@aws-sdk/client-kms': 3.1088.0
+      '@aws-sdk/credential-provider-web-identity': 3.972.65
+      '@babel/generator': 7.29.7
+      '@babel/parser': 7.29.7
+      '@babel/traverse': 7.29.7
+      '@babel/types': 7.29.7
+      '@opentelemetry/api': 1.9.1
+      '@simplewebauthn/browser': 13.3.0
+      '@vercel/functions': 2.2.13(@aws-sdk/credential-provider-web-identity@3.972.65)
+      bcryptjs: 3.0.3
+      crc: 4.3.2
+      elliptic: 6.6.1
+      esbuild-wasm: 0.20.2
+      ip-regex: 5.0.0
+      jiti: 2.7.0
+      jose: 6.2.3
+      oauth4webapi: 3.8.6
       react-dom: 19.2.8(react@19.2.8)
     optionalDependencies:
       '@types/react': 19.2.17
       '@types/react-dom': 19.2.3(@types/react@19.2.17)
-
-  '@hexclave/sc@1.0.80(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(next@16.3.0(@opentelemetry/api@1.9.1)(@types/node@24.13.3)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)':
-    dependencies:
-      next: 16.3.0(@opentelemetry/api@1.9.1)(@types/node@24.13.3)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       react: 19.2.8
-      react-dom: 19.2.8(react@19.2.8)
-    optionalDependencies:
-      '@types/react': 19.2.17
-      '@types/react-dom': 19.2.3(@types/react@19.2.17)
+      yup: 1.7.1
+    transitivePeerDependencies:
+      - buffer
+      - supports-color
 
   '@hexclave/shared@1.0.80(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(yup@1.7.1)':
     dependencies:
@@ -7912,60 +7892,6 @@ snapshots:
       - '@types/node'
       - babel-plugin-macros
 
-  next@16.3.0(@opentelemetry/api@1.9.1)(@types/node@22.20.1)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8):
-    dependencies:
-      '@next/env': 16.3.0
-      '@swc/helpers': 0.5.15
-      baseline-browser-mapping: 2.11.12
-      caniuse-lite: 1.0.30001806
-      postcss: 8.5.23
-      react: 19.2.8
-      react-dom: 19.2.8(react@19.2.8)
-      styled-jsx: 5.1.6(@babel/core@7.29.7)(react@19.2.8)
-    optionalDependencies:
-      '@next/swc-darwin-arm64': 16.3.0
-      '@next/swc-darwin-x64': 16.3.0
-      '@next/swc-linux-arm64-gnu': 16.3.0
-      '@next/swc-linux-arm64-musl': 16.3.0
-      '@next/swc-linux-x64-gnu': 16.3.0
-      '@next/swc-linux-x64-musl': 16.3.0
-      '@next/swc-win32-arm64-msvc': 16.3.0
-      '@next/swc-win32-x64-msvc': 16.3.0
-      '@opentelemetry/api': 1.9.1
-      babel-plugin-react-compiler: 1.0.0
-      sharp: 0.35.3(@types/node@22.20.1)
-    transitivePeerDependencies:
-      - '@babel/core'
-      - '@types/node'
-      - babel-plugin-macros
-
-  next@16.3.0(@opentelemetry/api@1.9.1)(@types/node@24.13.3)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8):
-    dependencies:
-      '@next/env': 16.3.0
-      '@swc/helpers': 0.5.15
-      baseline-browser-mapping: 2.11.12
-      caniuse-lite: 1.0.30001806
-      postcss: 8.5.23
-      react: 19.2.8
-      react-dom: 19.2.8(react@19.2.8)
-      styled-jsx: 5.1.6(@babel/core@7.29.7)(react@19.2.8)
-    optionalDependencies:
-      '@next/swc-darwin-arm64': 16.3.0
-      '@next/swc-darwin-x64': 16.3.0
-      '@next/swc-linux-arm64-gnu': 16.3.0
-      '@next/swc-linux-arm64-musl': 16.3.0
-      '@next/swc-linux-x64-gnu': 16.3.0
-      '@next/swc-linux-x64-musl': 16.3.0
-      '@next/swc-win32-arm64-msvc': 16.3.0
-      '@next/swc-win32-x64-msvc': 16.3.0
-      '@opentelemetry/api': 1.9.1
-      babel-plugin-react-compiler: 1.0.0
-      sharp: 0.35.3(@types/node@24.13.3)
-    transitivePeerDependencies:
-      - '@babel/core'
-      - '@types/node'
-      - babel-plugin-macros
-
   node-releases@2.0.52: {}
 
   normalize-wheel@1.0.1: {}
@@ -8562,40 +8488,6 @@ snapshots:
       '@img/sharp-win32-ia32': 0.35.3
       '@img/sharp-win32-x64': 0.35.3
       '@types/node': 22.20.1
-    optional: true
-
-  sharp@0.35.3(@types/node@24.13.3):
-    dependencies:
-      '@img/colour': 1.1.0
-      detect-libc: 2.1.2
-      semver: 7.8.5
-    optionalDependencies:
-      '@img/sharp-darwin-arm64': 0.35.3
-      '@img/sharp-darwin-x64': 0.35.3
-      '@img/sharp-freebsd-wasm32': 0.35.3
-      '@img/sharp-libvips-darwin-arm64': 1.3.2
-      '@img/sharp-libvips-darwin-x64': 1.3.2
-      '@img/sharp-libvips-linux-arm': 1.3.2
-      '@img/sharp-libvips-linux-arm64': 1.3.2
-      '@img/sharp-libvips-linux-ppc64': 1.3.2
-      '@img/sharp-libvips-linux-riscv64': 1.3.2
-      '@img/sharp-libvips-linux-s390x': 1.3.2
-      '@img/sharp-libvips-linux-x64': 1.3.2
-      '@img/sharp-libvips-linuxmusl-arm64': 1.3.2
-      '@img/sharp-libvips-linuxmusl-x64': 1.3.2
-      '@img/sharp-linux-arm': 0.35.3
-      '@img/sharp-linux-arm64': 0.35.3
-      '@img/sharp-linux-ppc64': 0.35.3
-      '@img/sharp-linux-riscv64': 0.35.3
-      '@img/sharp-linux-s390x': 0.35.3
-      '@img/sharp-linux-x64': 0.35.3
-      '@img/sharp-linuxmusl-arm64': 0.35.3
-      '@img/sharp-linuxmusl-x64': 0.35.3
-      '@img/sharp-webcontainers-wasm32': 0.35.3
-      '@img/sharp-win32-arm64': 0.35.3
-      '@img/sharp-win32-ia32': 0.35.3
-      '@img/sharp-win32-x64': 0.35.3
-      '@types/node': 24.13.3
     optional: true
 
   shebang-command@2.0.0:

@@ -11,8 +11,8 @@
     "dev:setup": "convex dev --configure --until-success"
   },
   "dependencies": {
+    "@hexclave/js": "^1.0.79",
     "@settersaga/game": "workspace:*",
-    "@hexclave/next": "^1.0.80",
     "convex": "catalog:",
     "dotenv": "catalog:",
     "zod": "catalog:"
