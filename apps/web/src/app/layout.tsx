@@ -13,11 +13,15 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
 export const metadata: Metadata = {
   description: "A friendly real-time island-building board game.",
-  title: "SetterSaga",
+  title: {
+    default: "SetterSaga",
+    template: "%s · SetterSaga",
+  },
 };
 
 export const viewport: Viewport = {
   width: "device-width",
+  initialScale: 1,
 };
 
 const dmSans = DM_Sans({

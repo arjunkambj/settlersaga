@@ -1,3 +1,4 @@
+import Image from "next/image";
 import type { PlayerColor } from "@settersaga/game";
 import type { CSSProperties } from "react";
 
@@ -30,7 +31,7 @@ export function PieceIcon({
       aria-hidden="true"
       className={`piece-icon piece-icon-${asset} player-${theme} ${className}`.trim()}
     >
-      <img alt="" draggable={false} height={512} src={assetPath} width={512} />
+      <Image alt="" draggable={false} height={512} src={assetPath} unoptimized width={512} />
       <span
         className="piece-color"
         style={{ "--piece-mask": `url(${assetPath})` } as CSSProperties}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import type { ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { isUiPreviewMode, UiPreview } from "@/components/app/ui-preview";
@@ -14,6 +14,16 @@ export interface AppProvidersProps {
 }
 
 export function AppProviders({ children, convexUrl, hexclaveProjectId }: AppProvidersProps) {
+  return (
+    <Suspense fallback={null}>
+      <AppProvidersInner convexUrl={convexUrl} hexclaveProjectId={hexclaveProjectId}>
+        {children}
+      </AppProvidersInner>
+    </Suspense>
+  );
+}
+
+function AppProvidersInner({ children, convexUrl, hexclaveProjectId }: AppProvidersProps) {
   const searchParams = useSearchParams();
   const previewMode = searchParams.get("preview");
   const previewSeed = searchParams.get("seed")?.trim() || undefined;

@@ -105,27 +105,29 @@ export function HomeScreen({
 
   return (
     <main className="min-h-dvh bg-background" id="main-content">
-      <header className="flex items-center justify-between border-b bg-card px-4 py-3">
+      <div className="flex items-center justify-between gap-3 px-4 pt-4">
         <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground text-sm font-bold">
+          <span aria-hidden="true" className="text-lg font-black leading-none tracking-tight">
             S
-          </div>
+          </span>
           <div>
             <p className="text-sm font-bold leading-none">SetterSaga</p>
             <p className="text-xs text-muted-foreground">Catan Saga</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label="Open player settings"
-            disabled={isPending}
-            onClick={openPlayerSettings}
-          >
-            <Icon icon={settingsIcon} />
-          </Button>
-          <div className="flex items-center gap-2 rounded-full border bg-background px-2 py-1">
+        <div className="flex items-center gap-2.5">
+          <div className="rounded-full border bg-card p-1">
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Open player settings"
+              disabled={isPending}
+              onClick={openPlayerSettings}
+            >
+              <Icon icon={settingsIcon} />
+            </Button>
+          </div>
+          <div className="flex items-center gap-2 rounded-full border bg-card py-1 pr-1 pl-2">
             <Image
               alt=""
               height={28}
@@ -148,11 +150,11 @@ export function HomeScreen({
             </Button>
           </div>
         </div>
-      </header>
+      </div>
 
-      <div className="mx-auto max-w-5xl p-4 sm:p-6 space-y-6">
+      <div className="mx-auto max-w-5xl p-4 pt-6 sm:p-6 sm:pt-6 space-y-6">
         {activeCode ? (
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 rounded-xl border border-primary/20 bg-primary/5 p-4 sm:p-5 shadow-xs">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 rounded-xl border border-primary/20 bg-primary/5 p-4 sm:p-5">
             <div className="text-center sm:text-left">
               <p className="text-xs font-semibold uppercase tracking-wider text-primary">
                 Active Session

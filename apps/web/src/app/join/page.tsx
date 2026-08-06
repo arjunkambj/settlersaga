@@ -1,28 +1,34 @@
-"use client";
-
-import { useSearchParams } from "next/navigation";
+import type { Metadata } from "next";
 import { Suspense } from "react";
 
 import { AppProviders } from "@/components/app/app-providers";
 import { AppSessionProvider } from "@/components/app/app-session-context";
-import { HomePageContent } from "@/components/home/home-page-content";
 import { FullPageStatus } from "@/components/ui/full-page-status";
-import { normalizeRoomCode } from "@/lib/session";
+import { isRoomCode, normalizeRoomCode } from "@/lib/session";
 
-function JoinPageContent() {
-  const searchParams = useSearchParams();
-  const rawCode = searchParams.get("code") ?? searchParams.get("room") ?? "";
-  const initialJoinCode = normalizeRoomCode(rawCode);
+import { JoinPageClient } from "./join-client";
 
-  return <HomePageContent initialJoinCode={initialJoinCode} initialJoinOpen />;
-}
+export const metadata: Metadata = {
+  description: "Join an island table with a room code.",
+  title: "Join Crew · SetterSaga",
+};
 
-export default function JoinPage() {
+type JoinPageProps = {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+};
+
+export default async function JoinPage({ searchParams }: JoinPageProps) {
+  const params = await searchParams;
+  const raw = params.code ?? params.room;
+  const rawCode = Array.isArray(raw) ? (raw[0] ?? "") : (raw ?? "");
+  const normalized = normalizeRoomCode(rawCode);
+  const initialJoinCode = isRoomCode(normalized) ? normalized : normalized;
+
   return (
     <Suspense fallback={<FullPageStatus label="Opening Join Room…" />}>
       <AppProviders>
         <AppSessionProvider>
-          <JoinPageContent />
+          <JoinPageClient initialJoinCode={initialJoinCode} />
         </AppSessionProvider>
       </AppProviders>
     </Suspense>

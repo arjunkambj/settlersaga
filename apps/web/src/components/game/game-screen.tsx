@@ -320,7 +320,7 @@ export function GameScreen({
         viewerPlayerId={me.id}
         winnerPlayerId={game.winnerPlayerId}
       />
-      <header className="flex items-center justify-between border-b bg-card px-3 py-2">
+      <div className="flex items-center justify-between gap-3 px-3 pt-3">
         <div className="flex items-center gap-2">
           <span className={gameMetaPillClassName}>Turn {game.turnNumber}</span>
           <span className={`${gameMetaPillClassName} victory-target-pill`}>
@@ -366,7 +366,7 @@ export function GameScreen({
             <Icon aria-hidden="true" icon="hugeicons:logout-01" />
           </Button>
         </div>
-      </header>
+      </div>
 
       <HandDockProvider>
         <aside aria-label="Table status" className="space-y-3">
@@ -654,7 +654,7 @@ function PlayerStrip({
                   getPlayerInitials(player.displayName)
                 )}
               </span>
-              <img
+              <Image
                 alt=""
                 className="player-avatar-image"
                 draggable={false}
@@ -663,6 +663,7 @@ function PlayerStrip({
                   event.currentTarget.hidden = true;
                 }}
                 src={avatarSrc}
+                unoptimized
                 width={256}
               />
             </span>
@@ -1657,7 +1658,7 @@ function WinOverlay({
     <Dialog open>
       <DialogContent
         showCloseButton={false}
-        className={`win-overlay !fixed !inset-0 !grid !max-w-none !max-h-none !translate-x-0 !translate-y-0 bg-transparent border-0 p-0 shadow-none !place-items-center`}
+        className={`win-overlay !fixed !inset-0 !grid !max-w-none !max-h-none !translate-x-0 !translate-y-0 bg-transparent border-0 p-0-none !place-items-center`}
       >
         <div className={`win-card player-${featuredTheme}`}>
           <DialogHeader className="win-card-header">
@@ -1674,7 +1675,14 @@ function WinOverlay({
             />
             <div className="win-hero">
               <span className="win-avatar" aria-hidden="true">
-                <img alt="" draggable={false} height={256} src={featuredPortrait} width={256} />
+                <Image
+                  alt=""
+                  draggable={false}
+                  height={256}
+                  src={featuredPortrait}
+                  unoptimized
+                  width={256}
+                />
                 <span className="win-crown">
                   <Icon icon={crownIcon} />
                 </span>
@@ -1766,12 +1774,13 @@ function WinOverlay({
                       key={player.id}
                     >
                       <span className="win-rank">{index + 1}</span>
-                      <img
+                      <Image
                         alt=""
                         aria-hidden="true"
                         draggable={false}
                         height={96}
                         src={getResultPortraitPath(player, viewerProfileImageUrl)}
+                        unoptimized
                         width={96}
                       />
                       <span className="win-standing-name">

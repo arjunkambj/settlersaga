@@ -65,35 +65,32 @@ export function HostIslandScreen() {
 
   return (
     <main className="min-h-dvh bg-background flex flex-col" id="main-content">
-      <header className="sticky top-0 z-20 flex items-center justify-between border-b bg-card/90 backdrop-blur-xs px-4 py-3 shadow-2xs">
-        <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between gap-3 px-4 pt-4">
+        <div className="flex items-center gap-2">
           <Button
             variant="ghost"
-            size="icon"
+            size="icon-sm"
             aria-label="Return home"
             onClick={() => router.push("/")}
           >
             <Icon icon={backIcon} className="h-5 w-5" />
           </Button>
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground text-sm font-black shadow-xs">
-              S
-            </div>
-            <div>
-              <p className="text-sm font-bold leading-tight">Host Island</p>
-              <p className="text-xs text-muted-foreground">Private Room Setup</p>
-            </div>
+          <span aria-hidden="true" className="text-lg font-black leading-none tracking-tight">
+            S
+          </span>
+          <div>
+            <p className="text-sm font-bold leading-tight">Host Island</p>
+            <p className="text-xs text-muted-foreground">Private Room Setup</p>
           </div>
         </div>
-
-        <div className="flex items-center gap-2 rounded-full border bg-muted/40 px-3 py-1 text-xs font-semibold text-foreground">
-          <Icon icon={userIcon} className="h-3.5 w-3.5 text-primary" />
+        <div className="flex items-center gap-2 rounded-full border bg-card px-3 py-1.5 text-xs font-semibold">
+          <Icon icon={userIcon} className="h-3.5 w-3.5 text-muted-foreground" />
           <span>{displayName || "Explorer"}</span>
         </div>
-      </header>
+      </div>
 
       <div className="mx-auto max-w-4xl w-full p-4 sm:p-6 space-y-6 flex-1">
-        <div className="flex flex-col sm:flex-row items-center gap-5 rounded-2xl border bg-card p-5 shadow-xs">
+        <div className="flex flex-col sm:flex-row items-center gap-5 rounded-2xl border bg-card p-5">
           <Image
             alt="Host Island"
             className="h-28 w-auto object-contain shrink-0"
@@ -113,7 +110,7 @@ export function HostIslandScreen() {
           </div>
         </div>
 
-        <div className="rounded-2xl border bg-card p-5 sm:p-7 shadow-xs space-y-6">
+        <div className="rounded-2xl border bg-card p-5 sm:p-7 space-y-6">
           <LobbySettings
             botCount={lobbySettings.botCount}
             botDifficulty={lobbySettings.botDifficulty}
@@ -135,7 +132,7 @@ export function HostIslandScreen() {
               After creating your room, share your 6-character friend code with your crew to join.
             </p>
             <Button
-              className="w-full sm:w-auto min-w-[220px] h-11 text-base font-bold rounded-xl shadow-xs"
+              className="w-full sm:w-auto min-w-[220px] h-11 text-base font-bold rounded-xl"
               disabled={isPending || !displayName.trim()}
               onClick={() => void handleHostIsland()}
             >

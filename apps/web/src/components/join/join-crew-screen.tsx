@@ -7,7 +7,7 @@ import backIcon from "@iconify-icons/solar/arrow-left-linear";
 import { useMutation } from "convex/react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 
 import { useAppSession } from "@/components/app/app-session-context";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,14 @@ import { cleanDisplayName } from "@/lib/app/display-name";
 import { isRoomCode, normalizeRoomCode } from "@/lib/session";
 
 export function JoinCrewScreen() {
+  return (
+    <Suspense fallback={null}>
+      <JoinCrewScreenInner />
+    </Suspense>
+  );
+}
+
+function JoinCrewScreenInner() {
   const { displayName, error, pendingAction, setError, setPendingAction, updateSession } =
     useAppSession();
   const router = useRouter();
@@ -56,30 +64,26 @@ export function JoinCrewScreen() {
 
   return (
     <main className="min-h-dvh bg-background" id="main-content">
-      <header className="flex items-center justify-between border-b bg-card px-4 py-3">
-        <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label="Return home"
-            onClick={() => router.push("/")}
-          >
-            <Icon icon={backIcon} className="h-5 w-5" />
-          </Button>
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground text-sm font-bold">
-              S
-            </div>
-            <div>
-              <p className="text-sm font-bold leading-none">Join Crew</p>
-              <p className="text-xs text-muted-foreground">Private Room Entry</p>
-            </div>
-          </div>
+      <div className="flex items-center gap-2 px-4 pt-4">
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label="Return home"
+          onClick={() => router.push("/")}
+        >
+          <Icon icon={backIcon} className="h-5 w-5" />
+        </Button>
+        <span aria-hidden="true" className="text-lg font-black leading-none tracking-tight">
+          S
+        </span>
+        <div>
+          <p className="text-sm font-bold leading-none">Join Crew</p>
+          <p className="text-xs text-muted-foreground">Private Room Entry</p>
         </div>
-      </header>
+      </div>
 
       <div className="mx-auto max-w-xl p-4 sm:p-6">
-        <div className="mb-6 flex flex-col sm:flex-row items-center gap-4 rounded-xl border bg-card p-4 shadow-xs">
+        <div className="mb-6 flex flex-col sm:flex-row items-center gap-4 rounded-xl border bg-card p-4">
           <Image
             alt="Join Crew"
             className="h-24 w-auto object-contain rounded-md"
@@ -95,7 +99,7 @@ export function JoinCrewScreen() {
           </div>
         </div>
 
-        <div className="rounded-xl border bg-card p-6 shadow-xs space-y-6">
+        <div className="rounded-xl border bg-card p-6 space-y-6">
           <form
             onSubmit={(event) => {
               event.preventDefault();

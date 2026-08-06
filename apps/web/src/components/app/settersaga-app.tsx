@@ -5,7 +5,7 @@ import type { GameCommand } from "@settersaga/game";
 import { type CurrentUser, useHexclaveApp } from "@hexclave/next";
 import { useMutation, useQuery } from "convex/react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 
 import { BackgroundMusic } from "@/components/audio/background-music";
 import { AuthScreen } from "@/components/auth/auth-screen";
@@ -104,15 +104,17 @@ export function SetterSagaApp() {
   );
 
   return (
-    <AuthenticatedApp
-      accountLabel={accountLabel}
-      audioSettings={audioSettings}
-      defaultDisplayName={defaultDisplayName}
-      onAudioSettingsChange={updateAudioSettings}
-      onSignOut={() => user.signOut({ redirectUrl: "/" })}
-      profileImageUrl={user.profileImageUrl}
-      userId={user.id}
-    />
+    <Suspense fallback={<FullPageStatus label="Building your island…" />}>
+      <AuthenticatedApp
+        accountLabel={accountLabel}
+        audioSettings={audioSettings}
+        defaultDisplayName={defaultDisplayName}
+        onAudioSettingsChange={updateAudioSettings}
+        onSignOut={() => user.signOut({ redirectUrl: "/" })}
+        profileImageUrl={user.profileImageUrl}
+        userId={user.id}
+      />
+    </Suspense>
   );
 }
 

@@ -133,11 +133,11 @@ export function LobbyScreen({
 
   return (
     <main className="min-h-dvh bg-background" id="main-content">
-      <header className="flex items-center justify-between border-b bg-card px-4 py-3">
-        <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground text-sm font-bold">
+      <div className="flex items-center justify-between gap-3 px-4 pt-4">
+        <div className="flex items-center gap-2">
+          <span aria-hidden="true" className="text-lg font-black leading-none tracking-tight">
             S
-          </div>
+          </span>
           <span className="text-sm font-bold">SetterSaga</span>
           <Badge variant="secondary">
             Private room <span className="font-mono ml-1">{room.code}</span>
@@ -157,7 +157,7 @@ export function LobbyScreen({
             "Leave"
           )}
         </Button>
-      </header>
+      </div>
 
       <div className="mx-auto grid max-w-6xl gap-4 p-4 lg:grid-cols-[280px_1fr_280px]">
         <Card>

@@ -1,3 +1,4 @@
+import Image from "next/image";
 import type { ResourceType } from "@settersaga/game";
 
 import { getResourceCardAssetPath } from "@/constants/game/card-assets";
@@ -18,12 +19,13 @@ interface ResourceIconProps {
 
 export function ResourceIcon({ decorative = false, resource, size = 38 }: ResourceIconProps) {
   return (
-    <img
+    <Image
       alt={decorative ? "" : RESOURCE_LABELS[resource]}
       className="resource-icon"
       draggable={false}
       height={size}
       src={getResourceCardAssetPath(resource)}
+      unoptimized
       width={size}
     />
   );

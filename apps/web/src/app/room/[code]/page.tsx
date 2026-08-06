@@ -1,6 +1,4 @@
-"use client";
-
-import { useParams } from "next/navigation";
+import type { Metadata } from "next";
 import { Suspense } from "react";
 
 import { AppProviders } from "@/components/app/app-providers";
@@ -8,15 +6,23 @@ import { AppSessionProvider } from "@/components/app/app-session-context";
 import { RoomScreenContainer } from "@/components/room/room-screen-container";
 import { FullPageStatus } from "@/components/ui/full-page-status";
 
-export default function RoomPage() {
-  const params = useParams();
-  const roomCode = typeof params.code === "string" ? params.code : (params.code?.[0] ?? "");
+export const metadata: Metadata = {
+  description: "Join an island table and play.",
+  title: "Island Room · SetterSaga",
+};
+
+type RoomPageProps = {
+  params: Promise<{ code: string }>;
+};
+
+export default async function RoomPage({ params }: RoomPageProps) {
+  const { code } = await params;
 
   return (
     <Suspense fallback={<FullPageStatus label="Joining the Island…" />}>
       <AppProviders>
         <AppSessionProvider>
-          <RoomScreenContainer roomCode={roomCode} />
+          <RoomScreenContainer roomCode={code} />
         </AppSessionProvider>
       </AppProviders>
     </Suspense>

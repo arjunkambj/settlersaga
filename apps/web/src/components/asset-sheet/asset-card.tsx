@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import {
   Dialog,
   DialogContent,
@@ -149,18 +150,19 @@ export function AssetCard({ asset }: { asset: AssetCardItem }) {
               aria-label={`Open ${asset.name} preview`}
               className="group/trigger relative flex h-full w-full cursor-zoom-in items-center justify-center overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card"
             >
-              <img
+              <Image
                 alt={`${asset.name} asset preview`}
                 className={cn(
                   "relative h-full w-full transition-transform duration-300 will-change-transform group-hover/card:scale-[1.02] group-focus-within/card:scale-[1.02]",
-                  asset.fit === "cover"
-                    ? "object-cover"
-                    : "object-contain",
+                  asset.fit === "cover" ? "object-cover" : "object-contain",
                 )}
                 decoding="async"
                 draggable={false}
                 loading="lazy"
-                src={asset.path}
+                src={asset.path!}
+                unoptimized
+                width={512}
+                height={512}
               />
               <span className="pointer-events-none absolute bottom-2 right-2 flex h-7 w-7 items-center justify-center rounded-full border bg-chip/90 text-chip-foreground shadow-sm backdrop-blur transition-all duration-200 md:opacity-0 md:group-hover/trigger:opacity-100 md:group-focus-visible/trigger:opacity-100">
                 <Icon aria-hidden="true" className="h-4 w-4" icon={magniferIcon} />
@@ -197,7 +199,7 @@ export function AssetCard({ asset }: { asset: AssetCardItem }) {
                     : "bg-gradient-to-b from-muted/40 to-background",
                 )}
               >
-                <img
+                <Image
                   alt={asset.name}
                   className={cn(
                     "max-h-[60vh] max-w-full rounded-xl object-contain",
@@ -205,10 +207,12 @@ export function AssetCard({ asset }: { asset: AssetCardItem }) {
                       ? "w-full shadow-sm ring-1 ring-foreground/10"
                       : "drop-shadow-[0_12px_32px_rgba(0,0,0,0.18)]",
                   )}
-                  src={asset.path}
+                  src={asset.path!}
+                  unoptimized
+                  width={768}
+                  height={512}
                 />
               </div>
-
             </DialogContent>
           </Dialog>
         ) : isAudio ? (
@@ -234,7 +238,6 @@ export function AssetCard({ asset }: { asset: AssetCardItem }) {
             </span>
           </div>
         )}
-
       </div>
 
       <div className="flex flex-1 flex-col gap-2 p-3.5">
@@ -257,7 +260,6 @@ export function AssetCard({ asset }: { asset: AssetCardItem }) {
               </span>
             ) : null}
           </div>
-
         </div>
       </div>
     </div>

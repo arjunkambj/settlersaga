@@ -2,8 +2,8 @@
 
 import { api } from "@settersaga/backend/convex/_generated/api";
 import { useMutation } from "convex/react";
+import { Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect } from "react";
 
 import { useAppSession } from "@/components/app/app-session-context";
 import { BackgroundMusic } from "@/components/audio/background-music";
@@ -13,6 +13,20 @@ import { cleanDisplayName } from "@/lib/app/display-name";
 import { isRoomCode, normalizeRoomCode } from "@/lib/session";
 
 export function HomePageContent({
+  initialJoinCode,
+  initialJoinOpen,
+}: {
+  initialJoinCode?: string;
+  initialJoinOpen?: boolean;
+}) {
+  return (
+    <Suspense fallback={null}>
+      <HomePageContentInner initialJoinCode={initialJoinCode} initialJoinOpen={initialJoinOpen} />
+    </Suspense>
+  );
+}
+
+function HomePageContentInner({
   initialJoinCode,
   initialJoinOpen,
 }: {
