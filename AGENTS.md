@@ -2,7 +2,7 @@
 
 ## Product & Technology Scope
 
-SetterSaga is a Setter.io-style multiplayer board game. Build deterministic rules, real-time turns, reconnect-safe sessions, and separate game state from presentation. Use only Next.js for the client and Convex for the backend, persistence, and synchronization. Do not add another framework, database, or API layer without an explicit architecture change.
+SetterSaga is a colonist.io-style multiplayer board game. Build deterministic rules, real-time turns, reconnect-safe sessions, and separate game state from presentation. Use only Next.js for the client and Convex for the backend, persistence, and synchronization. Do not add another framework, database, or API layer without an explicit architecture change.
 
 ## Build, Test, and Development Commands
 
