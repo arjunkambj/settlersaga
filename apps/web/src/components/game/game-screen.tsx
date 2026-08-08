@@ -830,8 +830,7 @@ function BankPanel({
             key={resource}
           >
             <ResourceIcon decorative resource={resource} size={72} />
-            <span>{RESOURCE_LABELS[resource]}</span>
-            <strong>{bank ? bank[resource] : "?"}</strong>
+            <strong aria-hidden="true">{bank ? bank[resource] : "?"}</strong>
           </li>
         ))}
         <li aria-label={`Development cards: ${developmentCardSupply}`}>
@@ -844,8 +843,7 @@ function BankPanel({
             src={DEVELOPMENT_CARD_BACK_ASSET_PATH}
             width={512}
           />
-          <span>Development Card</span>
-          <strong>{developmentCardSupply}</strong>
+          <strong aria-hidden="true">{developmentCardSupply}</strong>
         </li>
       </ul>
     </section>
@@ -1118,7 +1116,6 @@ function BuildingActionsDock({
         <DevelopmentCardAction
           disabledReason={developmentCardDisabledReason}
           onClick={() => onCommand({ kind: "buy_development_card" }, "Development card purchased.")}
-          resources={me.resources}
           supply={game.developmentCardSupply}
         />
         <BuildAction
@@ -1129,7 +1126,6 @@ function BuildingActionsDock({
           disabledReason={roadDisabledReason}
           label="Road"
           onClick={() => onBuildMode(buildMode === "road" ? null : "road")}
-          resources={me.resources}
         />
         <BuildAction
           active={buildMode === "settlement"}
@@ -1139,7 +1135,6 @@ function BuildingActionsDock({
           disabledReason={settlementDisabledReason}
           label="Settlement"
           onClick={() => onBuildMode(buildMode === "settlement" ? null : "settlement")}
-          resources={me.resources}
         />
         <BuildAction
           active={buildMode === "city"}
@@ -1149,7 +1144,6 @@ function BuildingActionsDock({
           disabledReason={cityDisabledReason}
           label="City"
           onClick={() => onBuildMode(buildMode === "city" ? null : "city")}
-          resources={me.resources}
         />
       </div>
     </section>
@@ -1292,13 +1286,11 @@ function DevelopmentCardAction({
   disabledReason,
   onClick,
   onPress,
-  resources,
   supply,
 }: {
   disabledReason: string | null;
   onClick?(): void;
   onPress?(): void;
-  resources: Readonly<ResourceInventory>;
   supply: number;
 }) {
   const handlePress = onClick ?? onPress ?? (() => {});
@@ -1322,14 +1314,8 @@ function DevelopmentCardAction({
             width={512}
           />
         }
-        caption={
-          <span className={`build-action-status${disabledReason ? " is-blocked" : ""}`}>
-            {getBuildStatusLabel(disabledReason)}
-          </span>
-        }
         count={supply}
         kind="development-card"
-        meta={<CostSummary cost={DEVELOPMENT_CARD_COST} resources={resources} />}
         onClick={handlePress}
         title="Dev Card"
         unavailable={disabledReason !== null}
@@ -1354,7 +1340,6 @@ function BuildAction({
   label,
   onClick,
   onPress,
-  resources,
 }: {
   active: boolean;
   asset: "city" | "road" | "settlement";
@@ -1364,16 +1349,9 @@ function BuildAction({
   label: string;
   onClick?(): void;
   onPress?(): void;
-  resources: Readonly<ResourceInventory>;
 }) {
   const handlePress = onClick ?? onPress ?? (() => {});
   const descriptionId = `build-${asset}-description`;
-  const status =
-    disabledReason === "Action in progress…"
-      ? "Working…"
-      : active
-        ? "Pick a glowing spot"
-        : getBuildStatusLabel(disabledReason);
   const costResources = getCostResources(cost);
 
   return (
@@ -1399,16 +1377,8 @@ function BuildAction({
             width={512}
           />
         }
-        caption={
-          <span
-            className={`build-action-status${disabledReason ? " is-blocked" : active ? " is-active" : ""}`}
-          >
-            {status}
-          </span>
-        }
         count={count}
         kind={asset}
-        meta={<CostSummary cost={cost} resources={resources} />}
         onClick={handlePress}
         pressed={active}
         title={label}
@@ -1426,65 +1396,8 @@ function BuildAction({
   );
 }
 
-function CostSummary({
-  cost,
-  resources,
-}: {
-  cost: Readonly<ResourceInventory>;
-  resources: Readonly<ResourceInventory>;
-}) {
-  const costResources = getCostResources(cost);
-  return (
-    <span aria-label={`Cost: ${formatCost(cost)}`} className="mini-cost">
-      {costResources.map((resource) => (
-        <span
-          aria-hidden="true"
-          className={resources[resource] < cost[resource] ? "is-missing" : undefined}
-          key={resource}
-          title={`${cost[resource]} ${RESOURCE_LABELS[resource]}`}
-        >
-          <ResourceIcon decorative resource={resource} size={20} />
-          <b>{cost[resource]}</b>
-          <span>{RESOURCE_LABELS[resource]}</span>
-        </span>
-      ))}
-    </span>
-  );
-}
-
 function getCostResources(cost: Readonly<ResourceInventory>) {
   return RESOURCE_ORDER.filter((resource) => cost[resource] > 0);
-}
-
-function formatCost(cost: Readonly<ResourceInventory>) {
-  return getCostResources(cost)
-    .map((resource) => `${cost[resource]} ${RESOURCE_LABELS[resource]}`)
-    .join(", ");
-}
-
-function getBuildStatusLabel(disabledReason: string | null): string {
-  if (!disabledReason) {
-    return "Ready";
-  }
-  if (disabledReason === "Roll the dice first") {
-    return "Roll first";
-  }
-  if (disabledReason === "Wait for your turn") {
-    return "Waiting";
-  }
-  if (disabledReason === "Finish the required action first") {
-    return "Finish action";
-  }
-  if (disabledReason.startsWith("Need ")) {
-    return "Missing cards";
-  }
-  if (disabledReason.startsWith("No legal ")) {
-    return "No space";
-  }
-  if (disabledReason.startsWith("No ") && disabledReason.endsWith(" remaining")) {
-    return "None left";
-  }
-  return "Working…";
 }
 
 function getPlayerInitials(displayName: string): string {

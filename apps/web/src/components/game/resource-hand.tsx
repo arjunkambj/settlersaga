@@ -244,6 +244,9 @@ export function ResourceHand({
                     {selected} selected
                   </span>
                 ) : null}
+                <span aria-hidden="true" className="resource-card-name">
+                  {RESOURCE_LABELS[resource]}
+                </span>
                 {interaction && interactionMatchesSource ? (
                   <Button
                     aria-label={`Move one ${RESOURCE_LABELS[resource]} from your hand to ${interaction.label}`}
@@ -291,6 +294,9 @@ export function ResourceHand({
                 </span>
                 <span aria-hidden="true" className="resource-card-count">
                   {card.count}
+                </span>
+                <span aria-hidden="true" className="resource-card-name">
+                  {card.label}
                 </span>
                 <DevelopmentCardButton
                   card={card.id}

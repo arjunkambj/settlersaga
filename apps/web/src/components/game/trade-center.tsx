@@ -93,14 +93,6 @@ export function TradeCenter({
     return () => document.removeEventListener("keydown", closeOnEscape);
   }, [closeDock, isOpen]);
 
-  const launchCaption = game.legalActions.canRespondToTrade
-    ? "Answer offer"
-    : game.legalActions.canCancelTrade
-      ? "Offer waiting"
-      : game.tradeOffer
-        ? "Offer open"
-        : "Bank or players";
-
   return (
     <div className="trade-center" ref={tradeCenterRef}>
       <ActionTile
@@ -125,7 +117,6 @@ export function TradeCenter({
             width={512}
           />
         }
-        caption={launchCaption}
         className="trade-launch"
         disabled={disabled}
         kind="trade"

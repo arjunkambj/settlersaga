@@ -93,6 +93,22 @@ const PORT_TRADE_BADGE_HEIGHT = 42;
 const PORT_TRADE_BADGE_WIDTH = 78;
 const PORT_RESOURCE_MARK_SIZE = 31;
 
+/** Placement-target sizing. Resting markers stay small so a board full of legal
+    corners still reads as terrain; the hovered one grows into a real preview. */
+const VERTEX_MARKER_RADIUS = 20;
+const VERTEX_CITY_SIZE = 36;
+const VERTEX_SETTLEMENT_SIZE = 32;
+const VERTEX_GLOW_RADIUS = 26;
+// A corner marker has to stay small — a fresh board offers 54 of them — so the
+// hovered one grows a long way to reach the size the piece will actually be
+// built at. Road edges are never crowded, so their marker already sits close to
+// full size and only needs a nudge.
+const VERTEX_HOVER_PIECE_SCALE = 2.3;
+const ROAD_TARGET_SIZE = 95;
+const ROAD_HOVER_PIECE_SCALE = 1.45;
+const TARGET_RESTING_PIECE_ALPHA = 0.5;
+const TARGET_DISABLED_ALPHA = 0.2;
+
 const PORT_RESOURCE_ACCENTS: Readonly<Record<ResourceType, string>> = {
   brick: "#c94f2d",
   sheep: "#789b25",
@@ -697,167 +713,203 @@ function drawTargets(
   scene: DynamicScene,
   images: ReadonlyMap<string, HTMLImageElement | null>,
 ) {
-  for (const target of scene.targets) {
-    const placement = { ...target.point, angle: target.angle };
-    const path = target.asset === "robber" ? ROBBER_ASSET_PATH : getPieceAssetPath(target.asset);
+  // The hovered target paints last so its glow and full-size preview are never
+  // clipped by a neighbouring marker.
+  const ordered = [...scene.targets].sort(
+    (first, second) => Number(Boolean(first.highlighted)) - Number(Boolean(second.highlighted)),
+  );
+
+  for (const target of ordered) {
+    if (target.asset === "robber") {
+      drawRobberTarget(context, target, images.get(ROBBER_ASSET_PATH) ?? null);
+      continue;
+    }
+
+    const path = getPieceAssetPath(target.asset);
     const image = images.get(path) ?? null;
+    const preview = image
+      ? getTintedPieceCanvas(image, path, target.theme, PLAYER_COLOR_HEX[target.theme])
+      : null;
 
-    if (target.highlighted && (target.asset === "city" || target.asset === "settlement") && image) {
-      drawBuildingTargetTooltip(context, target, placement, image, path);
-      continue;
-    }
-
-    if (!target.highlighted) {
-      drawTargetHint(context, target, placement);
-      continue;
-    }
-
-    if (target.asset !== "road") {
-      drawHighlightedTarget(context, target, placement);
-    }
-
-    if (image) {
-      drawTargetGhost(context, target, placement, image, path);
+    if (target.asset === "road") {
+      drawRoadTarget(context, target, preview);
+    } else {
+      drawVertexTarget(context, target, preview);
     }
   }
 }
 
-function drawBuildingTargetTooltip(
+/** Legal settlement/city corner: a marker ring at rest, the piece itself on hover. */
+function drawVertexTarget(
   context: CanvasRenderingContext2D,
   target: BoardCanvasTarget,
-  placement: PixelCoordinate & { angle: number },
-  image: HTMLImageElement,
-  path: string,
+  preview: HTMLCanvasElement | null,
 ) {
-  const cardWidth = target.highlighted ? 62 : 56;
-  const cardHeight = target.highlighted ? 58 : 52;
-  const cardBottom = -30;
-  const cardLeft = -cardWidth / 2;
-  const cardTop = cardBottom - cardHeight;
-  const previewSize = target.asset === "city" ? 40 : 36;
-  const preview = getTintedPieceCanvas(image, path, target.theme, PLAYER_COLOR_HEX[target.theme]);
+  const accent = PLAYER_COLOR_HEX[target.theme];
+  const pieceSize = target.asset === "city" ? VERTEX_CITY_SIZE : VERTEX_SETTLEMENT_SIZE;
 
   context.save();
-  context.translate(placement.x, placement.y);
-  context.globalAlpha = target.disabled ? 0.22 : target.highlighted ? 1 : 0.9;
-  context.shadowBlur = target.highlighted ? 12 : 7;
-  context.shadowColor = "rgba(15, 48, 70, 0.28)";
-  context.shadowOffsetY = 3;
+  context.translate(target.point.x, target.point.y);
+  context.globalAlpha = target.disabled ? TARGET_DISABLED_ALPHA : 1;
 
-  context.beginPath();
-  context.moveTo(-8, cardBottom - 1);
-  context.lineTo(0, -14);
-  context.lineTo(8, cardBottom - 1);
-  context.closePath();
-  context.fillStyle = "rgba(248, 253, 255, 0.97)";
-  context.fill();
+  if (target.highlighted) {
+    drawTargetGlow(context, accent, () => {
+      context.beginPath();
+      context.arc(0, 0, VERTEX_GLOW_RADIUS, 0, Math.PI * 2);
+    });
+  } else {
+    drawMarkerRing(context, () => {
+      context.beginPath();
+      context.arc(0, 0, VERTEX_MARKER_RADIUS, 0, Math.PI * 2);
+    });
+  }
 
-  createRoundedRectPath(context, cardLeft, cardTop, cardWidth, cardHeight, 9);
-  context.fill();
-  context.shadowColor = "transparent";
-  context.strokeStyle = target.highlighted
-    ? PLAYER_COLOR_HEX[target.theme]
-    : "rgba(82, 145, 180, 0.78)";
-  context.lineWidth = target.highlighted ? 4 : 3;
-  context.stroke();
+  if (preview) {
+    drawGhostPiece(
+      context,
+      preview,
+      pieceSize * (target.highlighted ? VERTEX_HOVER_PIECE_SCALE : 1),
+      target.highlighted ?? false,
+      accent,
+    );
+  }
 
-  context.drawImage(
-    preview,
-    -previewSize / 2,
-    cardTop + (cardHeight - previewSize) / 2,
-    previewSize,
-    previewSize,
-  );
   context.restore();
 }
 
-function drawTargetHint(
+/** Legal road edge: no marker ring, just the road piece ghosted along the edge. */
+function drawRoadTarget(
   context: CanvasRenderingContext2D,
   target: BoardCanvasTarget,
-  placement: PixelCoordinate & { angle: number },
+  preview: HTMLCanvasElement | null,
 ) {
-  if (target.asset === "road") {
+  if (!preview) {
     return;
   }
 
   context.save();
-  context.translate(placement.x, placement.y);
-  context.rotate((placement.angle * Math.PI) / 180);
-  context.globalAlpha = target.disabled ? 0.16 : 0.62;
-  context.fillStyle = "#ffe7a4";
-
-  const radius = target.asset === "robber" ? 8 : target.asset === "settlement" ? 12 : 6;
-  context.beginPath();
-  context.arc(0, 0, radius, 0, Math.PI * 2);
-
-  context.fill();
-  context.strokeStyle = "rgba(9, 49, 70, 0.7)";
-  context.lineWidth = 2;
-  context.stroke();
+  context.translate(target.point.x, target.point.y);
+  context.rotate((target.angle * Math.PI) / 180);
+  context.scale(1, ROAD_PIECE_SCALE_Y);
+  context.globalAlpha = target.disabled ? TARGET_DISABLED_ALPHA : 1;
+  drawGhostPiece(
+    context,
+    preview,
+    ROAD_TARGET_SIZE * (target.highlighted ? ROAD_HOVER_PIECE_SCALE : 1),
+    target.highlighted ?? false,
+    PLAYER_COLOR_HEX[target.theme],
+  );
   context.restore();
 }
 
-function drawHighlightedTarget(
+/**
+ * A preview of the piece the click would build. At rest it is translucent, so a
+ * board full of options still reads as terrain; the dark rim is what keeps it
+ * legible over both the pale desert and the dark forest. Hovering promotes it to
+ * a solid piece sitting in a player-tinted glow.
+ */
+function drawGhostPiece(
   context: CanvasRenderingContext2D,
-  target: BoardCanvasTarget,
-  placement: PixelCoordinate & { angle: number },
+  preview: HTMLCanvasElement,
+  size: number,
+  highlighted: boolean,
+  accent: string,
 ) {
-  context.save();
-  context.translate(placement.x, placement.y);
-  context.rotate((placement.angle * Math.PI) / 180);
-  context.globalAlpha = target.disabled ? 0.34 : 1;
-  context.shadowBlur = 16;
-  context.shadowColor = "rgba(255, 194, 45, 0.82)";
-  context.fillStyle = "rgba(255, 219, 108, 0.26)";
-
-  if (target.asset === "road") {
-    createRoundedRectPath(context, -50, -19, 100, 38, 19);
-  } else {
-    context.beginPath();
-    context.arc(0, 0, target.asset === "robber" ? 60 : 32, 0, Math.PI * 2);
-  }
-
-  context.fill();
-  context.strokeStyle = "rgba(9, 45, 67, 0.82)";
-  context.lineWidth = 6;
-  context.stroke();
-  context.strokeStyle = "#fff1bb";
-  context.lineWidth = 3;
-  context.stroke();
-  context.restore();
-}
-
-function drawTargetGhost(
-  context: CanvasRenderingContext2D,
-  target: BoardCanvasTarget,
-  placement: PixelCoordinate & { angle: number },
-  image: HTMLImageElement,
-  path: string,
-) {
-  const size =
-    target.asset === "robber"
-      ? 92
-      : target.asset === "road"
-        ? 94
-        : target.asset === "city"
-          ? 58
-          : 52;
-  const preview =
-    target.asset === "robber"
-      ? image
-      : getTintedPieceCanvas(image, path, target.theme, PLAYER_COLOR_HEX[target.theme]);
+  const rimOffset = Math.max(1.2, size * 0.017);
+  const alpha = context.globalAlpha * (highlighted ? 1 : TARGET_RESTING_PIECE_ALPHA);
 
   context.save();
-  context.translate(placement.x, placement.y);
-  context.rotate((placement.angle * Math.PI) / 180);
-  if (target.asset === "road") {
-    context.scale(1, ROAD_PIECE_SCALE_Y);
+  // A hairline rim rather than a full outline: enough to separate the ghost from
+  // pale sand and dark forest alike without reading as a solid placed piece.
+  context.globalAlpha = alpha * 0.7;
+  context.filter = "brightness(0.24) saturate(0.7)";
+  for (const [offsetX, offsetY] of [
+    [-rimOffset, 0],
+    [rimOffset, 0],
+    [0, -rimOffset],
+    [0, rimOffset],
+  ]) {
+    context.drawImage(preview, -size / 2 + offsetX, -size / 2 + offsetY, size, size);
   }
-  context.globalAlpha = target.disabled ? 0.18 : 0.94;
-  context.shadowBlur = 12;
-  context.shadowColor = "rgba(255, 199, 69, 0.72)";
+
+  context.globalAlpha = alpha;
+  context.filter = "none";
+  context.shadowBlur = highlighted ? 14 : 6;
+  context.shadowColor = highlighted ? withAlpha(accent, 0.9) : "rgba(12, 40, 58, 0.5)";
+  context.shadowOffsetY = highlighted ? 0 : 2;
   context.drawImage(preview, -size / 2, -size / 2, size, size);
   context.restore();
+}
+
+function drawRobberTarget(
+  context: CanvasRenderingContext2D,
+  target: BoardCanvasTarget,
+  image: HTMLImageElement | null,
+) {
+  context.save();
+  context.translate(target.point.x, target.point.y);
+  context.globalAlpha = target.disabled ? TARGET_DISABLED_ALPHA : 1;
+
+  if (target.highlighted) {
+    drawTargetGlow(context, "#ffc22d", () => {
+      context.beginPath();
+      context.arc(0, 0, 58, 0, Math.PI * 2);
+    });
+
+    if (image) {
+      context.globalAlpha *= 0.94;
+      context.shadowBlur = 12;
+      context.shadowColor = "rgba(255, 199, 69, 0.72)";
+      context.drawImage(image, -46, -46, 92, 92);
+    }
+  } else {
+    drawMarkerRing(context, () => {
+      context.beginPath();
+      context.arc(0, 0, 9, 0, Math.PI * 2);
+    });
+  }
+
+  context.restore();
+}
+
+/**
+ * The resting affordance: a translucent well with a dark keyline so it stays
+ * legible over both the pale desert and the dark forest tiles, plus a warm
+ * inner stroke that ties it to the board's gold trim.
+ */
+function drawMarkerRing(context: CanvasRenderingContext2D, createPath: () => void) {
+  context.save();
+  createPath();
+  context.fillStyle = "rgba(255, 248, 227, 0.16)";
+  context.fill();
+  context.lineWidth = 4.5;
+  context.strokeStyle = "rgba(9, 38, 56, 0.5)";
+  context.stroke();
+  context.lineWidth = 2;
+  context.strokeStyle = "rgba(255, 244, 214, 0.72)";
+  context.stroke();
+  context.restore();
+}
+
+/** The hover affordance: a soft player-tinted pool under the previewed piece. */
+function drawTargetGlow(
+  context: CanvasRenderingContext2D,
+  accent: string,
+  createPath: () => void,
+) {
+  context.save();
+  context.shadowBlur = 22;
+  context.shadowColor = withAlpha(accent, 0.85);
+  createPath();
+  context.fillStyle = withAlpha(accent, 0.38);
+  context.fill();
+  context.restore();
+}
+
+function withAlpha(color: string, alpha: number): string {
+  return `${color}${Math.round(alpha * 255)
+    .toString(16)
+    .padStart(2, "0")}`;
 }
 
 function drawPlayerPiece(

@@ -175,9 +175,9 @@
 }
 
 .bank-grid li {
+  position: relative;
   display: grid;
   justify-items: center;
-  gap: 0.1rem;
   padding: 0.35rem 0.2rem;
   border: 1px solid var(--hud-line);
   border-radius: var(--radius-md);
@@ -191,19 +191,26 @@
   object-fit: contain;
 }
 
-.bank-grid li span {
-  color: var(--hud-text-faint);
-  font-size: 0.55rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  line-height: 1.1;
-}
-
+/* Supply count rides the card as a chip, like the hand's count badges. */
 .bank-grid li strong {
-  color: var(--hud-text);
-  font-size: 0.9rem;
+  position: absolute;
+  z-index: 5;
+  top: 0.15rem;
+  right: 0.15rem;
+  display: grid;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  place-items: center;
+  padding-inline: 0.22rem;
+  border: 1px solid var(--hud-line-strong);
+  border-radius: 999px;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-size: 0.66rem;
   font-variant-numeric: tabular-nums;
-  font-weight: 800;
+  font-weight: 900;
+  line-height: 1;
+  pointer-events: none;
 }
 
 /* Game log --------------------------------------------------------------- */
@@ -566,7 +573,9 @@
   filter: drop-shadow(0 0 8px var(--hud-glow));
 }
 
-/* Legal placement targets. */
+/* Legal placement targets. The marker artwork itself is painted on the board
+   canvas so it can be player-tinted and sit under the pieces; these buttons are
+   only the hit area plus the keyboard focus ring. */
 .build-target {
   position: absolute;
   z-index: 20;
@@ -577,28 +586,22 @@
   padding: 0;
   border: 0;
   border-radius: 50%;
-  background: color-mix(in oklch, var(--hud-glow) 22%, transparent);
-  box-shadow:
-    inset 0 0 0 2px color-mix(in oklch, var(--hud-glow) 85%, transparent),
-    0 0 10px color-mix(in oklch, var(--hud-glow) 55%, transparent);
+  background: transparent;
+  box-shadow: none;
   cursor: pointer;
   transform: translate(-50%, -50%) rotate(var(--target-rotation, 0deg));
-  transition:
-    background-color 140ms ease,
-    box-shadow 140ms ease;
-}
-
-.build-target:hover,
-.build-target:focus-visible {
-  background: color-mix(in oklch, var(--hud-glow) 42%, transparent);
-  box-shadow:
-    inset 0 0 0 2px var(--hud-glow),
-    0 0 18px color-mix(in oklch, var(--hud-glow) 80%, transparent);
 }
 
 .build-target:focus-visible {
-  outline: 2px solid var(--foreground);
+  outline: 2px solid var(--hud-glow);
   outline-offset: 2px;
+}
+
+/* The corner hit area is deliberately fatter than the marker painted on the
+   canvas, so pull the focus ring inwards to sit on the marker instead of
+   floating well outside it. */
+.target-vertex:focus-visible {
+  outline-offset: -5px;
 }
 
 .target-road,
@@ -846,10 +849,14 @@
 }
 
 .resource-card-face {
+  --card-name-height: 0.85rem;
+
   position: relative;
+  display: grid;
   width: 3.9rem;
   min-width: 3.9rem;
-  aspect-ratio: 2 / 3;
+  grid-template-rows: auto var(--card-name-height);
+  gap: 0.1rem;
   border-radius: 0.4rem;
   overflow: visible;
   transition:
@@ -857,12 +864,24 @@
     transform 150ms ease;
 }
 
+.resource-card-name {
+  align-self: center;
+  overflow: hidden;
+  color: var(--hud-text-muted);
+  font-size: 0.55rem;
+  font-weight: 800;
+  line-height: var(--card-name-height);
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .resource-card-face.is-selectable,
 .resource-card-face.is-playable {
   cursor: pointer;
 }
 
-.resource-card-face.is-playable {
+.resource-card-face.is-playable .resource-card-art {
   box-shadow: 0 0 0 2px color-mix(in oklch, var(--primary) 65%, transparent);
 }
 
@@ -882,8 +901,12 @@
   display: block;
   width: 100%;
   height: 100%;
-  border-radius: inherit;
+  border-radius: 0.4rem;
   object-fit: contain;
+}
+
+.resource-card-art {
+  aspect-ratio: 2 / 3;
 }
 
 .resource-card-count {
@@ -911,7 +934,7 @@
   position: absolute;
   z-index: 5;
   right: 50%;
-  bottom: -0.3rem;
+  bottom: calc(var(--card-name-height) - 0.2rem);
   padding: 0.15rem 0.35rem;
   border-radius: 999px;
   background: var(--accent);
@@ -924,8 +947,8 @@
   white-space: nowrap;
 }
 
-.resource-card-face.is-selected,
-.resource-card-face[data-selected="true"] {
+.resource-card-face.is-selected .resource-card-art,
+.resource-card-face[data-selected="true"] .resource-card-art {
   box-shadow:
     0 0 0 2px var(--accent),
     0 0 0.75rem color-mix(in oklch, var(--accent) 45%, transparent);
@@ -1082,11 +1105,14 @@
 
 /* Build & trade dock ----------------------------------------------------- */
 
+/* Laid out like the resource hand: a heading, then one row of card faces.
+   TradeCenter is `display: contents`, so its tile joins this row directly. */
 .action-dock {
-  display: grid;
-  align-content: start;
-  gap: 0.45rem;
-  padding: 0.55rem 0.65rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 0.4rem;
+  padding: 0.5rem 0.6rem;
   border: 1px solid var(--hud-line);
   border-radius: var(--hud-radius);
   background: var(--hud-surface);
@@ -1121,6 +1147,7 @@
 
 .action-heading {
   display: grid;
+  flex: 1 0 100%;
   gap: 0.05rem;
 }
 
@@ -1220,50 +1247,65 @@
   pointer-events: none;
 }
 
-.mini-cost {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 0.15rem;
+/* Dock tiles drop the button chrome and read as hand cards: a full-bleed
+   portrait face with a corner count, matching `.resource-card-face`. */
+.action-tile-preset--dock {
+  width: 3.9rem;
+  grid-template-rows: auto auto;
+  gap: 0.2rem;
+  padding: 0.4rem 0;
+  border: 0;
+  border-radius: 0.4rem;
+  background: transparent;
 }
 
-.mini-cost > span {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.08rem;
-  color: var(--hud-text-muted);
-  font-size: 0.55rem;
-  font-weight: 800;
+.action-tile-preset--dock:not(:disabled):hover,
+.action-tile-preset--dock.is-selected {
+  border: 0;
+  background: transparent;
 }
 
-/* The resource name is for assistive tech and tooltips only. */
-.mini-cost > span > span {
-  display: none;
+.action-tile-preset--dock .action-tile-preset__art {
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  border-radius: 0.4rem;
+  transition:
+    filter 150ms ease,
+    transform 150ms ease;
 }
 
-.mini-cost .resource-icon {
-  width: 0.7rem;
-  height: 0.95rem;
-  object-fit: contain;
+.action-tile-preset--dock .action-art {
+  width: 100%;
+  height: 100%;
 }
 
-.mini-cost > .is-missing {
-  color: var(--destructive);
+.action-tile-preset--dock:not(:disabled):hover .action-tile-preset__art {
+  filter: brightness(1.09);
+  transform: translateY(-2px);
 }
 
-.build-action-status {
-  color: var(--hud-text-faint);
-  font-size: 0.53rem;
-  font-weight: 800;
-  letter-spacing: 0.03em;
+.action-tile-preset--dock.is-selected .action-tile-preset__art {
+  box-shadow:
+    0 0 0 2px var(--accent),
+    0 0 0.75rem color-mix(in oklch, var(--accent) 45%, transparent);
 }
 
-.build-action-status.is-active {
-  color: var(--primary);
+.action-tile-preset--dock.is-unavailable {
+  opacity: 1;
 }
 
-.build-action-status.is-blocked {
-  color: var(--destructive);
+.action-tile-preset--dock.is-unavailable .action-tile-preset__art {
+  filter: saturate(0.5) brightness(0.7);
+  opacity: 0.7;
+}
+
+.action-tile-preset--dock .action-count {
+  top: 0.1rem;
+  right: -0.3rem;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  border: 1px solid var(--hud-line-strong);
+  font-size: 0.66rem;
 }
 
 /* Turn control ----------------------------------------------------------- */
@@ -2351,6 +2393,10 @@
     width: 4rem;
   }
 
+  .action-tile-preset--dock {
+    width: 3.2rem;
+  }
+
   .win-card {
     padding: 0.9rem;
   }
@@ -2364,7 +2410,6 @@
 
   .action-tile-preset,
   .resource-card-face,
-  .build-target,
   .target-robber::after {
     transition: none;
   }
