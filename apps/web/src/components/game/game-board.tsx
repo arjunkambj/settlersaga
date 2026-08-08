@@ -532,7 +532,7 @@ function BoardInspector({ inspection }: { inspection: BoardInspection | null }) 
   }
 
   return (
-    <aside aria-label="Board inspector" className={"rounded-md border bg-card"}>
+    <aside aria-label="Board inspector" className="board-inspector">
       <span className="board-inspector-kicker">{inspection.kicker}</span>
       <span className="board-inspector-title-row">
         {inspection.resource ? (

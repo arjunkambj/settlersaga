@@ -183,10 +183,10 @@ export function ResourceHand({
   };
 
   return (
-    <section aria-label="Your cards" className={"rounded-md border bg-card"}>
+    <section aria-label="Your cards" className="resource-hand">
       {notice}
-      <div className={""} id={HAND_DOCK_ROOT_ID} />
-      <div className={""}>
+      <div className="hand-dock" id={HAND_DOCK_ROOT_ID} />
+      <div className="hand-viewport">
         <ul
           aria-label={
             resourceListOverflows
@@ -217,8 +217,8 @@ export function ResourceHand({
                   "resource-card",
                   "resource-card-face",
                   `resource-${resource}`,
-                  selected > 0 && !preserveHandAppearance ? "" : "",
-                  interaction && interactionMatchesSource ? "" : "",
+                  selected > 0 && !preserveHandAppearance ? "is-selected" : "",
+                  interaction && interactionMatchesSource ? "is-selectable" : "",
                 ]
                   .filter(Boolean)
                   .join(" ")}
@@ -236,18 +236,18 @@ export function ResourceHand({
                     sizes="4.5rem"
                   />
                 </span>
-                <span aria-hidden="true" className={""}>
+                <span aria-hidden="true" className="resource-card-count">
                   {displayedCount}
                 </span>
                 {selected > 0 && !preserveHandAppearance ? (
-                  <span aria-hidden="true" className={""}>
+                  <span aria-hidden="true" className="resource-card-selected">
                     {selected} selected
                   </span>
                 ) : null}
                 {interaction && interactionMatchesSource ? (
                   <Button
                     aria-label={`Move one ${RESOURCE_LABELS[resource]} from your hand to ${interaction.label}`}
-                    className={""}
+                    className="resource-card-select"
                     disabled={interaction.disabled || available === 0}
                     onClick={() => interaction.onSelect(resource)}
                     variant="ghost"
@@ -261,7 +261,7 @@ export function ResourceHand({
             );
           })}
           {developmentCardCounts.length > 0 ? (
-            <li aria-hidden="true" className={`mx-1 ${""}`} />
+            <li aria-hidden="true" className="hand-card-divider" />
           ) : null}
           {developmentCardCounts.map((card) => {
             const playable =
@@ -271,7 +271,7 @@ export function ResourceHand({
                 aria-label={`${card.label} development cards: ${card.count}. ${card.description}`}
                 className={[
                   "resource-card resource-card-face development-card-face",
-                  playable ? "" : "",
+                  playable ? "is-playable" : "",
                 ]
                   .filter(Boolean)
                   .join(" ")}
@@ -289,7 +289,7 @@ export function ResourceHand({
                     width={512}
                   />
                 </span>
-                <span aria-hidden="true" className={""}>
+                <span aria-hidden="true" className="resource-card-count">
                   {card.count}
                 </span>
                 <DevelopmentCardButton
@@ -305,13 +305,13 @@ export function ResourceHand({
             );
           })}
         </ul>
-        <div aria-hidden="true" className={""}>
+        <div aria-hidden="true" className="resource-flight-layer">
           {resourceAnimations.map((animation) => {
             const column = RESOURCE_ORDER.indexOf(animation.resource) + 1;
 
             return (
               <span
-                className={""}
+                className="resource-flight-anchor"
                 key={animation.id}
                 style={{
                   ...RESOURCE_FLIGHT_STYLES[animation.resource],
@@ -319,15 +319,15 @@ export function ResourceHand({
                 }}
               >
                 <span
-                  className={`${""} ${animation.direction === "receive" ? "" : ""}`}
+                  className={`resource-flight resource-flight--${animation.direction === "receive" ? "receive" : "spend"}`}
                   onAnimationEnd={(event) => finishAnimation(animation.id, event)}
                 >
                   <GameCardArtwork
-                    className={""}
+                    className="resource-flight-image"
                     path={RESOURCE_CARD_ASSET_PATHS[animation.resource]}
                     sizes="2.65rem"
                   />
-                  <span className={""}>
+                  <span className="resource-flight-badge">
                     {animation.direction === "receive" ? "+" : "−"}
                     {animation.amount}
                   </span>
@@ -369,7 +369,7 @@ function DevelopmentCardButton({
   return (
     <Button
       aria-label={`${label} development cards: ${count}. ${description} ${status}`}
-      className={""}
+      className="resource-card-select"
       disabled={pending || !playable}
       onClick={() => {
         if (card !== "victory-point") {

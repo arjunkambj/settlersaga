@@ -1,6 +1,11 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+/* Game table styles. Deliberately unlayered: several game surfaces reshape a
+   shadcn Button (action tiles, card hit areas), and unlayered rules win over
+   Tailwind's layered utilities, so the component's own sizing does not fight
+   the tile shape. */
+@import "./game.css";
 
 @custom-variant dark (&:is(.dark *));
 

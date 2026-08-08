@@ -82,17 +82,17 @@ export function DevelopmentCardDialog({
 
   return (
     <HandDockPortal>
-      <div className={""}>
+      <div className="dev-card-dialog">
         <section
           aria-label={isMonopoly ? "Choose a Monopoly resource" : "Choose two resources"}
-          className={"rounded-md border bg-card"}
+          className="dev-card-dialog__panel"
           ref={dialogRef}
           role="dialog"
           tabIndex={-1}
         >
-          <header className={""}>
+          <header className="dev-card-dialog__header">
             <div>
-              <p className={""}>Development card</p>
+              <p className="eyebrow">Development card</p>
               <h2>{isMonopoly ? "Play Monopoly" : "Year of Plenty"}</h2>
             </div>
             <Button disabled={pending} onClick={onClose} size="icon-sm" variant="ghost">
@@ -103,13 +103,13 @@ export function DevelopmentCardDialog({
             </Button>
           </header>
 
-          <p className={""}>
+          <p className="dev-card-dialog__hint">
             {isMonopoly
               ? "Choose one resource. Every opponent gives you all cards of that type."
               : "Choose exactly two available bank cards. You can choose the same type twice."}
           </p>
 
-          <div className={""}>
+          <div className="dev-card-dialog__grid">
             {RESOURCE_ORDER.map((resource) => {
               const selected = isMonopoly
                 ? monopolyResource === resource
@@ -124,12 +124,12 @@ export function DevelopmentCardDialog({
                     (knownAvailable !== undefined && selected >= knownAvailable)));
 
               return (
-                <article className={""} data-selected={selected > 0} key={resource}>
+                <article className="dev-card-option" data-selected={selected > 0} key={resource}>
                   {isMonopoly ? (
                     <Button
                       aria-label={`Choose ${RESOURCE_LABELS[resource]}`}
                       aria-pressed={selected > 0}
-                      className={""}
+                      className="dev-card-option__button"
                       disabled={pending}
                       onClick={() => setMonopolyResource(resource)}
                       variant="ghost"
@@ -141,7 +141,7 @@ export function DevelopmentCardDialog({
                   )}
 
                   {!isMonopoly ? (
-                    <div className={""}>
+                    <div className="dev-card-option__stepper">
                       <Button
                         aria-label={`Remove one ${RESOURCE_LABELS[resource]}`}
                         disabled={pending || selected === 0}
@@ -168,7 +168,7 @@ export function DevelopmentCardDialog({
             })}
           </div>
 
-          <footer className={""}>
+          <footer className="dev-card-dialog__footer">
             <span aria-live="polite">
               {isMonopoly
                 ? monopolyResource
@@ -177,11 +177,10 @@ export function DevelopmentCardDialog({
                 : `${selectedCount} of 2 cards selected`}
             </span>
             <div>
-              <Button className={""} disabled={pending} onClick={onClose} variant="secondary">
+              <Button disabled={pending} onClick={onClose} variant="secondary">
                 Cancel
               </Button>
               <Button
-                className={""}
                 disabled={pending || (isMonopoly ? monopolyResource === null : selectedCount !== 2)}
                 onClick={play}
                 variant="default"
@@ -205,7 +204,7 @@ export function DevelopmentCardDialog({
 function ResourceCard({ resource, selected }: { resource: ResourceType; selected: number }) {
   return (
     <>
-      <span className={""}>
+      <span className="dev-card-option__art">
         <Image
           alt=""
           draggable={false}
@@ -215,7 +214,7 @@ function ResourceCard({ resource, selected }: { resource: ResourceType; selected
           width={128}
         />
         {selected > 0 ? (
-          <span aria-hidden="true" className={""}>
+          <span aria-hidden="true" className="dev-card-option__count">
             {selected}
           </span>
         ) : null}

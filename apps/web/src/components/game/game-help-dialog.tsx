@@ -211,11 +211,11 @@ export function GameHelpDialog({ onClose }: GameHelpDialogProps) {
           </div>
           <div className="flex justify-between gap-2">
             {!isFirstPage && (
-              <Button className="" onClick={showPreviousPage} variant="ghost">
+              <Button onClick={showPreviousPage} variant="ghost">
                 Back
               </Button>
             )}
-            <Button className={""} onClick={showNextPage} variant="default">
+            <Button onClick={showNextPage} variant="default">
               {isLastPage ? "Start playing" : "Next"}
               {!isLastPage && <span aria-hidden="true">→</span>}
             </Button>

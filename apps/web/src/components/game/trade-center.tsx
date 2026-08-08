@@ -102,7 +102,7 @@ export function TradeCenter({
         : "Bank or players";
 
   return (
-    <div className={""} ref={tradeCenterRef}>
+    <div className="trade-center" ref={tradeCenterRef}>
       <ActionTile
         ariaControls={tradeOfferOpen ? "trade-offer-surface" : "trade-dock"}
         ariaExpanded={panelVisible}
@@ -126,7 +126,7 @@ export function TradeCenter({
           />
         }
         caption={launchCaption}
-        className={`trade-launch ${""}`}
+        className="trade-launch"
         disabled={disabled}
         kind="trade"
         onClick={() => {
@@ -150,7 +150,7 @@ export function TradeCenter({
 
       {isOpen && !tradeOfferOpen ? (
         <HandDockPortal>
-          <div className={""}>
+          <div className="trade-dock">
             <section
               aria-labelledby="trade-dock-title"
               autoFocus
@@ -184,14 +184,14 @@ function TradeDockHeader({
   titleId?: string;
 }) {
   return (
-    <header className={""}>
+    <header className="trade-dock-header">
       <div>
         <h2 id={titleId}>{title}</h2>
       </div>
       {onClose ? (
         <Button
           aria-label="Close trade panel"
-          className={""}
+          className="trade-dock-close"
           size="icon-sm"
           onClick={onClose}
           variant="ghost"
@@ -312,8 +312,8 @@ function TradeComposer({
   };
 
   return (
-    <div className={""}>
-      <div className={""}>
+    <div className="trade-composer">
+      <div className="trade-rows">
         <RequestedResourceRow
           disabled={disabled || !canComposeTrade}
           excludedResources={give}
@@ -330,19 +330,23 @@ function TradeComposer({
         />
       </div>
 
-      <fieldset className={""}>
+      <fieldset className="trade-recipients">
         <legend className="sr-only">Offer recipients</legend>
-        <div className={""}>
+        <div className="trade-recipient-list">
           {opponents.map((player) => (
-            <label key={player.id} htmlFor={`trade-recipient-${player.id}`} className={""}>
+            <label
+              key={player.id}
+              htmlFor={`trade-recipient-${player.id}`}
+              className="trade-recipient"
+            >
               <Checkbox
                 id={`trade-recipient-${player.id}`}
                 checked={recipientPlayerIds.includes(player.id)}
                 disabled={disabled}
                 onCheckedChange={(checked) => toggleRecipient(player.id, checked === true)}
               />
-              <span className={""}>
-                <span className={""} aria-hidden="true">
+              <span className="trade-recipient-identity">
+                <span className="trade-recipient-avatar" aria-hidden="true">
                   <Image
                     alt=""
                     draggable={false}
@@ -352,7 +356,7 @@ function TradeComposer({
                     width={256}
                   />
                 </span>
-                <span className={""}>
+                <span className="trade-recipient-name">
                   <strong>{player.displayName}</strong>
                 </span>
               </span>
@@ -361,14 +365,13 @@ function TradeComposer({
         </div>
       </fieldset>
 
-      <footer className={""}>
+      <footer className="trade-actions">
         <p id="trade-composer-status" role="status">
           {validationMessage}
         </p>
         <div>
           <Button
             aria-describedby="bank-trade-match-status"
-            className={""}
             disabled={disabled || !matchingBankTrade}
             onClick={() => {
               if (!matchingBankTrade) {
@@ -391,7 +394,6 @@ function TradeComposer({
           </Button>
           <Button
             aria-describedby="trade-composer-status"
-            className={""}
             disabled={disabled || !canSendOffer}
             onClick={() =>
               onCommand(
@@ -439,49 +441,49 @@ function RequestedResourceRow({
   };
 
   return (
-    <fieldset className={""} data-direction="receive">
+    <fieldset className="trade-row" data-direction="receive">
       <legend>
-        <span className={""}>
+        <span className="trade-row-direction">
           <Icon aria-hidden="true" icon={arrowDownIcon} />
         </span>
         <span>
           <strong>Cards you want to receive</strong>
         </span>
       </legend>
-      <div className={""}>
+      <div className="trade-picker">
         {RESOURCE_ORDER.map((resource) => {
           const quantity = inventory[resource];
           const conflicts = excludedResources[resource] > 0;
           const canAdd = !disabled && !conflicts && quantity < 19;
           const quantityDescriptionId = `receive-${resource}-trade-quantity`;
           return (
-            <div className={""} key={resource}>
+            <div className="trade-picker-cell" key={resource}>
               <Button
                 aria-describedby={quantityDescriptionId}
                 aria-label={`Add one ${RESOURCE_LABELS[resource]} to what you receive`}
                 aria-pressed={quantity > 0}
-                className={`${""}${quantity > 0 ? ` ${""}` : ""}`}
+                className={`trade-picker-button${quantity > 0 ? " is-selected" : ""}`}
                 disabled={!canAdd}
                 onClick={() => update(resource, 1)}
                 variant="ghost"
               >
                 <Image
                   alt=""
-                  className={""}
+                  className="trade-picker-image"
                   draggable={false}
                   height={768}
                   sizes="3.5rem"
                   src={RESOURCE_CARD_ASSET_PATHS[resource]}
                   width={512}
                 />
-                <span className={""} aria-hidden="true">
+                <span className="trade-picker-quantity" aria-hidden="true">
                   {quantity}
                 </span>
               </Button>
               {quantity > 0 ? (
                 <Button
                   aria-label={`Remove one ${RESOURCE_LABELS[resource]} from what you receive`}
-                  className={""}
+                  className="trade-remove-button"
                   disabled={disabled}
                   size="icon-sm"
                   onClick={() => update(resource, -1)}
@@ -579,7 +581,7 @@ export function ActiveTradeOffer({
       id="trade-offer-surface"
       tabIndex={-1}
     >
-      <div className={""}>
+      <div className="trade-offer">
         <TradeDockHeader
           title={viewerIsProposer ? "Offer sent" : `Offer from ${proposerName}`}
           titleId="trade-offer-title"
@@ -590,7 +592,7 @@ export function ActiveTradeOffer({
           You receive {formatInventory(receive)}. You give {formatInventory(give)}.
         </p>
 
-        <div className={""}>
+        <div className="trade-rows">
           <OfferInventoryRow direction="receive" inventory={receive} label="You receive" />
           <OfferInventoryRow
             availability={viewerIsProposer ? undefined : me.resources}
@@ -601,13 +603,13 @@ export function ActiveTradeOffer({
         </div>
 
         {viewerIsProposer ? (
-          <ul aria-label="Trade responses" className={""}>
+          <ul aria-label="Trade responses" className="trade-offer-responses">
             {offer.recipientPlayerIds.map((playerId) => {
               const player = game.players.find((candidate) => candidate.id === playerId);
               const rejected = offer.rejectedPlayerIds.includes(playerId);
               return (
                 <li data-state={rejected ? "rejected" : "waiting"} key={playerId}>
-                  <span className={""} aria-hidden="true">
+                  <span className="trade-response-avatar" aria-hidden="true">
                     {getPlayerInitial(player?.displayName ?? "?")}
                   </span>
                   <span>{player?.displayName ?? "Invited player"}</span>
@@ -619,7 +621,7 @@ export function ActiveTradeOffer({
         ) : null}
 
         {game.legalActions.canRespondToTrade ? (
-          <footer className={""}>
+          <footer className="trade-offer-actions">
             <p
               aria-live="polite"
               data-state={viewerCanAfford ? "ready" : "error"}
@@ -657,7 +659,7 @@ export function ActiveTradeOffer({
             </div>
           </footer>
         ) : game.legalActions.canCancelTrade ? (
-          <footer className={`${""} ${""}`}>
+          <footer className="trade-offer-actions">
             <Button
               disabled={disabled}
               onClick={() => {
@@ -683,7 +685,7 @@ export function ActiveTradeOffer({
             </Button>
           </footer>
         ) : (
-          <p className={""} role="status">
+          <p className="trade-offer-status" role="status">
             {offer.rejectedPlayerIds.includes(game.viewerPlayerId)
               ? "You declined. Other invited players may still accept."
               : "Waiting for an invited player to answer."}
@@ -716,12 +718,12 @@ function OfferInventoryRow({
 
   return (
     <section
-      className={""}
+      className="trade-row"
       data-direction={direction}
       data-removable={onRemove ? "true" : undefined}
     >
       <header>
-        <span className={""}>
+        <span className="trade-row-direction">
           <Icon aria-hidden="true" icon={directionIcon} />
         </span>
         <strong>{label}</strong>
@@ -734,7 +736,7 @@ function OfferInventoryRow({
               <li data-missing={missing > 0 || undefined} key={resource}>
                 <Image
                   alt=""
-                  className={""}
+                  className="trade-card-thumb"
                   draggable={false}
                   height={768}
                   sizes="2.8rem"
@@ -748,7 +750,7 @@ function OfferInventoryRow({
                 {onRemove ? (
                   <Button
                     aria-label={`Remove one ${RESOURCE_LABELS[resource]} from your offer`}
-                    className={""}
+                    className="trade-remove-inline"
                     disabled={disabled}
                     size="icon-sm"
                     onClick={() => onRemove(resource)}
@@ -762,7 +764,7 @@ function OfferInventoryRow({
           })}
         </ul>
       ) : (
-        <p className={""}>{emptyMessage ?? "No cards selected."}</p>
+        <p className="trade-row-empty">{emptyMessage ?? "No cards selected."}</p>
       )}
     </section>
   );

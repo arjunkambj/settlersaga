@@ -111,38 +111,33 @@ export function DiscardPanel({
 
   return (
     <HandDockPortal>
-      <section
-        aria-labelledby="discard-tray-title"
-        className={"rounded-md border bg-card"}
-        id="discard-tray"
-      >
-        <header className={""}>
+      <section aria-labelledby="discard-tray-title" className="discard-tray" id="discard-tray">
+        <header className="discard-tray__header">
           <h2 id="discard-tray-title">Discard {count}</h2>
         </header>
 
-        <div aria-label="Cards selected to discard" className={""} role="list">
+        <div aria-label="Cards selected to discard" className="discard-tray__cards" role="list">
           {selectedResources.length === 0 ? (
             <span className="sr-only">No cards selected</span>
           ) : (
             selectedResources.map((resource) => (
-              <div className={""} key={resource} role="listitem">
-                <div className={""}>
+              <div className="discard-chip" key={resource} role="listitem">
+                <div className="discard-chip__art">
                   <Image
                     alt=""
-                    className={""}
+                    className="discard-chip__image"
                     draggable={false}
                     height={768}
                     sizes="2.5rem"
                     src={RESOURCE_CARD_ASSET_PATHS[resource]}
                     width={512}
                   />
-                  <span aria-hidden="true" className={""}>
+                  <span aria-hidden="true" className="discard-chip__count">
                     {selection[resource]}
                   </span>
                 </div>
                 <Button
                   aria-label={`Remove one ${RESOURCE_LABELS[resource]} from the discard selection`}
-                  className={""}
                   disabled={pending}
                   onClick={() => removeResource(resource)}
                   size="icon-sm"
@@ -155,7 +150,7 @@ export function DiscardPanel({
           )}
         </div>
 
-        <div className={""}>
+        <div className="discard-tray__footer">
           {isPaused || nextActionAt ? (
             <div
               aria-label={
@@ -170,7 +165,7 @@ export function DiscardPanel({
                       : `Cards will be selected and discarded automatically in ${seconds} seconds`
               }
               aria-live="off"
-              className={""}
+              className="discard-tray__timer"
               data-expired={isExpired || undefined}
               role="timer"
             >
@@ -190,7 +185,6 @@ export function DiscardPanel({
           </p>
           <Button
             aria-describedby="discard-tray-status"
-            className={""}
             disabled={pending || selectedCount !== count}
             onClick={() =>
               onCommand({ kind: "discard", resources: selection }, "Resources discarded.")

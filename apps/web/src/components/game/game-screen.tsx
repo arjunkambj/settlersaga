@@ -306,12 +306,11 @@ export function GameScreen({
       setConfirming(false);
     }
   };
-  const gameMetaPillClassName =
-    "inline-flex items-center gap-1 rounded-full border bg-card px-2.5 py-1 text-xs font-medium";
-  const gameHeaderActionClassName = "rounded-full border bg-card";
+  const gameMetaPillClassName = "game-pill";
+  const gameHeaderActionClassName = "game-icon-button";
 
   return (
-    <main data-game-shell className="min-h-dvh bg-background" id="main-content">
+    <main data-game-shell className="game-shell" id="main-content">
       <GameAudio
         activePlayerId={game.activePlayerId}
         events={events}
@@ -320,14 +319,14 @@ export function GameScreen({
         viewerPlayerId={me.id}
         winnerPlayerId={game.winnerPlayerId}
       />
-      <div className="flex items-center justify-between gap-3 px-3 pt-3">
-        <div className="flex items-center gap-2">
+      <div className="game-topbar">
+        <div>
           <span className={gameMetaPillClassName}>Turn {game.turnNumber}</span>
           <span className={`${gameMetaPillClassName} victory-target-pill`}>
             <Icon aria-hidden="true" icon={trophyIcon} /> First to {game.settings.victoryPoints} VP
           </span>
         </div>
-        <div className="flex items-center gap-1">
+        <div>
           {isHost && game.status !== "completed" ? (
             <Button
               aria-label={isPaused ? "Resume game" : "Pause game"}
@@ -369,8 +368,8 @@ export function GameScreen({
       </div>
 
       <HandDockProvider>
-        <aside aria-label="Table status" className="space-y-3">
-          <div className="grid gap-3 lg:grid-cols-2">
+        <aside aria-label="Table status" className="game-rail">
+          <div className="game-rail__panels">
             <EventLog events={events} />
             <BankPanel bank={game.bank} developmentCardSupply={game.developmentCardSupply} />
           </div>
@@ -399,7 +398,7 @@ export function GameScreen({
           />
         </aside>
 
-        <div className="hidden" id={BOARD_INSPECTOR_DOCK_ROOT_ID} />
+        <div className="board-inspector-dock" id={BOARD_INSPECTOR_DOCK_ROOT_ID} />
 
         <GameBoard
           buildMode={buildMode}
@@ -410,7 +409,7 @@ export function GameScreen({
           pending={pendingCommand !== null}
         />
 
-        <footer className="grid gap-3 border-t bg-card p-3 lg:grid-cols-3">
+        <footer className="game-footer">
           <ResourceHand
             actionNumber={game.actionNumber}
             me={me}
@@ -436,15 +435,9 @@ export function GameScreen({
             playableDevelopmentCards={game.legalActions.playableDevelopmentCards}
           />
 
-          <div className="space-y-2">
-            <section
-              aria-labelledby="phase-title"
-              className="flex items-center gap-2 rounded-md border bg-card p-3"
-            >
-              <span
-                aria-hidden="true"
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-muted"
-              >
+          <div className="game-footer__column">
+            <section aria-labelledby="phase-title" className="phase-card">
+              <span aria-hidden="true" className="phase-card__icon">
                 <Icon icon={playerIcon} />
               </span>
               <div className="flex-1">
@@ -474,7 +467,7 @@ export function GameScreen({
             />
           </div>
 
-          <div className="space-y-2">
+          <div className="game-footer__column">
             {game.legalActions.discardCount === null ? (
               <TurnClock
                 botThinking={botThinking}
@@ -829,7 +822,7 @@ function BankPanel({
   developmentCardSupply: number;
 }) {
   return (
-    <section aria-label="Resource market" className={"rounded-md border bg-card"}>
+    <section aria-label="Resource market" className="side-card bank-card">
       <ul className="bank-grid">
         {RESOURCE_ORDER.map((resource) => (
           <li
@@ -870,7 +863,7 @@ function EventLog({ events }: { events: RoomEventView[] }) {
   const timeFormatter = showLocalTime ? LOCAL_EVENT_TIME_FORMATTER : UTC_EVENT_TIME_FORMATTER;
 
   return (
-    <section className={"rounded-md border bg-card"} aria-labelledby="events-title">
+    <section className="side-card event-card" aria-labelledby="events-title">
       <div className="side-card-title">
         <h2 id="events-title">Game Log</h2>
         <Icon aria-hidden="true" icon={scrollIcon} />
@@ -1105,7 +1098,7 @@ function BuildingActionsDock({
       supply: game.developmentCardSupply,
     });
   return (
-    <section aria-labelledby="building-actions-title" className={"rounded-md border bg-card"}>
+    <section aria-labelledby="building-actions-title" className="action-dock">
       <div className="action-heading">
         <strong id="building-actions-title">Build & Trade</strong>
         <span>
@@ -1178,7 +1171,7 @@ function TurnControl({
     isRequiredActor: legal.isRequiredActor,
     phaseKind: game.phase.kind,
   });
-  const turnControlClassName = "rounded-md border bg-card";
+  const turnControlClassName = "turn-control";
 
   if (controlKind === "roll") {
     return (
@@ -1187,11 +1180,7 @@ function TurnControl({
           <DieFace value={1} />
           <DieFace value={5} />
         </div>
-        <Button
-          className=""
-          disabled={pending}
-          onClick={() => onCommand({ kind: "roll" }, "Dice rolled.")}
-        >
+        <Button disabled={pending} onClick={() => onCommand({ kind: "roll" }, "Dice rolled.")}>
           <span className="inline-flex items-center gap-2">
             {pending ? (
               <>
@@ -1211,7 +1200,6 @@ function TurnControl({
       <section className={`${turnControlClassName} is-end-turn`} aria-label="Turn control">
         <Button
           aria-label="End Turn"
-          className=""
           disabled={pending || !legal.canEndTurn}
           onClick={() => onCommand({ kind: "end_turn" }, "Turn ended.")}
         >
@@ -1281,7 +1269,7 @@ function UnavailablePlayerView({ onLeave }: { onLeave(): Promise<void> }) {
         <section className="notice-card">
           <h1>Player View Unavailable</h1>
           <p>Your private seat could not be matched to this game. Refresh to reconnect.</p>
-          <Button className="" onClick={() => setShowConfirmation(true)} variant="secondary">
+          <Button onClick={() => setShowConfirmation(true)} variant="secondary">
             Leave Game
           </Button>
         </section>
@@ -1806,7 +1794,7 @@ function WinOverlay({
             </section>
           </div>
           <div className="win-card-footer">
-            <Button className="button win-home-button" onClick={onLeave}>
+            <Button className="win-home-button" onClick={onLeave}>
               Return Home
             </Button>
           </div>

@@ -1,0 +1,2371 @@
+/* ============================================================================
+   Game table styles — Congress Blue.
+
+   Everything that the in-game screen needs beyond Tailwind/shadcn utilities
+   lives here. The rule of thumb: shadcn owns generic chrome (buttons, dialogs,
+   cards); this file owns the board scene and the dense HUD that Tailwind
+   utilities cannot express (canvas overlays, absolutely placed hit targets,
+   player identity colours, card fans).
+
+   Colours derive from the shadcn tokens declared in `styles.css`, so a theme
+   change there flows through here. Do not hardcode hex values outside the
+   token block below.
+   ========================================================================= */
+
+.game-shell {
+  /* Surfaces */
+  --hud-surface: color-mix(in oklch, var(--card) 88%, transparent);
+  --hud-surface-deep: color-mix(in oklch, var(--background) 82%, black 8%);
+  --hud-surface-raised: color-mix(in oklch, var(--card), var(--accent) 8%);
+
+  /* Lines, glows and shadows */
+  --hud-line: color-mix(in oklch, var(--accent) 18%, transparent);
+  --hud-line-strong: color-mix(in oklch, var(--accent) 38%, transparent);
+  --hud-glow: var(--primary);
+  --hud-shadow: 0 14px 34px color-mix(in oklch, var(--background) 70%, black);
+  --hud-shadow-sm: 0 6px 16px color-mix(in oklch, var(--background) 65%, black);
+
+  /* Text ramp */
+  --hud-text: var(--foreground);
+  --hud-text-muted: color-mix(in oklch, var(--foreground) 72%, transparent);
+  --hud-text-faint: color-mix(in oklch, var(--foreground) 50%, transparent);
+
+  /* Rhythm */
+  --hud-gap: 0.75rem;
+  --hud-rail: clamp(288px, 23vw, 348px);
+  --hud-radius: var(--radius-lg);
+
+  display: grid;
+  width: 100%;
+  height: 100dvh;
+  grid-template-areas:
+    "topbar rail"
+    "board  rail"
+    "footer rail";
+  grid-template-columns: minmax(0, 1fr) var(--hud-rail);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: var(--hud-gap);
+  padding: max(0.5rem, env(safe-area-inset-top)) max(0.75rem, env(safe-area-inset-right))
+    max(0.5rem, env(safe-area-inset-bottom)) max(0.75rem, env(safe-area-inset-left));
+  overflow: hidden;
+  background: var(--background);
+  color: var(--hud-text);
+}
+
+/* --------------------------------------------------------------------------
+   Top bar
+   ----------------------------------------------------------------------- */
+
+.game-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--hud-gap);
+  grid-area: topbar;
+  min-width: 0;
+}
+
+.game-topbar > * {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.game-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.3rem 0.7rem;
+  border: 1px solid var(--hud-line);
+  border-radius: 999px;
+  background: var(--hud-surface);
+  color: var(--hud-text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.game-pill svg {
+  color: var(--primary);
+}
+
+.game-icon-button {
+  border: 1px solid var(--hud-line);
+  border-radius: 999px;
+  background: var(--hud-surface);
+  color: var(--hud-text-muted);
+}
+
+.game-icon-button:hover {
+  border-color: var(--hud-line-strong);
+  color: var(--hud-text);
+}
+
+/* --------------------------------------------------------------------------
+   Right rail — game log, market, players
+   ----------------------------------------------------------------------- */
+
+/* A flex column rather than fixed rows: the trade offer between the panels
+   and the player strip is conditional. */
+.game-rail {
+  display: flex;
+  flex-direction: column;
+  grid-area: rail;
+  min-height: 0;
+  gap: var(--hud-gap);
+}
+
+/* The log grows; the market only needs its intrinsic height. */
+.game-rail__panels {
+  display: grid;
+  min-height: 0;
+  flex: 1 1 55%;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: var(--hud-gap);
+}
+
+.side-card {
+  display: grid;
+  min-height: 0;
+  grid-template-rows: auto minmax(0, 1fr);
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--hud-line);
+  border-radius: var(--hud-radius);
+  background: var(--hud-surface);
+  box-shadow: var(--hud-shadow-sm);
+}
+
+.side-card-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.45rem;
+  color: var(--hud-text-muted);
+}
+
+.side-card-title h2 {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.side-card-title svg {
+  color: var(--primary);
+}
+
+/* Resource market -------------------------------------------------------- */
+
+/* No visible heading, so the grid owns the whole card. */
+.bank-card {
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.bank-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(3.25rem, 1fr));
+  gap: 0.4rem;
+  padding: 0;
+  margin: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.bank-grid li {
+  display: grid;
+  justify-items: center;
+  gap: 0.1rem;
+  padding: 0.35rem 0.2rem;
+  border: 1px solid var(--hud-line);
+  border-radius: var(--radius-md);
+  background: color-mix(in oklch, var(--background) 45%, transparent);
+  text-align: center;
+}
+
+.bank-grid .resource-icon {
+  width: 2.15rem;
+  height: 2.85rem;
+  object-fit: contain;
+}
+
+.bank-grid li span {
+  color: var(--hud-text-faint);
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1.1;
+}
+
+.bank-grid li strong {
+  color: var(--hud-text);
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+}
+
+/* Game log --------------------------------------------------------------- */
+
+.event-list {
+  display: grid;
+  align-content: start;
+  gap: 0.3rem;
+  padding: 0;
+  margin: 0;
+  overflow-y: auto;
+  list-style: none;
+  scrollbar-width: thin;
+}
+
+.event-list li {
+  display: grid;
+  grid-template-columns: 0.4rem minmax(0, 1fr);
+  align-items: start;
+  gap: 0.45rem;
+  padding: 0.3rem 0.1rem;
+}
+
+.event-list li + li {
+  border-top: 1px solid var(--hud-line);
+}
+
+.event-list li > span:first-child {
+  width: 0.4rem;
+  height: 0.4rem;
+  margin-top: 0.35rem;
+  border-radius: 50%;
+  background: var(--primary);
+}
+
+.event-copy {
+  display: grid;
+  min-width: 0;
+  gap: 0.1rem;
+}
+
+.event-list p {
+  margin: 0;
+  color: var(--hud-text);
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+.event-list time {
+  color: var(--hud-text-faint);
+  font-size: 0.6rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Player strip ----------------------------------------------------------- */
+
+.player-strip {
+  display: grid;
+  min-height: 8rem;
+  flex: 1 1 45%;
+  align-content: start;
+  gap: 0.4rem;
+  padding: 0;
+  margin: 0;
+  overflow-y: auto;
+  list-style: none;
+  scrollbar-width: thin;
+}
+
+.player-summary {
+  position: relative;
+  display: grid;
+  grid-template-areas:
+    "avatar name    victory"
+    "avatar supply  supply";
+  grid-template-columns: 2.5rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.25rem 0.5rem;
+  padding: 0.45rem 0.55rem;
+  border: 1px solid var(--hud-line);
+  border-left: 3px solid var(--player-color, var(--primary));
+  border-radius: var(--radius-md);
+  background: var(--hud-surface);
+}
+
+.player-summary.is-active {
+  border-color: color-mix(in oklch, var(--player-color, var(--primary)) 60%, transparent);
+  border-left-color: var(--player-color, var(--primary));
+  background: var(--hud-surface-raised);
+  box-shadow: 0 0 0 1px color-mix(in oklch, var(--player-color, var(--primary)) 35%, transparent);
+}
+
+.player-summary.is-viewer .player-identity-line > strong::after {
+  content: " (you)";
+  color: var(--hud-text-faint);
+  font-weight: 600;
+}
+
+.player-avatar {
+  position: relative;
+  display: grid;
+  width: 2.5rem;
+  height: 2.5rem;
+  grid-area: avatar;
+  place-items: center;
+  border: 2px solid var(--player-color, var(--primary));
+  border-radius: 50%;
+  background: color-mix(in oklch, var(--player-color, var(--primary)) 28%, var(--background));
+  overflow: hidden;
+}
+
+.player-avatar-fallback {
+  position: absolute;
+  color: var(--hud-text);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.player-avatar-image {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.player-name {
+  min-width: 0;
+  grid-area: name;
+}
+
+.player-identity-line {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  gap: 0.3rem;
+}
+
+.player-identity-line > strong {
+  overflow: hidden;
+  color: var(--hud-text);
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.player-victory-progress {
+  grid-area: victory;
+}
+
+.player-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.player-victory-stat svg {
+  color: var(--primary);
+}
+
+.player-victory-score {
+  display: inline-flex;
+  align-items: baseline;
+  color: var(--hud-text);
+}
+
+.player-victory-score strong {
+  font-size: 0.95rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+}
+
+.player-victory-score small {
+  color: var(--hud-text-faint);
+  font-size: 0.62rem;
+  font-weight: 700;
+}
+
+.player-victory-stat > em {
+  color: var(--hud-text-faint);
+  font-size: 0.55rem;
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.player-table-supply {
+  display: flex;
+  flex-wrap: wrap;
+  grid-area: supply;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.player-table-fact {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.15rem 0.35rem 0.15rem 0.2rem;
+  border: 1px solid var(--hud-line);
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--background) 45%, transparent);
+}
+
+.player-table-fact > img {
+  width: 1rem;
+  height: 1.4rem;
+  object-fit: contain;
+}
+
+.player-award-fact > img {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.player-table-fact > strong {
+  color: var(--hud-text);
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+}
+
+.player-table-fact > small {
+  color: var(--hud-text-faint);
+  font-size: 0.55rem;
+  font-weight: 700;
+}
+
+.player-table-fact[data-empty="true"] {
+  opacity: 0.5;
+}
+
+/* The active bot's roll, tucked into the card's bottom-right so it clears the
+   victory-point readout in the top row. */
+.player-side-dice {
+  position: absolute;
+  right: 0.45rem;
+  bottom: 0.45rem;
+  display: flex;
+  gap: 0.2rem;
+}
+
+.player-summary.has-side-dice .player-table-supply {
+  padding-right: 3rem;
+}
+
+.player-side-dice .die-face {
+  width: 1.15rem;
+  height: 1.15rem;
+  padding: 0.14rem;
+}
+
+.player-replace {
+  grid-column: 1 / -1;
+  justify-self: start;
+}
+
+/* --------------------------------------------------------------------------
+   Board scene
+   ----------------------------------------------------------------------- */
+
+.board-shell {
+  position: relative;
+  display: grid;
+  grid-area: board;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  place-items: center;
+  padding: 0.35rem;
+  border: 1px solid var(--hud-line-strong);
+  border-radius: var(--hud-radius);
+  overflow: hidden;
+  background: url("/game-assets/ui/ocean-board-canvas.webp") center / cover no-repeat;
+  box-shadow: var(--hud-shadow);
+  container-type: size;
+  cursor: default;
+  touch-action: none;
+  user-select: none;
+}
+
+.board-shell.is-dragging {
+  cursor: grabbing;
+}
+
+.board-shell.is-placing {
+  border-color: var(--hud-glow);
+  box-shadow:
+    var(--hud-shadow),
+    inset 0 0 0 1px color-mix(in oklch, var(--hud-glow) 45%, transparent);
+}
+
+/* The stage keeps the board's 10:11 aspect ratio inside whatever space the
+   shell has, using container query units so it tracks the shell, not the
+   viewport. */
+.board-stage {
+  position: relative;
+  width: min(100cqw, calc(100cqh * 0.9091));
+  isolation: isolate;
+}
+
+.game-board {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  inset: 0;
+  isolation: isolate;
+  /* Overwritten inline by the board camera; this is the at-rest value. */
+  transform: translate3d(0, 0, 0) scale(1);
+  transform-origin: center;
+  backface-visibility: hidden;
+  will-change: transform;
+}
+
+.board-canvas-layer {
+  display: block;
+}
+
+.board-canvas-static {
+  z-index: 0;
+}
+
+.board-canvas-dynamic {
+  z-index: 1;
+}
+
+/* Invisible hover/focus targets layered over the canvas artwork. */
+.board-hit-target {
+  position: absolute;
+  z-index: 10;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: inherit;
+  outline: none;
+  transform: translate(-50%, -50%) rotate(var(--hit-rotation, 0deg));
+}
+
+.port-hit-target {
+  width: clamp(42px, 7%, 64px);
+  aspect-ratio: 3 / 4;
+}
+
+.piece-hit-target-road {
+  width: 10.6%;
+  aspect-ratio: 2 / 1;
+}
+
+.board-inspectable {
+  cursor: inherit;
+  outline: none;
+}
+
+.board-hit-target:focus-visible {
+  z-index: 30;
+  outline: 3px solid var(--hud-glow);
+  outline-offset: 3px;
+  filter: drop-shadow(0 0 8px var(--hud-glow));
+}
+
+/* Legal placement targets. */
+.build-target {
+  position: absolute;
+  z-index: 20;
+  display: grid;
+  width: max(46px, 5.8%);
+  height: max(46px, 5.8%);
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: color-mix(in oklch, var(--hud-glow) 22%, transparent);
+  box-shadow:
+    inset 0 0 0 2px color-mix(in oklch, var(--hud-glow) 85%, transparent),
+    0 0 10px color-mix(in oklch, var(--hud-glow) 55%, transparent);
+  cursor: pointer;
+  transform: translate(-50%, -50%) rotate(var(--target-rotation, 0deg));
+  transition:
+    background-color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.build-target:hover,
+.build-target:focus-visible {
+  background: color-mix(in oklch, var(--hud-glow) 42%, transparent);
+  box-shadow:
+    inset 0 0 0 2px var(--hud-glow),
+    0 0 18px color-mix(in oklch, var(--hud-glow) 80%, transparent);
+}
+
+.build-target:focus-visible {
+  outline: 2px solid var(--foreground);
+  outline-offset: 2px;
+}
+
+.target-road,
+.target-edge {
+  width: max(66px, 9%);
+  height: max(20px, 2.6%);
+  border-radius: 999px;
+}
+
+.target-tile {
+  width: max(86px, 12%);
+  height: max(86px, 12%);
+}
+
+/* The robber target is a hex-clipped well with the robber ghosted inside. */
+.target-robber {
+  width: calc(var(--tile-size) * 0.72);
+  min-width: 64px;
+  height: auto;
+  aspect-ratio: 1;
+  border-radius: 0;
+  background: color-mix(in oklch, var(--hud-glow) 12%, transparent);
+  box-shadow: none;
+  clip-path: polygon(50% 2%, 92% 25%, 92% 75%, 50% 98%, 8% 75%, 8% 25%);
+}
+
+.target-robber::before {
+  position: absolute;
+  inset: 5%;
+  border: 3px solid color-mix(in oklch, var(--hud-glow) 85%, transparent);
+  background: radial-gradient(
+    circle,
+    color-mix(in oklch, var(--hud-glow) 28%, transparent),
+    transparent 62%
+  );
+  clip-path: inherit;
+  content: "";
+  pointer-events: none;
+}
+
+.target-robber::after {
+  position: absolute;
+  inset: 23%;
+  background: url("/game-assets/pieces/robber-piece.png") center / contain no-repeat;
+  content: "";
+  opacity: 0.38;
+  pointer-events: none;
+  transition:
+    opacity 140ms ease,
+    transform 140ms ease;
+}
+
+.target-robber:hover,
+.target-robber:focus-visible {
+  background: color-mix(in oklch, var(--hud-glow) 26%, transparent);
+  box-shadow: none;
+}
+
+.target-robber:hover::after,
+.target-robber:focus-visible::after {
+  opacity: 0.9;
+  transform: scale(1.2);
+}
+
+/* While the camera is being dragged or zoomed, targets must not swallow
+   pointer events or the gesture stutters. */
+.board-shell.is-interacting .board-hit-target,
+.board-shell.is-interacting .build-target {
+  pointer-events: none;
+}
+
+/* Board inspector. Its portal root is a sibling of the board section, so it
+   claims the same grid area and parks itself in the bottom-left corner. */
+.board-inspector-dock {
+  z-index: 40;
+  display: block;
+  width: min(17rem, 60%);
+  grid-area: board;
+  align-self: end;
+  justify-self: start;
+  margin: 0 0 0.75rem 0.75rem;
+  pointer-events: none;
+}
+
+.board-inspector {
+  display: inline-grid;
+  width: fit-content;
+  max-width: 100%;
+  gap: 0.25rem;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--hud-line-strong);
+  border-radius: var(--radius-md);
+  background: var(--hud-surface-deep);
+  box-shadow: var(--hud-shadow-sm);
+  color: var(--hud-text);
+  backdrop-filter: blur(10px);
+}
+
+/* Blur is expensive mid-gesture. */
+.game-shell.is-board-interacting .board-inspector {
+  backdrop-filter: none;
+}
+
+.board-inspector-kicker {
+  color: var(--hud-text-faint);
+  font-size: 0.55rem;
+  font-weight: 900;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.board-inspector-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.board-inspector-title-row .resource-icon {
+  width: 1.4rem;
+  height: 1.85rem;
+}
+
+.board-inspector-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.board-inspector-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin: 0;
+}
+
+.board-inspector-detail {
+  display: inline-flex;
+  min-width: 0;
+  align-items: baseline;
+  gap: 0.25rem;
+}
+
+.board-inspector-label {
+  color: var(--hud-text-faint);
+  font-size: 0.5rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.board-inspector-value {
+  margin: 0;
+  font-size: 0.62rem;
+  font-weight: 800;
+}
+
+/* --------------------------------------------------------------------------
+   Footer — hand, build & trade dock, turn control
+   ----------------------------------------------------------------------- */
+
+.game-footer {
+  display: grid;
+  grid-area: footer;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1.35fr) minmax(8rem, 0.5fr);
+  align-items: stretch;
+  gap: var(--hud-gap);
+}
+
+.game-footer__column {
+  display: grid;
+  min-width: 0;
+  align-content: stretch;
+  gap: 0.4rem;
+}
+
+.phase-card {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--hud-line);
+  border-radius: var(--hud-radius);
+  background: var(--hud-surface);
+}
+
+.phase-card h1 {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.phase-card__icon {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 50%;
+  background: color-mix(in oklch, var(--primary) 22%, transparent);
+  color: var(--primary);
+}
+
+/* Resource hand ---------------------------------------------------------- */
+
+.resource-hand {
+  position: relative;
+  display: grid;
+  min-width: 0;
+  align-content: start;
+  gap: 0.4rem;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--hud-line);
+  border-radius: var(--hud-radius);
+  background: var(--hud-surface);
+}
+
+/* Trade/discard panels portal into this slot, floating above the hand. */
+.hand-dock {
+  position: absolute;
+  z-index: 60;
+  bottom: calc(100% + 0.5rem);
+  left: 0;
+  width: min(30rem, 92vw);
+}
+
+.hand-viewport {
+  position: relative;
+  min-width: 0;
+}
+
+.resource-card-list {
+  display: flex;
+  min-width: 0;
+  align-items: stretch;
+  gap: 0.4rem;
+  /* Vertical breathing room so the count badges are not clipped by the
+     horizontal scroll container. */
+  padding: 0.4rem 0;
+  margin: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  list-style: none;
+  scrollbar-width: thin;
+}
+
+.resource-card-face {
+  position: relative;
+  width: 3.9rem;
+  min-width: 3.9rem;
+  aspect-ratio: 2 / 3;
+  border-radius: 0.4rem;
+  overflow: visible;
+  transition:
+    filter 150ms ease,
+    transform 150ms ease;
+}
+
+.resource-card-face.is-selectable,
+.resource-card-face.is-playable {
+  cursor: pointer;
+}
+
+.resource-card-face.is-playable {
+  box-shadow: 0 0 0 2px color-mix(in oklch, var(--primary) 65%, transparent);
+}
+
+.resource-card-face[data-empty="true"] {
+  filter: saturate(0.5) brightness(0.7);
+  opacity: 0.7;
+}
+
+.resource-card-face:hover,
+.resource-card-face:focus-within {
+  filter: brightness(1.09);
+  transform: translateY(-2px);
+}
+
+.resource-card-art,
+.resource-card-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: contain;
+}
+
+.resource-card-count {
+  position: absolute;
+  z-index: 5;
+  top: -0.3rem;
+  right: -0.3rem;
+  display: grid;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  place-items: center;
+  padding-inline: 0.22rem;
+  border: 1px solid var(--hud-line-strong);
+  border-radius: 999px;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-size: 0.66rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 900;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.resource-card-selected {
+  position: absolute;
+  z-index: 5;
+  right: 50%;
+  bottom: -0.3rem;
+  padding: 0.15rem 0.35rem;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-foreground);
+  font-size: 0.55rem;
+  font-weight: 900;
+  line-height: 1;
+  pointer-events: none;
+  transform: translateX(50%);
+  white-space: nowrap;
+}
+
+.resource-card-face.is-selected,
+.resource-card-face[data-selected="true"] {
+  box-shadow:
+    0 0 0 2px var(--accent),
+    0 0 0.75rem color-mix(in oklch, var(--accent) 45%, transparent);
+}
+
+/* Full-bleed hit area so the whole card is clickable during trade/discard. */
+.resource-card-select {
+  position: absolute;
+  z-index: 4;
+  width: 100%;
+  height: 100%;
+  inset: 0;
+  padding: 0;
+  border-radius: inherit;
+  background: transparent;
+}
+
+.hand-card-divider {
+  width: 2px;
+  min-width: 2px;
+  align-self: center;
+  height: 80%;
+  border-radius: 999px;
+  background: linear-gradient(180deg, transparent, var(--hud-line-strong), transparent);
+  pointer-events: none;
+}
+
+/* Resource gain/spend flights ------------------------------------------- */
+
+.resource-flight-layer {
+  position: absolute;
+  z-index: 8;
+  inset: 0;
+  display: grid;
+  grid-template-columns: repeat(5, 3.9rem);
+  grid-template-rows: minmax(0, 1fr);
+  align-items: center;
+  justify-content: start;
+  justify-items: center;
+  gap: 0.4rem;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.resource-flight-anchor {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  grid-row: 1;
+  pointer-events: none;
+}
+
+.resource-flight {
+  --resource-flight-delay: 0ms;
+  --resource-flight-tilt: 0deg;
+  --resource-flight-x: 0rem;
+  --resource-flight-y: 5rem;
+
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: min(72%, 2.65rem);
+  aspect-ratio: 2 / 3;
+  border-radius: 0.4rem;
+  box-shadow: var(--hud-shadow-sm);
+  opacity: 0;
+  pointer-events: none;
+  transform-origin: center;
+  will-change: opacity, transform;
+}
+
+.resource-flight--receive {
+  animation: receive-resource-card 560ms cubic-bezier(0.22, 0.74, 0.2, 1)
+    var(--resource-flight-delay) both;
+}
+
+.resource-flight--spend {
+  animation: spend-resource-card 540ms cubic-bezier(0.42, 0, 0.26, 1) var(--resource-flight-delay)
+    both;
+}
+
+.resource-flight-image {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: contain;
+}
+
+.resource-flight-badge {
+  position: absolute;
+  top: -0.35rem;
+  right: -0.45rem;
+  display: grid;
+  min-width: 1.4rem;
+  min-height: 1.4rem;
+  place-items: center;
+  padding-inline: 0.25rem;
+  border: 2px solid var(--background);
+  border-radius: 999px;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-size: 0.64rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.resource-flight--spend .resource-flight-badge {
+  background: var(--destructive);
+  color: var(--foreground);
+}
+
+@keyframes receive-resource-card {
+  0% {
+    opacity: 0;
+    transform: translate(
+        calc(-50% + var(--resource-flight-x)),
+        calc(-50% - var(--resource-flight-y))
+      )
+      rotate(var(--resource-flight-tilt)) scale(0.56);
+  }
+
+  16% {
+    opacity: 1;
+  }
+
+  88% {
+    opacity: 1;
+    transform: translate(-50%, -50%) rotate(0deg) scale(1.04);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(0deg) scale(1);
+  }
+}
+
+@keyframes spend-resource-card {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) rotate(0deg) scale(0.96);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(
+        calc(-50% + var(--resource-flight-x)),
+        calc(-50% - var(--resource-flight-y))
+      )
+      rotate(var(--resource-flight-tilt)) scale(0.54);
+  }
+}
+
+/* Build & trade dock ----------------------------------------------------- */
+
+.action-dock {
+  display: grid;
+  align-content: start;
+  gap: 0.45rem;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--hud-line);
+  border-radius: var(--hud-radius);
+  background: var(--hud-surface);
+}
+
+.action-dock.is-waiting {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: var(--hud-text-muted);
+}
+
+.action-dock.is-waiting > svg {
+  flex: 0 0 auto;
+  color: var(--primary);
+  font-size: 1.5rem;
+}
+
+.action-dock.is-waiting > div {
+  display: grid;
+  gap: 0.1rem;
+}
+
+.action-dock.is-waiting strong {
+  color: var(--hud-text);
+  font-size: 0.82rem;
+}
+
+.action-dock.is-waiting span {
+  font-size: 0.66rem;
+}
+
+.action-heading {
+  display: grid;
+  gap: 0.05rem;
+}
+
+.action-heading strong {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.action-heading span {
+  color: var(--hud-text-faint);
+  font-size: 0.64rem;
+}
+
+.action-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 0.4rem;
+}
+
+/* Action tiles are shadcn Buttons re-shaped into portrait cards. */
+.action-tile-preset {
+  position: relative;
+  display: grid;
+  width: 4.6rem;
+  height: auto;
+  min-height: 0;
+  grid-template-rows: minmax(0, 1fr) auto auto auto;
+  justify-items: center;
+  gap: 0.15rem;
+  padding: 0.35rem 0.25rem;
+  border: 1px solid var(--hud-line);
+  border-radius: var(--radius-md);
+  background: color-mix(in oklch, var(--background) 40%, transparent);
+  white-space: normal;
+}
+
+.action-tile-preset:not(:disabled):hover {
+  border-color: var(--hud-line-strong);
+  background: var(--hud-surface-raised);
+}
+
+.action-tile-preset.is-selected {
+  border-color: var(--primary);
+  background: color-mix(in oklch, var(--primary) 18%, transparent);
+}
+
+.action-tile-preset.is-unavailable {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.action-tile-preset__art {
+  display: grid;
+  width: 100%;
+  min-height: 0;
+  place-items: center;
+}
+
+.action-art {
+  width: 2.4rem;
+  height: 3.2rem;
+  object-fit: contain;
+}
+
+.action-tile-preset__title {
+  font-size: 0.66rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.action-tile-preset__meta,
+.action-tile-preset__caption {
+  font-size: 0.55rem;
+  line-height: 1.1;
+}
+
+.action-count {
+  position: absolute;
+  z-index: 5;
+  top: -0.3rem;
+  right: -0.3rem;
+  display: grid;
+  min-width: 1.2rem;
+  height: 1.2rem;
+  place-items: center;
+  padding-inline: 0.22rem;
+  border-radius: 999px;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-size: 0.64rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 900;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.mini-cost {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.15rem;
+}
+
+.mini-cost > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.08rem;
+  color: var(--hud-text-muted);
+  font-size: 0.55rem;
+  font-weight: 800;
+}
+
+/* The resource name is for assistive tech and tooltips only. */
+.mini-cost > span > span {
+  display: none;
+}
+
+.mini-cost .resource-icon {
+  width: 0.7rem;
+  height: 0.95rem;
+  object-fit: contain;
+}
+
+.mini-cost > .is-missing {
+  color: var(--destructive);
+}
+
+.build-action-status {
+  color: var(--hud-text-faint);
+  font-size: 0.53rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+
+.build-action-status.is-active {
+  color: var(--primary);
+}
+
+.build-action-status.is-blocked {
+  color: var(--destructive);
+}
+
+/* Turn control ----------------------------------------------------------- */
+
+.turn-control {
+  display: grid;
+  min-width: 0;
+  align-content: center;
+  justify-items: center;
+  gap: 0.45rem;
+  padding: 0.55rem;
+  border: 1px solid var(--hud-line);
+  border-radius: var(--hud-radius);
+  background: var(--hud-surface);
+}
+
+.turn-control > button {
+  width: 100%;
+}
+
+.turn-control.is-unavailable {
+  color: var(--hud-text-faint);
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.roll-preview-card {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+}
+
+.roll-preview-card .die-face {
+  width: 2rem;
+  height: 2rem;
+}
+
+.turn-control-state-icon {
+  width: 2.6rem;
+  height: 2.6rem;
+  object-fit: contain;
+}
+
+.turn-control-required-copy {
+  display: grid;
+  gap: 0.05rem;
+  color: var(--hud-text);
+  font-size: 0.78rem;
+  font-weight: 900;
+  line-height: 1.05;
+  text-align: center;
+}
+
+.turn-clock {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  padding: 0.3rem 0.5rem;
+  border: 1px solid var(--hud-line);
+  border-radius: var(--hud-radius);
+  background: var(--hud-surface);
+  color: var(--hud-text-muted);
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.turn-clock strong {
+  color: var(--hud-text);
+  font-weight: 800;
+}
+
+.turn-clock.is-expired strong,
+.turn-clock.is-paused strong {
+  color: var(--destructive);
+}
+
+.turn-clock.is-bot strong {
+  color: var(--primary);
+}
+
+/* --------------------------------------------------------------------------
+   Trade centre
+   ----------------------------------------------------------------------- */
+
+.trade-center {
+  display: contents;
+}
+
+.trade-dock,
+.trade-composer {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.trade-dock-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.trade-dock-header h2 {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+.trade-rows {
+  display: grid;
+  gap: 0.5rem;
+}
+
+/* One side of a trade: "you receive" / "you give". */
+.trade-row {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.5rem;
+  border: 1px solid var(--hud-line);
+  border-radius: var(--radius-md);
+  background: color-mix(in oklch, var(--background) 40%, transparent);
+}
+
+.trade-row > header,
+.trade-row > legend {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0;
+  color: var(--hud-text-muted);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.trade-row-direction {
+  display: grid;
+  width: 1.25rem;
+  height: 1.25rem;
+  place-items: center;
+  border-radius: 50%;
+  background: color-mix(in oklch, var(--primary) 22%, transparent);
+  color: var(--primary);
+}
+
+.trade-row[data-direction="give"] .trade-row-direction {
+  background: color-mix(in oklch, var(--destructive) 22%, transparent);
+  color: var(--destructive);
+}
+
+.trade-row > ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.trade-row > ul > li {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.45rem 0.2rem 0.2rem;
+  border: 1px solid var(--hud-line);
+  border-radius: 999px;
+  background: var(--hud-surface);
+}
+
+.trade-row > ul > li[data-missing] {
+  border-color: var(--destructive);
+}
+
+.trade-row > ul > li small {
+  color: var(--destructive);
+  font-size: 0.55rem;
+  font-weight: 800;
+}
+
+.trade-card-thumb {
+  width: 1.2rem;
+  height: 1.7rem;
+  object-fit: contain;
+}
+
+.trade-row-empty {
+  margin: 0;
+  color: var(--hud-text-faint);
+  font-size: 0.66rem;
+}
+
+.trade-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.trade-picker-cell {
+  position: relative;
+}
+
+.trade-picker-button {
+  position: relative;
+  display: grid;
+  width: 2.8rem;
+  height: auto;
+  padding: 0.15rem;
+  border: 1px solid var(--hud-line);
+  border-radius: 0.4rem;
+  background: transparent;
+}
+
+.trade-picker-button.is-selected {
+  border-color: var(--primary);
+  background: color-mix(in oklch, var(--primary) 16%, transparent);
+}
+
+.trade-picker-image {
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  object-fit: contain;
+}
+
+.trade-picker-quantity {
+  position: absolute;
+  top: -0.3rem;
+  right: -0.3rem;
+  display: grid;
+  min-width: 1.1rem;
+  height: 1.1rem;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-size: 0.6rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 900;
+}
+
+.trade-remove-button {
+  position: absolute;
+  bottom: -0.4rem;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.trade-recipients {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0;
+  border: 0;
+  margin: 0;
+}
+
+.trade-recipient-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.trade-recipient {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.55rem 0.25rem 0.35rem;
+  border: 1px solid var(--hud-line);
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--background) 40%, transparent);
+  cursor: pointer;
+  font-size: 0.7rem;
+}
+
+.trade-recipient-identity {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.trade-recipient-avatar {
+  display: grid;
+  width: 1.45rem;
+  height: 1.45rem;
+  place-items: center;
+  border-radius: 50%;
+  overflow: hidden;
+}
+
+.trade-recipient-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.trade-actions {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.trade-actions > p {
+  margin: 0;
+  color: var(--hud-text-faint);
+  font-size: 0.66rem;
+}
+
+.trade-actions > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.trade-offer {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.trade-offer-responses {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.trade-offer-responses li {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.7rem;
+}
+
+.trade-offer-responses li strong {
+  margin-left: auto;
+  color: var(--hud-text-faint);
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.trade-offer-responses li[data-state="rejected"] strong {
+  color: var(--destructive);
+}
+
+.trade-response-avatar {
+  display: grid;
+  width: 1.4rem;
+  height: 1.4rem;
+  place-items: center;
+  border: 1px solid var(--hud-line);
+  border-radius: 50%;
+  background: color-mix(in oklch, var(--primary) 20%, transparent);
+  font-size: 0.62rem;
+  font-weight: 800;
+}
+
+.trade-offer-actions {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.trade-offer-actions > p {
+  margin: 0;
+  font-size: 0.66rem;
+}
+
+.trade-offer-actions > p[data-state="error"] {
+  color: var(--destructive);
+}
+
+.trade-offer-actions > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.trade-offer-status {
+  margin: 0;
+  color: var(--hud-text-faint);
+  font-size: 0.66rem;
+}
+
+/* --------------------------------------------------------------------------
+   Hand-docked panels — discard tray and development card chooser.
+   Both portal into `.hand-dock`, so they only need internal layout.
+   ----------------------------------------------------------------------- */
+
+.discard-tray,
+.dev-card-dialog__panel {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--hud-line-strong);
+  border-radius: var(--hud-radius);
+  background: var(--hud-surface-deep);
+  box-shadow: var(--hud-shadow);
+}
+
+.discard-tray__header,
+.dev-card-dialog__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.discard-tray__header h2,
+.dev-card-dialog__header h2 {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.discard-tray__cards {
+  display: flex;
+  flex-wrap: wrap;
+  min-height: 2.5rem;
+  gap: 0.35rem;
+}
+
+.discard-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.3rem 0.2rem 0.2rem;
+  border: 1px solid var(--hud-line);
+  border-radius: 999px;
+  background: var(--hud-surface);
+}
+
+.discard-chip__art {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+}
+
+.discard-chip__image {
+  width: 1.2rem;
+  height: 1.7rem;
+  object-fit: contain;
+}
+
+.discard-chip__count {
+  position: absolute;
+  right: -0.3rem;
+  bottom: -0.2rem;
+  display: grid;
+  min-width: 1rem;
+  height: 1rem;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-size: 0.58rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 900;
+}
+
+.discard-tray__footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.discard-tray__footer > p {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.25rem;
+  margin: 0 auto 0 0;
+  color: var(--hud-text-muted);
+  font-size: 0.68rem;
+}
+
+.discard-tray__footer > p strong {
+  color: var(--hud-text);
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+}
+
+.discard-tray__timer {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.25rem;
+  padding: 0.2rem 0.5rem;
+  border: 1px solid var(--hud-line);
+  border-radius: 999px;
+  color: var(--hud-text-muted);
+  font-size: 0.62rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.discard-tray__timer[data-expired] strong {
+  color: var(--destructive);
+}
+
+.dev-card-dialog__hint {
+  margin: 0;
+  color: var(--hud-text-muted);
+  font-size: 0.7rem;
+}
+
+.dev-card-dialog__header svg,
+.trade-dock-header svg {
+  width: 1rem;
+  height: 1rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-width: 2;
+}
+
+.dev-card-dialog__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(4.25rem, 1fr));
+  gap: 0.4rem;
+}
+
+.dev-card-option {
+  display: grid;
+  justify-items: center;
+  gap: 0.2rem;
+  padding: 0.35rem 0.2rem;
+  border: 1px solid var(--hud-line);
+  border-radius: var(--radius-md);
+  background: color-mix(in oklch, var(--background) 40%, transparent);
+  font-size: 0.6rem;
+  text-align: center;
+}
+
+.dev-card-option[data-selected="true"] {
+  border-color: var(--primary);
+  background: color-mix(in oklch, var(--primary) 16%, transparent);
+}
+
+.dev-card-option__button {
+  display: grid;
+  height: auto;
+  justify-items: center;
+  gap: 0.2rem;
+  padding: 0;
+  background: transparent;
+}
+
+.dev-card-option__art {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+}
+
+.dev-card-option__art img {
+  width: 2.4rem;
+  height: 3.2rem;
+  object-fit: contain;
+}
+
+.dev-card-option__count {
+  position: absolute;
+  top: -0.3rem;
+  right: -0.3rem;
+  display: grid;
+  min-width: 1.1rem;
+  height: 1.1rem;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-size: 0.6rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 900;
+}
+
+.dev-card-option__stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.dev-card-dialog__footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.dev-card-dialog__footer > span {
+  margin-right: auto;
+  color: var(--hud-text-muted);
+  font-size: 0.68rem;
+}
+
+.dev-card-dialog__footer > div {
+  display: flex;
+  gap: 0.4rem;
+}
+
+/* --------------------------------------------------------------------------
+   Win overlay
+   ----------------------------------------------------------------------- */
+
+.win-overlay {
+  overflow-y: auto;
+  background: color-mix(in oklch, var(--background) 80%, black);
+  backdrop-filter: blur(8px);
+}
+
+.win-card {
+  display: grid;
+  width: min(46rem, 92vw);
+  gap: 1rem;
+  padding: 1.25rem;
+  border: 1px solid var(--hud-line-strong);
+  border-radius: var(--radius-2xl);
+  background: var(--card);
+  box-shadow: var(--hud-shadow);
+  color: var(--card-foreground);
+}
+
+.win-card-header {
+  position: relative;
+  display: grid;
+  gap: 0.75rem;
+  text-align: left;
+}
+
+.win-flourish {
+  width: 100%;
+  max-height: 6rem;
+  object-fit: contain;
+  opacity: 0.85;
+}
+
+.win-hero {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.win-avatar {
+  position: relative;
+  display: grid;
+  width: 4.5rem;
+  height: 4.5rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 3px solid var(--player-color, var(--primary));
+  border-radius: 50%;
+  overflow: visible;
+}
+
+.win-avatar > img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.win-crown {
+  position: absolute;
+  top: -0.9rem;
+  display: grid;
+  width: 1.8rem;
+  height: 1.8rem;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.win-hero-copy {
+  display: grid;
+  min-width: 0;
+  gap: 0.2rem;
+}
+
+.win-hero-copy h2 {
+  margin: 0;
+  font-size: 1.45rem;
+  font-weight: 800;
+  line-height: 1.15;
+}
+
+.win-hero-copy > p:last-child {
+  margin: 0;
+  color: var(--hud-text-muted, color-mix(in oklch, var(--foreground) 72%, transparent));
+  font-size: 0.85rem;
+}
+
+.win-card-body {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: 0.75rem;
+}
+
+.win-score-panel,
+.win-standings {
+  display: grid;
+  align-content: start;
+  gap: 0.6rem;
+  padding: 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: color-mix(in oklch, var(--background) 40%, transparent);
+}
+
+.win-score-heading,
+.win-standings-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.win-score-heading h3,
+.win-standings-heading h3 {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.win-total-score {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.15rem;
+  color: var(--primary);
+  font-size: 1.75rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.win-total-score small {
+  font-size: 0.65rem;
+  font-weight: 800;
+}
+
+.win-point-breakdown {
+  display: grid;
+  gap: 0.3rem;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.win-point-source {
+  display: grid;
+  grid-template-columns: 2.25rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0;
+}
+
+.win-point-source + .win-point-source {
+  border-top: 1px solid var(--border);
+}
+
+.win-point-source-art img {
+  width: 2.25rem;
+  height: 2.25rem;
+  object-fit: contain;
+}
+
+.win-point-source > span:nth-child(2) {
+  display: grid;
+  min-width: 0;
+  gap: 0.05rem;
+}
+
+.win-point-source strong {
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.win-point-source small {
+  color: color-mix(in oklch, var(--foreground) 55%, transparent);
+  font-size: 0.65rem;
+}
+
+.win-point-source b {
+  color: var(--primary);
+  font-size: 1rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 900;
+}
+
+.win-match-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.4rem;
+}
+
+.win-match-stats > span {
+  display: grid;
+  justify-items: center;
+  gap: 0.1rem;
+  padding: 0.4rem 0.25rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  text-align: center;
+}
+
+.win-match-stats small {
+  color: color-mix(in oklch, var(--foreground) 55%, transparent);
+  font-size: 0.6rem;
+  font-weight: 700;
+}
+
+.win-match-stats strong {
+  font-size: 1rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+}
+
+.win-standings ol {
+  display: grid;
+  gap: 0.3rem;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.win-standings li {
+  display: grid;
+  grid-template-columns: 1.4rem 2rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.45rem;
+  border: 1px solid transparent;
+  border-left: 3px solid var(--player-color, var(--primary));
+  border-radius: var(--radius-md);
+  background: color-mix(in oklch, var(--card) 60%, transparent);
+}
+
+.win-standings li.is-winner {
+  border-color: color-mix(in oklch, var(--primary) 55%, transparent);
+  border-left-color: var(--player-color, var(--primary));
+  background: color-mix(in oklch, var(--primary) 12%, transparent);
+}
+
+.win-rank {
+  color: color-mix(in oklch, var(--foreground) 55%, transparent);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 900;
+  text-align: center;
+}
+
+.win-standings li > img {
+  width: 2rem;
+  height: 2rem;
+  border: 2px solid var(--player-color, var(--primary));
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.win-standing-name {
+  display: grid;
+  min-width: 0;
+  gap: 0.05rem;
+}
+
+.win-standing-name strong {
+  overflow: hidden;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.win-standing-name small {
+  color: color-mix(in oklch, var(--foreground) 55%, transparent);
+  font-size: 0.62rem;
+}
+
+.win-standing-score {
+  font-size: 1rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 900;
+}
+
+.win-standing-score small {
+  font-size: 0.6rem;
+  font-weight: 700;
+}
+
+.win-card-footer {
+  display: flex;
+  justify-content: center;
+}
+
+.win-home-button {
+  min-width: 12rem;
+}
+
+/* --------------------------------------------------------------------------
+   Shared atoms
+   ----------------------------------------------------------------------- */
+
+.eyebrow {
+  margin: 0;
+  color: color-mix(in oklch, var(--foreground) 55%, transparent);
+  font-size: 0.6rem;
+  font-weight: 900;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.notice-card {
+  display: grid;
+  max-width: 28rem;
+  gap: 0.75rem;
+  padding: 1.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background: var(--card);
+  justify-items: start;
+}
+
+.notice-card h1 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 800;
+}
+
+.resource-icon {
+  display: inline-block;
+  flex: 0 0 auto;
+  object-fit: contain;
+  vertical-align: middle;
+}
+
+/* Piece icons tint a PNG silhouette with the owning player's colour. */
+.piece-icon {
+  position: relative;
+  display: inline-grid;
+  width: 1.5rem;
+  height: 1.5rem;
+  place-items: center;
+}
+
+.piece-icon > img,
+.piece-icon > .piece-color {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  inset: 0;
+  object-fit: contain;
+}
+
+.piece-icon > .piece-color {
+  background: var(--player-color, var(--primary));
+  mask: var(--piece-mask) center / contain no-repeat;
+}
+
+.piece-icon-road > img,
+.piece-icon-road > .piece-color {
+  transform: rotate(-30deg);
+}
+
+/* Dice */
+.die-face {
+  display: grid;
+  width: 1.75rem;
+  height: 1.75rem;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  place-items: center;
+  padding: 0.22rem;
+  border: 1px solid var(--hud-line-strong, var(--border));
+  border-radius: 0.3rem;
+  background: linear-gradient(145deg, #ffffff, #d7e3ec);
+  box-shadow: inset 0 -2px 0 rgb(0 0 0 / 0.12);
+}
+
+.die-face i {
+  width: 0.22rem;
+  height: 0.22rem;
+  border-radius: 50%;
+  background: #1b2f42;
+  opacity: 0;
+}
+
+.die-face i.is-visible {
+  opacity: 1;
+}
+
+.turn-summary-dice {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.turn-summary-dice > span {
+  display: flex;
+  gap: 0.2rem;
+}
+
+.compact-dice-total {
+  min-width: 1.2rem;
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 900;
+  text-align: center;
+}
+
+/* Player palette — keep in sync with `@settersaga/game` PLAYER_COLORS. */
+.player-red {
+  --player-color: #f36159;
+}
+
+.player-blue {
+  --player-color: #4fb0ff;
+}
+
+.player-orange {
+  --player-color: #f79a3c;
+}
+
+.player-green {
+  --player-color: #3fc97c;
+}
+
+.player-purple {
+  --player-color: #9b74ea;
+}
+
+.player-teal {
+  --player-color: #2bb8b8;
+}
+
+.player-yellow {
+  --player-color: #e0b23a;
+}
+
+.player-pink {
+  --player-color: #ec6aa0;
+}
+
+/* --------------------------------------------------------------------------
+   Responsive
+   ----------------------------------------------------------------------- */
+
+@media (max-width: 1100px) {
+  .game-shell {
+    height: auto;
+    min-height: 100dvh;
+    grid-template-areas:
+      "topbar"
+      "board"
+      "footer"
+      "rail";
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(52vh, 1fr) auto auto;
+    overflow: visible;
+  }
+
+  .game-rail {
+    grid-template-rows: none;
+    grid-auto-rows: minmax(0, auto);
+  }
+
+  .game-footer {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 720px) {
+  .game-shell {
+    --hud-gap: 0.5rem;
+  }
+
+  .resource-card-face {
+    width: 3.2rem;
+    min-width: 3.2rem;
+  }
+
+  .action-tile-preset {
+    width: 4rem;
+  }
+
+  .win-card {
+    padding: 0.9rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .resource-flight {
+    display: none;
+    animation: none;
+  }
+
+  .action-tile-preset,
+  .resource-card-face,
+  .build-target,
+  .target-robber::after {
+    transition: none;
+  }
+}

@@ -35,31 +35,19 @@ export function ConfirmationDialog({
         if (!open && !busy) onCancel();
       }}
     >
-      <AlertDialogContent className="confirmation-dialog-card">
-        <AlertDialogHeader className="confirmation-dialog-header">
+      <AlertDialogContent>
+        <AlertDialogHeader>
           <div>
             <p className="eyebrow">Please Confirm</p>
             <AlertDialogTitle>{title}</AlertDialogTitle>
           </div>
         </AlertDialogHeader>
-        <AlertDialogDescription className="confirmation-dialog-body">
-          {description}
-        </AlertDialogDescription>
-        <AlertDialogFooter className="confirmation-dialog-footer">
-          <Button
-            className="button-secondary"
-            disabled={busy}
-            onClick={onCancel}
-            variant="secondary"
-          >
+        <AlertDialogDescription>{description}</AlertDialogDescription>
+        <AlertDialogFooter>
+          <Button disabled={busy} onClick={onCancel} variant="secondary">
             Go Back
           </Button>
-          <Button
-            className="button-danger"
-            disabled={busy}
-            onClick={onConfirm}
-            variant="destructive"
-          >
+          <Button disabled={busy} onClick={onConfirm} variant="destructive">
             {busy ? (
               <>
                 <Spinner data-icon="inline-start" /> Working…
