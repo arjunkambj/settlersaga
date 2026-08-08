@@ -16,14 +16,14 @@ Built as a Turborepo monorepo: a Next.js client, a Convex backend for persistenc
 
 ## Tech stack
 
-| Layer | Choice |
-| --- | --- |
-| Client | Next.js 16, React 19, Tailwind CSS v4, HeroUI |
-| Backend | Convex (database, queries/mutations, scheduling, real-time sync) |
-| Auth | Hexclave |
-| Rules engine | Plain TypeScript, no framework dependencies |
-| Desktop | Electrobun |
-| Tooling | Turborepo, pnpm, Oxlint, Oxfmt, Bun test |
+| Layer        | Choice                                                           |
+| ------------ | ---------------------------------------------------------------- |
+| Client       | Next.js 16, React 19, Tailwind CSS v4, HeroUI                    |
+| Backend      | Convex (database, queries/mutations, scheduling, real-time sync) |
+| Auth         | Hexclave                                                         |
+| Rules engine | Plain TypeScript, no framework dependencies                      |
+| Desktop      | Electrobun                                                       |
+| Tooling      | Turborepo, pnpm, Oxlint, Oxfmt, Bun test                         |
 
 Only Next.js and Convex are used for the client and backend respectively. Adding another framework, database, or API layer is an explicit architecture decision, not a drive-by change.
 
@@ -57,13 +57,13 @@ Copy the environment template and fill it in:
 cp apps/web/.env.example apps/web/.env.local
 ```
 
-| Variable | Purpose |
-| --- | --- |
-| `NEXT_PUBLIC_CONVEX_URL` | Convex deployment URL |
-| `NEXT_PUBLIC_CONVEX_SITE_URL` | Convex site URL |
-| `NEXT_PUBLIC_HEXCLAVE_PROJECT_ID` | Hexclave project ID |
-| `NEXT_PUBLIC_HEXCLAVE_PUBLISHABLE_CLIENT_KEY` | Hexclave client key |
-| `NEXT_PUBLIC_HEXCLAVE_SECRET_SERVER_KEY` | Hexclave server key |
+| Variable                                      | Purpose               |
+| --------------------------------------------- | --------------------- |
+| `NEXT_PUBLIC_CONVEX_URL`                      | Convex deployment URL |
+| `NEXT_PUBLIC_CONVEX_SITE_URL`                 | Convex site URL       |
+| `NEXT_PUBLIC_HEXCLAVE_PROJECT_ID`             | Hexclave project ID   |
+| `NEXT_PUBLIC_HEXCLAVE_PUBLISHABLE_CLIENT_KEY` | Hexclave client key   |
+| `NEXT_PUBLIC_HEXCLAVE_SECRET_SERVER_KEY`      | Hexclave server key   |
 
 Configure and start the Convex development deployment (writes `NEXT_PUBLIC_CONVEX_URL` for you on first run):
 
@@ -81,19 +81,19 @@ The web client is served at http://localhost:3000.
 
 ## Scripts
 
-| Command | Description |
-| --- | --- |
-| `pnpm dev` | Run all dev tasks through Turborepo |
-| `pnpm dev:web` | Web client only |
-| `pnpm dev:server` | Convex dev deployment only |
-| `pnpm dev:setup` | Configure and start the Convex dev deployment |
-| `pnpm dev:desktop` | Desktop app with HMR against the web client |
-| `pnpm build` | Build all workspaces (desktop last) |
-| `pnpm build:desktop` | Desktop stable build |
-| `pnpm build:desktop:canary` | Desktop canary build |
-| `pnpm test` | Bun tests for `game`, `backend`, and `web` |
-| `pnpm check-types` | Type-check every workspace, including tests |
-| `pnpm check` | Oxlint, then format with Oxfmt |
+| Command                     | Description                                   |
+| --------------------------- | --------------------------------------------- |
+| `pnpm dev`                  | Run all dev tasks through Turborepo           |
+| `pnpm dev:web`              | Web client only                               |
+| `pnpm dev:server`           | Convex dev deployment only                    |
+| `pnpm dev:setup`            | Configure and start the Convex dev deployment |
+| `pnpm dev:desktop`          | Desktop app with HMR against the web client   |
+| `pnpm build`                | Build all workspaces (desktop last)           |
+| `pnpm build:desktop`        | Desktop stable build                          |
+| `pnpm build:desktop:canary` | Desktop canary build                          |
+| `pnpm test`                 | Bun tests for `game`, `backend`, and `web`    |
+| `pnpm check-types`          | Type-check every workspace, including tests   |
+| `pnpm check`                | Oxlint, then format with Oxfmt                |
 
 ## Testing
 

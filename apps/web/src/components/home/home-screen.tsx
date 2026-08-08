@@ -104,19 +104,31 @@ export function HomeScreen({
   };
 
   return (
-    <main className="min-h-dvh bg-background" id="main-content">
-      <div className="flex items-center justify-between gap-3 px-4 pt-4">
-        <div className="flex items-center gap-2">
+    <main className="relative min-h-dvh overflow-hidden" id="main-content">
+      <div aria-hidden="true" className="fixed inset-0 -z-10">
+        <Image
+          alt=""
+          className="object-cover"
+          fill
+          priority
+          sizes="100vw"
+          src="/shared-assets/coastal-island-kingdom-supercell.png"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#012d5c]/90 via-[#01315f]/55 to-[#01315f]/95" />
+      </div>
+
+      <div className="flex items-center justify-between gap-3 p-4">
+        <div className="flex items-center gap-2 rounded-2xl border border-white/15 bg-card/50 px-3 py-2 shadow-lg shadow-black/20 backdrop-blur-md">
           <span aria-hidden="true" className="text-lg font-black leading-none tracking-tight">
             S
           </span>
           <div>
             <p className="text-sm font-bold leading-none">SetterSaga</p>
-            <p className="text-xs text-muted-foreground">Settlers Saga</p>
+            <p className="text-xs text-white/70">Settlers Saga</p>
           </div>
         </div>
         <div className="flex items-center gap-2.5">
-          <div className="rounded-full border bg-card p-1">
+          <div className="rounded-full border border-white/15 bg-card/50 p-1 shadow-lg shadow-black/20 backdrop-blur-md">
             <Button
               variant="ghost"
               size="icon-sm"
@@ -127,7 +139,7 @@ export function HomeScreen({
               <Icon icon={settingsIcon} />
             </Button>
           </div>
-          <div className="flex items-center gap-2 rounded-full border bg-card py-1 pr-1 pl-2">
+          <div className="flex items-center gap-2 rounded-full border border-white/15 bg-card/50 py-1 pr-1 pl-2 shadow-lg shadow-black/20 backdrop-blur-md">
             <Image
               alt=""
               height={28}
@@ -137,7 +149,7 @@ export function HomeScreen({
             />
             <div className="hidden sm:block text-left">
               <p className="text-xs font-semibold leading-none">{displayName}</p>
-              <p className="text-xs text-muted-foreground leading-none">{accountLabel}</p>
+              <p className="text-xs text-white/70 leading-none">{accountLabel}</p>
             </div>
             <Button
               variant="ghost"
@@ -154,7 +166,7 @@ export function HomeScreen({
 
       <div className="mx-auto max-w-5xl p-4 pt-6 sm:p-6 sm:pt-6 space-y-6">
         {activeCode ? (
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 rounded-xl border border-primary/20 bg-primary/5 p-4 sm:p-5">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 rounded-2xl border border-white/15 bg-card/55 p-4 shadow-xl shadow-black/30 backdrop-blur-xl sm:p-5">
             <div className="text-center sm:text-left">
               <p className="text-xs font-semibold uppercase tracking-wider text-primary">
                 Game in Progress
@@ -162,9 +174,7 @@ export function HomeScreen({
               <h2 className="text-lg font-bold">
                 Room <span className="font-mono">{activeCode}</span> is still active
               </h2>
-              <p className="text-xs text-muted-foreground">
-                Hop back in anytime.
-              </p>
+              <p className="text-xs text-white/70">Hop back in anytime.</p>
             </div>
             <Button
               size="lg"
@@ -177,18 +187,18 @@ export function HomeScreen({
         ) : null}
 
         <div className="text-center">
-          <h1 className="text-2xl font-bold">How do you want to play?</h1>
+          <h1 className="text-2xl font-bold drop-shadow-md">How do you want to play?</h1>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-3">
-          <Card className="flex flex-col overflow-hidden hover:border-primary/50 transition-colors">
-            <div className="relative h-36 w-full bg-muted/30 flex items-center justify-center p-2">
+          <Card className="flex flex-col overflow-hidden border-white/15 bg-card/50 shadow-xl shadow-black/30 backdrop-blur-xl transition-all hover:-translate-y-0.5 hover:border-primary/60 hover:shadow-2xl">
+            <div className="relative h-32 w-full overflow-hidden bg-gradient-to-b from-white/10 to-transparent flex items-center justify-center">
               <Image
                 alt="Quick Match"
-                className="object-contain max-h-full"
+                className="h-24 w-24 shrink-0 object-contain drop-shadow-lg sm:h-28 sm:w-28"
                 height={140}
                 src="/home-assets/menu/quick-match-v2.png"
-                width={280}
+                width={140}
               />
             </div>
             <CardHeader className="pb-2">
@@ -222,14 +232,14 @@ export function HomeScreen({
             </CardContent>
           </Card>
 
-          <Card className="flex flex-col overflow-hidden hover:border-primary/50 transition-colors">
-            <div className="relative h-36 w-full bg-muted/30 flex items-center justify-center p-2">
+          <Card className="flex flex-col overflow-hidden border-white/15 bg-card/50 shadow-xl shadow-black/30 backdrop-blur-xl transition-all hover:-translate-y-0.5 hover:border-primary/60 hover:shadow-2xl">
+            <div className="relative h-32 w-full overflow-hidden bg-gradient-to-b from-white/10 to-transparent flex items-center justify-center">
               <Image
                 alt="Custom Game"
-                className="object-contain max-h-full"
+                className="h-24 w-24 shrink-0 object-contain drop-shadow-lg sm:h-28 sm:w-28"
                 height={140}
                 src="/home-assets/menu/host-island-v2.png"
-                width={280}
+                width={140}
               />
             </div>
             <CardHeader className="pb-2">
@@ -253,14 +263,14 @@ export function HomeScreen({
             </CardContent>
           </Card>
 
-          <Card className="flex flex-col overflow-hidden hover:border-primary/50 transition-colors">
-            <div className="relative h-36 w-full bg-muted/30 flex items-center justify-center p-2">
+          <Card className="flex flex-col overflow-hidden border-white/15 bg-card/50 shadow-xl shadow-black/30 backdrop-blur-xl transition-all hover:-translate-y-0.5 hover:border-primary/60 hover:shadow-2xl">
+            <div className="relative h-32 w-full overflow-hidden bg-gradient-to-b from-white/10 to-transparent flex items-center justify-center">
               <Image
                 alt="Join Crew"
-                className="object-contain max-h-full"
+                className="h-24 w-24 shrink-0 object-contain drop-shadow-lg sm:h-28 sm:w-28"
                 height={140}
                 src="/home-assets/menu/join-crew-v2.png"
-                width={280}
+                width={140}
               />
             </div>
             <CardHeader className="pb-2">
@@ -302,9 +312,7 @@ export function HomeScreen({
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Enter Room Code</DialogTitle>
-            <DialogDescription>
-              Enter the 6-character code from your host.
-            </DialogDescription>
+            <DialogDescription>Enter the 6-character code from your host.</DialogDescription>
           </DialogHeader>
           <form
             id="join-room-form"
@@ -419,9 +427,7 @@ export function HomeScreen({
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Quick Match Setup</DialogTitle>
-            <DialogDescription>
-              Choose rules and bot difficulty.
-            </DialogDescription>
+            <DialogDescription>Choose rules and bot difficulty.</DialogDescription>
           </DialogHeader>
           <div className="max-h-[60vh] overflow-auto">
             <LobbySettings
@@ -434,9 +440,7 @@ export function HomeScreen({
               settings={quickSettings.settings}
             />
           </div>
-          <p className="text-xs text-muted-foreground">
-            All open seats will be filled with bots.
-          </p>
+          <p className="text-xs text-muted-foreground">All open seats will be filled with bots.</p>
           <DialogFooter>
             <Button
               disabled={isPending}

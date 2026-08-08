@@ -892,11 +892,7 @@ function drawMarkerRing(context: CanvasRenderingContext2D, createPath: () => voi
 }
 
 /** The hover affordance: a soft player-tinted pool under the previewed piece. */
-function drawTargetGlow(
-  context: CanvasRenderingContext2D,
-  accent: string,
-  createPath: () => void,
-) {
+function drawTargetGlow(context: CanvasRenderingContext2D, accent: string, createPath: () => void) {
   context.save();
   context.shadowBlur = 22;
   context.shadowColor = withAlpha(accent, 0.85);
