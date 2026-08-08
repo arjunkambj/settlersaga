@@ -42,7 +42,7 @@ export interface HomeScreenProps {
   error: string;
   initialJoinCode?: string;
   initialJoinOpen?: boolean;
-  onCreateRoom?(): Promise<void>;
+  onCreateRoom(): Promise<void>;
   onAudioSettingsChange(settings: AudioSettings): void;
   onDisplayNameChange(value: string): void;
   onJoinRoom?(code: string): Promise<void>;
@@ -112,7 +112,7 @@ export function HomeScreen({
           </span>
           <div>
             <p className="text-sm font-bold leading-none">SetterSaga</p>
-            <p className="text-xs text-muted-foreground">Catan Saga</p>
+            <p className="text-xs text-muted-foreground">Settlers Saga</p>
           </div>
         </div>
         <div className="flex items-center gap-2.5">
@@ -157,13 +157,13 @@ export function HomeScreen({
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 rounded-xl border border-primary/20 bg-primary/5 p-4 sm:p-5">
             <div className="text-center sm:text-left">
               <p className="text-xs font-semibold uppercase tracking-wider text-primary">
-                Active Session
+                Game in Progress
               </p>
               <h2 className="text-lg font-bold">
-                You have an ongoing game in Room <span className="font-mono">{activeCode}</span>
+                Room <span className="font-mono">{activeCode}</span> is still active
               </h2>
               <p className="text-xs text-muted-foreground">
-                Rejoin your seat on the island at any time.
+                Hop back in anytime.
               </p>
             </div>
             <Button
@@ -171,14 +171,13 @@ export function HomeScreen({
               className="w-full sm:w-auto"
               onClick={() => router.push(`/room/${encodeURIComponent(activeCode)}`)}
             >
-              <Icon icon={playIcon} className="mr-2 h-4 w-4" /> Rejoin Island
+              <Icon icon={playIcon} className="mr-2 h-4 w-4" /> Rejoin
             </Button>
           </div>
         ) : null}
 
         <div className="text-center">
-          <h1 className="text-2xl font-bold">Choose your voyage</h1>
-          <p className="text-sm text-muted-foreground">Pick how you want to play</p>
+          <h1 className="text-2xl font-bold">How do you want to play?</h1>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-3">
@@ -194,7 +193,7 @@ export function HomeScreen({
             </div>
             <CardHeader className="pb-2">
               <CardTitle className="text-base">Quick Match</CardTitle>
-              <CardDescription>Play instantly with bots or players</CardDescription>
+              <CardDescription>Instant game with bots</CardDescription>
             </CardHeader>
             <CardContent className="mt-auto pt-2">
               {onQuickPlay ? (
@@ -226,7 +225,7 @@ export function HomeScreen({
           <Card className="flex flex-col overflow-hidden hover:border-primary/50 transition-colors">
             <div className="relative h-36 w-full bg-muted/30 flex items-center justify-center p-2">
               <Image
-                alt="Host Island"
+                alt="Custom Game"
                 className="object-contain max-h-full"
                 height={140}
                 src="/home-assets/menu/host-island-v2.png"
@@ -234,33 +233,23 @@ export function HomeScreen({
               />
             </div>
             <CardHeader className="pb-2">
-              <CardTitle className="text-base">Host Island</CardTitle>
-              <CardDescription>Invite friends to a private island</CardDescription>
+              <CardTitle className="text-base">Custom Game</CardTitle>
+              <CardDescription>Set rules and invite friends</CardDescription>
             </CardHeader>
             <CardContent className="mt-auto pt-2">
-              {onCreateRoom ? (
-                <Button
-                  className="w-full"
-                  disabled={isPending || !displayName.trim()}
-                  onClick={() => void onCreateRoom()}
-                >
-                  {pendingAction === "create" ? (
-                    <>
-                      <Spinner data-icon="inline-start" /> Creating...
-                    </>
-                  ) : (
-                    "Host Island"
-                  )}
-                </Button>
-              ) : (
-                <Button
-                  className="w-full"
-                  disabled={isPending || !displayName.trim()}
-                  onClick={() => router.push("/host-island")}
-                >
-                  Host Island
-                </Button>
-              )}
+              <Button
+                className="w-full"
+                disabled={isPending || !displayName.trim()}
+                onClick={() => void onCreateRoom()}
+              >
+                {pendingAction === "create" ? (
+                  <>
+                    <Spinner data-icon="inline-start" /> Creating...
+                  </>
+                ) : (
+                  "Create Custom Game"
+                )}
+              </Button>
             </CardContent>
           </Card>
 
@@ -276,7 +265,7 @@ export function HomeScreen({
             </div>
             <CardHeader className="pb-2">
               <CardTitle className="text-base">Join Crew</CardTitle>
-              <CardDescription>Jump in with a friend code</CardDescription>
+              <CardDescription>Enter a room code</CardDescription>
             </CardHeader>
             <CardContent className="mt-auto pt-2">
               <Button
@@ -312,9 +301,9 @@ export function HomeScreen({
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Enter a Friend Code</DialogTitle>
+            <DialogTitle>Enter Room Code</DialogTitle>
             <DialogDescription>
-              Ask the host for their six-character room code, then meet them at the island.
+              Enter the 6-character code from your host.
             </DialogDescription>
           </DialogHeader>
           <form
@@ -328,7 +317,7 @@ export function HomeScreen({
             className="space-y-4"
           >
             <Field>
-              <FieldLabel htmlFor="room-code">Friend room code</FieldLabel>
+              <FieldLabel htmlFor="room-code">Room code</FieldLabel>
               <Input
                 id="room-code"
                 autoComplete="off"
@@ -342,10 +331,10 @@ export function HomeScreen({
               />
               <p className="text-xs text-muted-foreground">
                 {joinCode.length === 0
-                  ? "Codes contain six letters or numbers."
+                  ? "6 letters or numbers."
                   : isRoomCode(joinCode)
-                    ? "Code ready — you can join the crew."
-                    : `${6 - joinCode.length} characters remaining.`}
+                    ? "Ready to join."
+                    : `${6 - joinCode.length} left.`}
               </p>
             </Field>
           </form>
@@ -378,7 +367,7 @@ export function HomeScreen({
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Player & Audio</DialogTitle>
+            <DialogTitle>Settings</DialogTitle>
           </DialogHeader>
           <form
             id="player-settings-form"
@@ -389,13 +378,13 @@ export function HomeScreen({
             className="space-y-4"
           >
             <Field>
-              <FieldLabel htmlFor="display-name-input">Display Name</FieldLabel>
+              <FieldLabel htmlFor="display-name-input">Display name</FieldLabel>
               <Input
                 id="display-name-input"
                 autoComplete="off"
                 autoFocus
                 maxLength={24}
-                placeholder="Example: River Fox..."
+                placeholder="Your name"
                 value={displayNameDraft}
                 onChange={(e) => setDisplayNameDraft(e.target.value)}
               />
@@ -415,7 +404,7 @@ export function HomeScreen({
               type="submit"
               disabled={isPending || !displayNameDraft.trim()}
             >
-              Save Settings
+              Save
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -429,9 +418,9 @@ export function HomeScreen({
       >
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Set Up Your Table</DialogTitle>
+            <DialogTitle>Quick Match Setup</DialogTitle>
             <DialogDescription>
-              Pick the standard rules and bot challenge before the island is built.
+              Choose rules and bot difficulty.
             </DialogDescription>
           </DialogHeader>
           <div className="max-h-[60vh] overflow-auto">
@@ -446,7 +435,7 @@ export function HomeScreen({
             />
           </div>
           <p className="text-xs text-muted-foreground">
-            Quick matches fill every open seat with bots for the selected board.
+            All open seats will be filled with bots.
           </p>
           <DialogFooter>
             <Button
@@ -459,7 +448,7 @@ export function HomeScreen({
               <Icon icon={botIcon} />
               {pendingAction === "quick" ? (
                 <>
-                  <Spinner data-icon="inline-start" /> Building the Island...
+                  <Spinner data-icon="inline-start" /> Starting...
                 </>
               ) : (
                 "Start Quick Match"

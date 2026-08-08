@@ -53,6 +53,7 @@ function HomePageContentInner({
   const searchParams = useSearchParams();
   const requestedRoom = searchParams.get("room");
   const joinRoomMutation = useMutation(api.rooms.joinRoom);
+  const createRoomMutation = useMutation(api.rooms.createRoom);
 
   useEffect(() => {
     if (!requestedRoom) return;
@@ -61,6 +62,24 @@ function HomePageContentInner({
       router.replace(`/room/${encodeURIComponent(normalized)}`);
     }
   }, [requestedRoom, router]);
+
+  const handleCreateRoom = async () => {
+    setError("");
+    setPendingAction("create");
+    try {
+      const result = await createRoomMutation({
+        displayName: cleanDisplayName(displayName),
+      });
+      const normalizedCode = normalizeRoomCode(result.code);
+      if (!isRoomCode(normalizedCode)) throw new Error("Invalid room code generated");
+      updateSession((current) => ({ ...current, activeCode: normalizedCode }));
+      router.push(`/room/${encodeURIComponent(normalizedCode)}`);
+    } catch (cause) {
+      setError(toActionableError(cause));
+    } finally {
+      setPendingAction(null);
+    }
+  };
 
   const handleJoinRoom = async (codeToJoin: string) => {
     const normalizedCode = normalizeRoomCode(codeToJoin);
@@ -97,6 +116,7 @@ function HomePageContentInner({
         error={error}
         initialJoinCode={initialJoinCode}
         initialJoinOpen={initialJoinOpen}
+        onCreateRoom={handleCreateRoom}
         onAudioSettingsChange={onAudioSettingsChange}
         onDisplayNameChange={onDisplayNameChange}
         onJoinRoom={handleJoinRoom}

@@ -14,7 +14,7 @@ export function FullPageStatus({ label }: FullPageStatusProps) {
       <Card className="w-full max-w-sm text-center">
         <CardHeader className="items-center">
           <CardTitle className="text-lg">SetterSaga</CardTitle>
-          <CardDescription>Settler Saga</CardDescription>
+          <CardDescription>Settlers Saga</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col items-center gap-4">
           <Spinner />
