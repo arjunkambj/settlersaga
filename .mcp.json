@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "asset-gen": {
+      "command": "bun",
+      "args": ["run", "packages/asset-gen-mcp/src/index.ts"]
+    }
+  }
+}
