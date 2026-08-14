@@ -174,10 +174,10 @@ body {
   --hud-glow: var(--primary);
   --hud-shadow: 0 14px 34px color-mix(in oklch, var(--background) 70%, black);
   --hud-shadow-sm: 0 6px 16px color-mix(in oklch, var(--background) 65%, black);
-  --hud-inset: max(0.7rem, env(safe-area-inset-top));
-  --hud-inset-x: max(0.85rem, env(safe-area-inset-right));
-  --hud-inset-bottom: max(0.7rem, env(safe-area-inset-bottom));
-  --hud-inset-left: max(0.85rem, env(safe-area-inset-left));
+  --hud-inset: max(0.4rem, env(safe-area-inset-top));
+  --hud-inset-x: max(0.45rem, env(safe-area-inset-right));
+  --hud-inset-bottom: max(0.4rem, env(safe-area-inset-bottom));
+  --hud-inset-left: max(0.45rem, env(safe-area-inset-left));
 
   /* Text ramp */
   --hud-text: var(--foreground);
@@ -186,7 +186,7 @@ body {
 
   /* Rhythm */
   --hud-gap: 0.75rem;
-  --hud-rail: clamp(360px, 30vw, 460px);
+  --hud-rail: clamp(350px, 27.5vw, 430px);
   --hud-radius: var(--radius-lg);
 
   /* Dice — ivory + ember pairing from the menu art, mixed from theme tokens */
@@ -228,7 +228,7 @@ body {
   min-height: 0;
   place-items: center;
   /* Keep the island in the open well so floating HUD does not cover ports. */
-  padding: 3.25rem calc(var(--hud-rail) + var(--hud-inset-x) + 0.6rem) 8.5rem var(--hud-inset-left);
+  padding: 2.75rem calc(var(--hud-rail) + var(--hud-inset-x) + 0.4rem) 8rem var(--hud-inset-left);
   border: 0;
   border-radius: 0;
   overflow: hidden;

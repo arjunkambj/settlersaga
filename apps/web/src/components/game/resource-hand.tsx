@@ -2,13 +2,11 @@
 
 import {
   RESOURCE_ORDER,
-  type DevelopmentCardType,
   type PlayableDevelopmentCardType,
   type PrivatePlayerState,
   type ResourceInventory,
   type ResourceType,
 } from "@settersaga/game";
-import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import {
   type AnimationEvent,
@@ -185,21 +183,21 @@ export function ResourceHand({
   return (
     <section
       aria-label="Your cards"
-      className="relative grid w-max max-w-full min-w-0 content-start gap-1 p-1 sm:p-1.5 rounded-2xl bg-card/85 backdrop-blur-md shadow-xl border border-white/10"
+      className="relative grid w-full min-w-0 self-end h-fit content-start gap-1 px-2 py-1.5 pt-2 rounded-2xl bg-card/90 shadow-md border border-white/10"
     >
       {notice}
       <div
         className="absolute z-60 bottom-[calc(100%+0.5rem)] left-0 w-[min(34rem,92vw)]"
         id={HAND_DOCK_ROOT_ID}
       />
-      <div className="relative min-w-0">
+      <div className="relative min-w-0 w-full">
         <ul
           aria-label={
             resourceListOverflows
               ? "Your private cards. Use the left and right arrow keys to scroll."
               : undefined
           }
-          className="flex w-max max-w-full min-w-0 items-stretch gap-1.5 pt-1 m-0 overflow-x-auto overflow-y-hidden list-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          className="flex w-full min-w-0 items-stretch gap-1.5 pt-1.5 pb-0.5 px-0.5 m-0 overflow-x-auto overflow-y-visible list-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           ref={resourceListRef}
           tabIndex={resourceListOverflows ? 0 : undefined}
         >
@@ -220,7 +218,7 @@ export function ResourceHand({
                     ? `${RESOURCE_LABELS[resource]}: ${available} available, ${selected} selected for ${interaction.label}`
                     : `${RESOURCE_LABELS[resource]}: ${me.resources[resource]}`
                 }
-                className={`relative grid w-16 min-w-16 grid-rows-[auto_0.75rem] gap-0.5 rounded-lg transition-all duration-150 ${
+                className={`relative flex flex-col w-16 min-w-16 aspect-[2/3] rounded-lg transition-all duration-150 ${
                   selected > 0 && !preserveHandAppearance ? "brightness-110 -translate-y-0.5" : ""
                 } ${interaction && interactionMatchesSource ? "cursor-pointer" : ""} ${
                   isEmpty
@@ -234,10 +232,7 @@ export function ResourceHand({
                   selected > 0 ? ` · ${selected} selected` : ""
                 }`}
               >
-                <span
-                  className="block w-full aspect-[2/3] rounded-lg overflow-hidden"
-                  aria-hidden="true"
-                >
+                <span className="block size-full rounded-lg overflow-hidden" aria-hidden="true">
                   <GameCardArtwork
                     className="size-full rounded-lg object-contain"
                     path={RESOURCE_CARD_ASSET_PATHS[resource]}
@@ -253,29 +248,23 @@ export function ResourceHand({
                 {selected > 0 && !preserveHandAppearance ? (
                   <span
                     aria-hidden="true"
-                    className="absolute z-10 right-1/2 bottom-3.5 translate-x-1/2 px-1.5 py-0.5 rounded-full bg-accent text-accent-foreground text-[0.55rem] font-black pointer-events-none whitespace-nowrap shadow-sm"
+                    className="absolute z-10 right-1/2 bottom-2 translate-x-1/2 px-1.5 py-0.5 rounded-full bg-accent text-accent-foreground text-[0.55rem] font-black pointer-events-none whitespace-nowrap shadow-sm"
                   >
                     {selected} selected
                   </span>
                 ) : null}
-                <span
-                  aria-hidden="true"
-                  className="self-center truncate text-center text-[0.52rem] font-extrabold text-muted-foreground leading-none"
-                >
-                  {RESOURCE_LABELS[resource]}
-                </span>
-                {interaction && interactionMatchesSource ? (
-                  <Button
+                {interaction && interactionMatchesSource && available > 0 ? (
+                  <button
                     aria-label={`Move one ${RESOURCE_LABELS[resource]} from your hand to ${interaction.label}`}
-                    className="absolute inset-0 z-10 size-full p-0 rounded-lg bg-transparent hover:bg-transparent"
-                    disabled={interaction.disabled || available === 0}
+                    className="absolute inset-0 z-10 size-full p-0 rounded-lg bg-transparent border-0 outline-none focus-visible:ring-2 focus-visible:ring-primary cursor-pointer disabled:pointer-events-none"
+                    disabled={interaction.disabled}
                     onClick={() => interaction.onSelect(resource)}
-                    variant="ghost"
+                    type="button"
                   >
                     <span className="sr-only">
                       {available} available, {selected} selected
                     </span>
-                  </Button>
+                  </button>
                 ) : null}
               </li>
             );
@@ -292,26 +281,17 @@ export function ResourceHand({
             return (
               <li
                 aria-label={`${card.label} development cards: ${card.count}. ${card.description}`}
-                className={`relative grid w-16 min-w-16 grid-rows-[auto_0.75rem] gap-0.5 rounded-lg transition-all duration-150 ${
-                  playable
-                    ? "cursor-pointer hover:brightness-105 hover:-translate-y-0.5"
-                    : "opacity-80"
+                className={`relative flex flex-col w-16 min-w-16 aspect-[2/3] rounded-lg transition-all duration-150 hover:brightness-105 hover:-translate-y-0.5 ${
+                  playable ? "cursor-pointer" : ""
                 }`}
                 key={card.id}
+                title={`${card.label} · ${card.count} in hand${playable ? " · Click to play" : ""}`}
               >
-                <span
-                  className="block w-full aspect-[2/3] rounded-lg overflow-hidden"
-                  aria-hidden="true"
-                >
-                  <Image
-                    alt=""
+                <span className="block size-full rounded-lg overflow-hidden" aria-hidden="true">
+                  <GameCardArtwork
                     className="size-full rounded-lg object-contain"
-                    draggable={false}
-                    height={768}
-                    loading="eager"
+                    path={card.path}
                     sizes="4.5rem"
-                    src={card.path}
-                    width={512}
                   />
                 </span>
                 <span
@@ -320,21 +300,19 @@ export function ResourceHand({
                 >
                   {card.count}
                 </span>
-                <span
-                  aria-hidden="true"
-                  className="self-center truncate text-center text-[0.52rem] font-extrabold text-muted-foreground leading-none"
-                >
-                  {card.label}
-                </span>
-                <DevelopmentCardButton
-                  card={card.id}
-                  count={card.count}
-                  description={card.description}
-                  label={card.label}
-                  onPlayDevelopmentCard={onPlayDevelopmentCard}
-                  pending={pending}
-                  playableDevelopmentCards={playableDevelopmentCards}
-                />
+                {playable ? (
+                  <button
+                    aria-label={`Play ${card.label} development card: ${card.description}`}
+                    className="absolute inset-0 z-10 size-full p-0 rounded-lg bg-transparent border-0 outline-none focus-visible:ring-2 focus-visible:ring-primary cursor-pointer disabled:pointer-events-none"
+                    disabled={pending}
+                    onClick={() => {
+                      onPlayDevelopmentCard(card.id);
+                    }}
+                    type="button"
+                  >
+                    <span className="sr-only">Play {card.label}</span>
+                  </button>
+                ) : null}
               </li>
             );
           })}
@@ -372,47 +350,5 @@ export function ResourceHand({
         </div>
       </div>
     </section>
-  );
-}
-
-function DevelopmentCardButton({
-  card,
-  count,
-  description,
-  label,
-  onPlayDevelopmentCard,
-  pending,
-  playableDevelopmentCards,
-}: {
-  card: DevelopmentCardType;
-  count: number;
-  description: string;
-  label: string;
-  onPlayDevelopmentCard(card: PlayableDevelopmentCardType): void;
-  pending: boolean;
-  playableDevelopmentCards: readonly PlayableDevelopmentCardType[];
-}) {
-  const playable = card !== "victory-point" && playableDevelopmentCards.includes(card);
-  const status =
-    card === "victory-point"
-      ? "This card counts automatically."
-      : playable
-        ? "Play this card."
-        : "This card cannot be played right now.";
-
-  return (
-    <Button
-      aria-label={`${label} development cards: ${count}. ${description} ${status}`}
-      className="absolute inset-0 z-10 size-full p-0 rounded-lg bg-transparent hover:bg-transparent"
-      disabled={pending || !playable}
-      onClick={() => {
-        if (card !== "victory-point") {
-          onPlayDevelopmentCard(card);
-        }
-      }}
-      variant="ghost"
-    >
-      <span className="sr-only">{status}</span>
-    </Button>
   );
 }

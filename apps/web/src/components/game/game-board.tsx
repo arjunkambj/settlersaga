@@ -534,7 +534,7 @@ function BoardInspector({ inspection }: { inspection: BoardInspection | null }) 
   return (
     <aside
       aria-label="Board inspector"
-      className="grid gap-1.5 p-3 rounded-2xl bg-card/85 backdrop-blur-md shadow-lg border border-white/10 text-card-foreground pointer-events-auto"
+      className="grid gap-1.5 p-3 rounded-2xl bg-card/90 shadow-md border border-white/10 text-card-foreground pointer-events-auto"
     >
       <span className="text-[0.65rem] font-black tracking-wider uppercase text-foreground/60">
         {inspection.kicker}
