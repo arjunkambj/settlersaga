@@ -11,8 +11,11 @@ import {
 } from "@settersaga/game";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import clockIcon from "@iconify-icons/solar/clock-circle-bold";
+import minusIcon from "@iconify-icons/solar/minus-circle-bold";
+import { Icon } from "@iconify/react";
 import Image from "next/image";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type CSSProperties } from "react";
 
 import { RESOURCE_CARD_ASSET_PATHS } from "@/constants/game/card-assets";
 
@@ -40,6 +43,7 @@ export function DiscardPanel({
   const selectedCount = totalResources(selection);
   const remainingCount = Math.max(0, count - selectedCount);
   const selectedResources = RESOURCE_ORDER.filter((resource) => selection[resource] > 0);
+  const isReady = selectedCount === count;
   const { isExpired, seconds } = useActionCountdown({ isPaused, nextActionAt });
 
   const addResource = useCallback(
@@ -111,46 +115,12 @@ export function DiscardPanel({
 
   return (
     <HandDockPortal>
-      <section aria-labelledby="discard-tray-title" className="discard-tray" id="discard-tray">
-        <header className="discard-tray__header">
-          <h2 id="discard-tray-title">Discard {count}</h2>
-        </header>
-
-        <div aria-label="Cards selected to discard" className="discard-tray__cards" role="list">
-          {selectedResources.length === 0 ? (
-            <span className="sr-only">No cards selected</span>
-          ) : (
-            selectedResources.map((resource) => (
-              <div className="discard-chip" key={resource} role="listitem">
-                <div className="discard-chip__art">
-                  <Image
-                    alt=""
-                    className="discard-chip__image"
-                    draggable={false}
-                    height={768}
-                    sizes="2.5rem"
-                    src={RESOURCE_CARD_ASSET_PATHS[resource]}
-                    width={512}
-                  />
-                  <span aria-hidden="true" className="discard-chip__count">
-                    {selection[resource]}
-                  </span>
-                </div>
-                <Button
-                  aria-label={`Remove one ${RESOURCE_LABELS[resource]} from the discard selection`}
-                  disabled={pending}
-                  onClick={() => removeResource(resource)}
-                  size="icon-sm"
-                  variant="ghost"
-                >
-                  ×
-                </Button>
-              </div>
-            ))
-          )}
-        </div>
-
-        <div className="discard-tray__footer">
+      <section aria-labelledby="discard-tray-title" className="hud-action-panel" id="discard-tray">
+        <header className="hud-action-panel__header">
+          <div>
+            <p className="eyebrow">Robber</p>
+            <h2 id="discard-tray-title">Discard {count} cards</h2>
+          </div>
           {isPaused || nextActionAt ? (
             <div
               aria-label={
@@ -169,10 +139,62 @@ export function DiscardPanel({
               data-expired={isExpired || undefined}
               role="timer"
             >
+              <Icon aria-hidden="true" icon={clockIcon} />
               <span>{isPaused ? "Paused" : "Auto"}</span>
               <strong>{isPaused ? "—" : isExpired ? "…" : `${seconds ?? "—"}s`}</strong>
             </div>
           ) : null}
+        </header>
+
+        <p className="hud-action-panel__hint">Tap cards in your hand to add them.</p>
+
+        <div aria-label="Cards selected to discard" className="discard-tray__cards" role="list">
+          {selectedResources.length === 0 ? (
+            <p className="trade-row-empty">No cards selected yet.</p>
+          ) : (
+            selectedResources.map((resource) => (
+              <div className="discard-chip" key={resource} role="listitem">
+                <div className="discard-chip__art">
+                  <Image
+                    alt=""
+                    className="discard-chip__image"
+                    draggable={false}
+                    height={768}
+                    sizes="2.8rem"
+                    src={RESOURCE_CARD_ASSET_PATHS[resource]}
+                    width={512}
+                  />
+                  <span aria-hidden="true" className="discard-chip__count">
+                    {selection[resource]}
+                  </span>
+                </div>
+                <Button
+                  aria-label={`Remove one ${RESOURCE_LABELS[resource]} from the discard selection`}
+                  disabled={pending}
+                  onClick={() => removeResource(resource)}
+                  size="icon-xs"
+                  variant="ghost"
+                >
+                  <Icon aria-hidden="true" icon={minusIcon} />
+                </Button>
+              </div>
+            ))
+          )}
+        </div>
+
+        <div className="discard-tray__progress">
+          <div
+            aria-hidden="true"
+            className="discard-tray__meter"
+            data-ready={isReady || undefined}
+            style={
+              {
+                "--progress": `${count === 0 ? 0 : (selectedCount / count) * 100}%`,
+              } as CSSProperties
+            }
+          >
+            <span />
+          </div>
           <p
             aria-label={`${selectedCount} of ${count} resource cards selected`}
             aria-live="polite"
@@ -181,11 +203,14 @@ export function DiscardPanel({
             <strong>
               {selectedCount}/{count}
             </strong>
-            <span>{remainingCount === 0 ? "Ready" : "selected"}</span>
+            <span>{isReady ? "Ready to discard" : `${remainingCount} more needed`}</span>
           </p>
+        </div>
+
+        <footer className="discard-tray__footer">
           <Button
             aria-describedby="discard-tray-status"
-            disabled={pending || selectedCount !== count}
+            disabled={pending || !isReady}
             onClick={() =>
               onCommand({ kind: "discard", resources: selection }, "Resources discarded.")
             }
@@ -198,7 +223,7 @@ export function DiscardPanel({
               "Discard"
             )}
           </Button>
-        </div>
+        </footer>
       </section>
     </HandDockPortal>
   );

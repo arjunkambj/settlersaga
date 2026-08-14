@@ -1,6 +1,6 @@
 "use client";
-import musicIcon from "@iconify-icons/solar/music-note-2-bold-duotone";
-import volumeIcon from "@iconify-icons/solar/volume-loud-outline";
+import musicIcon from "@iconify-icons/solar/music-note-2-bold";
+import volumeIcon from "@iconify-icons/solar/volume-loud-bold";
 import { Icon } from "@iconify/react";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";

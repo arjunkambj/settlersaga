@@ -2,9 +2,8 @@
 
 import { useRouter } from "next/navigation";
 
-import { DEFAULT_BASE_GAME_SETTINGS } from "@settersaga/game";
+import { DEFAULT_BASE_GAME_SETTINGS, type BotDifficulty } from "@settersaga/game";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import {
   Dialog,
@@ -16,23 +15,31 @@ import {
 } from "@/components/ui/dialog";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
+import { Tooltip as TooltipPrimitive } from "@base-ui/react/tooltip";
 import { Icon } from "@iconify/react";
 import Image from "next/image";
 import { useState } from "react";
-import botIcon from "@iconify-icons/game-icons/robot-golem";
-import logoutIcon from "@iconify-icons/solar/logout-2-outline";
+import arrowRightIcon from "@iconify-icons/solar/arrow-right-bold";
+import logoutIcon from "@iconify-icons/solar/logout-2-bold";
 import playIcon from "@iconify-icons/solar/play-bold";
-import settingsIcon from "@iconify-icons/solar/settings-minimalistic-outline";
+import settingsIcon from "@iconify-icons/solar/settings-minimalistic-bold";
 
-import { LobbySettings, type LobbySettingsValue } from "@/components/lobby/lobby-settings";
-import { AudioSettingsControls } from "@/components/audio/audio-settings-controls";
+import { BrandMark } from "@/components/app/brand-logo";
+import { PlayerSettingsDialog } from "@/components/app/player-settings-dialog";
+import { SceneBackdrop } from "@/components/app/scene-backdrop";
+import type { LobbySettingsValue } from "@/components/lobby/lobby-settings";
+import { QuickMatchDialog } from "@/components/quick-match/quick-match-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { LiveMessage } from "@/components/ui/live-message";
-import { cleanDisplayName } from "@/lib/app/display-name";
 import type { PendingAction } from "@/lib/app/pending-action";
 import type { AudioSettings } from "@/lib/audio-settings";
-import { toBotCount } from "@/lib/lobby/lobby-settings-model";
 import { isRoomCode, normalizeRoomCode } from "@/lib/session";
+import { cn } from "@/lib/utils";
 
 export interface HomeScreenProps {
   accountLabel: string;
@@ -74,233 +81,140 @@ export function HomeScreen({
   const [showJoinRoom, setShowJoinRoom] = useState(initialJoinOpen ?? false);
   const [showBotSetup, setShowBotSetup] = useState(false);
   const [showPlayerSettings, setShowPlayerSettings] = useState(false);
-  const [displayNameDraft, setDisplayNameDraft] = useState(displayName);
-  const [audioSettingsDraft, setAudioSettingsDraft] = useState(audioSettings);
-  const [audioSettingsAtOpen, setAudioSettingsAtOpen] = useState(audioSettings);
-  const [quickSettings, setQuickSettings] = useState<LobbySettingsValue>({
-    botCount: 3,
-    botDifficulty: "medium",
-    settings: { ...DEFAULT_BASE_GAME_SETTINGS },
-  });
+  const [botDifficulty, setBotDifficulty] = useState<BotDifficulty>("medium");
   const isPending = pendingAction !== null;
 
-  const openPlayerSettings = () => {
-    setDisplayNameDraft(displayName);
-    setAudioSettingsDraft(audioSettings);
-    setAudioSettingsAtOpen(audioSettings);
-    setShowPlayerSettings(true);
-  };
-  const savePlayerSettings = () => {
-    onDisplayNameChange(cleanDisplayName(displayNameDraft));
-    setShowPlayerSettings(false);
-  };
-  const cancelPlayerSettings = () => {
-    onAudioSettingsChange(audioSettingsAtOpen);
-    setShowPlayerSettings(false);
-  };
-  const updateAudioSettingsDraft = (settings: AudioSettings) => {
-    setAudioSettingsDraft(settings);
-    onAudioSettingsChange(settings);
-  };
-
   return (
-    <main className="relative min-h-dvh overflow-hidden" id="main-content">
-      <div aria-hidden="true" className="fixed inset-0 -z-10">
-        <Image
-          alt=""
-          className="object-cover"
-          fill
-          priority
-          sizes="100vw"
-          src="/shared-assets/coastal-island-kingdom-supercell.png"
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-[#012d5c]/90 via-[#01315f]/55 to-[#01315f]/95" />
-      </div>
+    <main className="relative flex min-h-dvh flex-col overflow-x-hidden" id="main-content">
+      <SceneBackdrop />
 
-      <div className="flex items-center justify-between gap-3 p-4">
-        <div className="flex items-center gap-2 rounded-2xl border border-white/15 bg-card/50 px-3 py-2 shadow-lg shadow-black/20 backdrop-blur-md">
-          <span aria-hidden="true" className="text-lg font-black leading-none tracking-tight">
-            S
-          </span>
-          <div>
-            <p className="text-sm font-bold leading-none">SetterSaga</p>
-            <p className="text-xs text-white/70">Settlers Saga</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2.5">
-          <div className="rounded-full border border-white/15 bg-card/50 p-1 shadow-lg shadow-black/20 backdrop-blur-md">
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              aria-label="Open player settings"
+      <div className="relative z-20 flex items-center justify-between gap-3 p-4">
+        <BrandMark priority />
+        <div className="flex items-center gap-2">
+          <TooltipPrimitive.Root>
+            <TooltipPrimitive.Trigger
+              aria-label="Settings"
+              className="inline-flex size-10 items-center justify-center rounded-full bg-card/50 text-foreground shadow-lg shadow-background/40 backdrop-blur-md hover:bg-card/80 focus-visible:ring-3 focus-visible:ring-ring/30 focus-visible:outline-none disabled:opacity-50"
+              delay={200}
               disabled={isPending}
-              onClick={openPlayerSettings}
+              onClick={() => setShowPlayerSettings(true)}
+              type="button"
             >
               <Icon icon={settingsIcon} />
-            </Button>
-          </div>
-          <div className="flex items-center gap-2 rounded-full border border-white/15 bg-card/50 py-1 pr-1 pl-2 shadow-lg shadow-black/20 backdrop-blur-md">
-            <Image
-              alt=""
-              height={28}
-              width={28}
-              className="h-7 w-7 rounded-full object-cover"
-              src={profileImageUrl ?? "/game-assets/players/red-navigator.png"}
-            />
-            <div className="hidden sm:block text-left">
-              <p className="text-xs font-semibold leading-none">{displayName}</p>
-              <p className="text-xs text-white/70 leading-none">{accountLabel}</p>
-            </div>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              aria-label="Sign out"
-              disabled={isPending && pendingAction !== "signout"}
-              onClick={() => void onSignOut()}
+            </TooltipPrimitive.Trigger>
+            <TooltipPrimitive.Portal>
+              <TooltipPrimitive.Positioner align="center" side="bottom" sideOffset={8}>
+                <TooltipPrimitive.Popup className="z-50 rounded-xl bg-popover px-3 py-1.5 text-xs text-popover-foreground shadow-md outline-none">
+                  Settings
+                </TooltipPrimitive.Popup>
+              </TooltipPrimitive.Positioner>
+            </TooltipPrimitive.Portal>
+          </TooltipPrimitive.Root>
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              aria-label="Account"
+              className="inline-flex max-w-48 items-center gap-2 rounded-full bg-card/50 py-1 pr-3 pl-1 shadow-lg shadow-background/40 backdrop-blur-md hover:bg-card/80 focus-visible:ring-3 focus-visible:ring-ring/30 focus-visible:outline-none disabled:opacity-50"
+              disabled={isPending}
             >
-              <Icon icon={logoutIcon} />
-            </Button>
-          </div>
+              <Image
+                alt=""
+                height={32}
+                width={32}
+                className="size-8 shrink-0 rounded-full object-cover"
+                src={profileImageUrl ?? "/game-assets/players/red-navigator.png"}
+              />
+              <span className="min-w-0 truncate text-sm font-semibold">{displayName}</span>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="min-w-44" side="bottom" sideOffset={12}>
+              {accountLabel && accountLabel !== displayName ? (
+                <p className="px-2 py-1.5 text-xs text-muted-foreground">{accountLabel}</p>
+              ) : null}
+              <DropdownMenuItem
+                disabled={isPending && pendingAction !== "signout"}
+                onClick={() => void onSignOut()}
+              >
+                <Icon icon={logoutIcon} />
+                Log out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
-      <div className="mx-auto max-w-5xl p-4 pt-6 sm:p-6 sm:pt-6 space-y-6">
-        {activeCode ? (
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 rounded-2xl border border-white/15 bg-card/55 p-4 shadow-xl shadow-black/30 backdrop-blur-xl sm:p-5">
-            <div className="text-center sm:text-left">
-              <p className="text-xs font-semibold uppercase tracking-wider text-primary">
-                Game in Progress
+      <div className="relative grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_auto_minmax(0,1fr)] px-4 pb-8 sm:px-6">
+        <div className="flex flex-col items-center justify-end pb-5">
+          <div className="relative">
+            {activeCode ? (
+              <button
+                aria-label={`Rejoin room ${activeCode}`}
+                className={cn(
+                  voyageCardClassName,
+                  "absolute bottom-full left-1/2 mb-3 flex w-[min(calc(100vw-2rem),28rem)] -translate-x-1/2 flex-row items-center justify-between gap-3 px-4 py-2.5 text-left",
+                )}
+                onClick={() => router.push(`/room/${encodeURIComponent(activeCode)}`)}
+                type="button"
+              >
+                <div className="min-w-0">
+                  <p className="font-heading text-sm font-bold tracking-wide uppercase">
+                    Game in progress
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Room{" "}
+                    <span className="font-mono font-semibold text-foreground">{activeCode}</span> is
+                    still active
+                  </p>
+                </div>
+                <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                  <Icon className="size-5" icon={playIcon} />
+                </span>
+              </button>
+            ) : null}
+            <div className="space-y-1 text-center">
+              <h1 className="font-heading text-3xl font-bold drop-shadow-md sm:text-4xl">
+                Choose your voyage
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                Play now, host a table, or join a crew.
               </p>
-              <h2 className="text-lg font-bold">
-                Room <span className="font-mono">{activeCode}</span> is still active
-              </h2>
-              <p className="text-xs text-white/70">Hop back in anytime.</p>
             </div>
-            <Button
-              size="lg"
-              className="w-full sm:w-auto"
-              onClick={() => router.push(`/room/${encodeURIComponent(activeCode)}`)}
-            >
-              <Icon icon={playIcon} className="mr-2 h-4 w-4" /> Rejoin
-            </Button>
           </div>
-        ) : null}
-
-        <div className="text-center">
-          <h1 className="text-2xl font-bold drop-shadow-md">How do you want to play?</h1>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-3">
-          <Card className="flex flex-col overflow-hidden border-white/15 bg-card/50 shadow-xl shadow-black/30 backdrop-blur-xl transition-all hover:-translate-y-0.5 hover:border-primary/60 hover:shadow-2xl">
-            <div className="relative h-32 w-full overflow-hidden bg-gradient-to-b from-white/10 to-transparent flex items-center justify-center">
-              <Image
-                alt="Quick Match"
-                className="h-24 w-24 shrink-0 object-contain drop-shadow-lg sm:h-28 sm:w-28"
-                height={140}
-                src="/home-assets/menu/quick-match-v2.png"
-                width={140}
-              />
-            </div>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base">Quick Match</CardTitle>
-              <CardDescription>Instant game with bots</CardDescription>
-            </CardHeader>
-            <CardContent className="mt-auto pt-2">
-              {onQuickPlay ? (
-                <Button
-                  className="w-full"
-                  disabled={isPending || !displayName.trim()}
-                  onClick={() => setShowBotSetup(true)}
-                >
-                  {pendingAction === "quick" ? (
-                    <>
-                      <Spinner data-icon="inline-start" /> Starting...
-                    </>
-                  ) : (
-                    "Quick Match"
-                  )}
-                </Button>
-              ) : (
-                <Button
-                  className="w-full"
-                  disabled={isPending || !displayName.trim()}
-                  onClick={() => router.push("/quick-match")}
-                >
-                  Quick Match
-                </Button>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className="flex flex-col overflow-hidden border-white/15 bg-card/50 shadow-xl shadow-black/30 backdrop-blur-xl transition-all hover:-translate-y-0.5 hover:border-primary/60 hover:shadow-2xl">
-            <div className="relative h-32 w-full overflow-hidden bg-gradient-to-b from-white/10 to-transparent flex items-center justify-center">
-              <Image
-                alt="Custom Game"
-                className="h-24 w-24 shrink-0 object-contain drop-shadow-lg sm:h-28 sm:w-28"
-                height={140}
-                src="/home-assets/menu/host-island-v2.png"
-                width={140}
-              />
-            </div>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base">Custom Game</CardTitle>
-              <CardDescription>Set rules and invite friends</CardDescription>
-            </CardHeader>
-            <CardContent className="mt-auto pt-2">
-              <Button
-                className="w-full"
-                disabled={isPending || !displayName.trim()}
-                onClick={() => void onCreateRoom()}
-              >
-                {pendingAction === "create" ? (
-                  <>
-                    <Spinner data-icon="inline-start" /> Creating...
-                  </>
-                ) : (
-                  "Create Custom Game"
-                )}
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card className="flex flex-col overflow-hidden border-white/15 bg-card/50 shadow-xl shadow-black/30 backdrop-blur-xl transition-all hover:-translate-y-0.5 hover:border-primary/60 hover:shadow-2xl">
-            <div className="relative h-32 w-full overflow-hidden bg-gradient-to-b from-white/10 to-transparent flex items-center justify-center">
-              <Image
-                alt="Join Crew"
-                className="h-24 w-24 shrink-0 object-contain drop-shadow-lg sm:h-28 sm:w-28"
-                height={140}
-                src="/home-assets/menu/join-crew-v2.png"
-                width={140}
-              />
-            </div>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base">Join Crew</CardTitle>
-              <CardDescription>Enter a room code</CardDescription>
-            </CardHeader>
-            <CardContent className="mt-auto pt-2">
-              <Button
-                className="w-full"
-                variant="secondary"
-                disabled={isPending || !displayName.trim()}
-                onClick={() => setShowJoinRoom(true)}
-              >
-                {pendingAction === "join" ? (
-                  <>
-                    <Spinner data-icon="inline-start" /> Joining...
-                  </>
-                ) : (
-                  "Join Crew"
-                )}
-              </Button>
-            </CardContent>
-          </Card>
+        <div className="mx-auto grid w-full max-w-5xl grid-cols-1 items-stretch gap-5 sm:grid-cols-3">
+          <PlayModeButton
+            actionLabel={
+              pendingAction === "quick" ? "Starting..." : "Play instantly with bots or players"
+            }
+            artSrc="/home-assets/menu/quick-match.png"
+            className="sm:col-start-2 sm:row-start-1"
+            disabled={isPending || !displayName.trim()}
+            onClick={() => setShowBotSetup(true)}
+            pending={pendingAction === "quick"}
+            title="Quick Match"
+          />
+          <PlayModeButton
+            actionLabel={pendingAction === "create" ? "Creating..." : "Create a private room"}
+            artSrc="/home-assets/menu/host-island.png"
+            className="sm:col-start-1 sm:row-start-1"
+            disabled={isPending || !displayName.trim()}
+            onClick={() => void onCreateRoom()}
+            pending={pendingAction === "create"}
+            title="Host Island"
+          />
+          <PlayModeButton
+            actionLabel={pendingAction === "join" ? "Joining..." : "Enter a friend code"}
+            artSrc="/home-assets/menu/join-crew.png"
+            className="sm:col-start-3 sm:row-start-1"
+            disabled={isPending || !displayName.trim()}
+            onClick={() => setShowJoinRoom(true)}
+            pending={pendingAction === "join"}
+            title="Join Crew"
+          />
         </div>
 
-        {error ? (
-          <div className="mt-4 flex justify-center">
-            <LiveMessage message={error} />
-          </div>
-        ) : null}
+        <div className="flex justify-center pt-4">
+          {error && !showBotSetup ? <LiveMessage message={error} /> : null}
+        </div>
       </div>
 
       <Dialog
@@ -367,104 +281,86 @@ export function HomeScreen({
         </DialogContent>
       </Dialog>
 
-      <Dialog
+      <PlayerSettingsDialog
+        audioSettings={audioSettings}
+        displayName={displayName}
+        isPending={isPending}
+        onAudioSettingsChange={onAudioSettingsChange}
+        onDisplayNameChange={onDisplayNameChange}
+        onOpenChange={setShowPlayerSettings}
         open={showPlayerSettings}
-        onOpenChange={(open) => {
-          if (!open && !isPending) cancelPlayerSettings();
-        }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Settings</DialogTitle>
-          </DialogHeader>
-          <form
-            id="player-settings-form"
-            onSubmit={(event) => {
-              event.preventDefault();
-              savePlayerSettings();
-            }}
-            className="space-y-4"
-          >
-            <Field>
-              <FieldLabel htmlFor="display-name-input">Display name</FieldLabel>
-              <Input
-                id="display-name-input"
-                autoComplete="off"
-                autoFocus
-                maxLength={24}
-                placeholder="Your name"
-                value={displayNameDraft}
-                onChange={(e) => setDisplayNameDraft(e.target.value)}
-              />
-            </Field>
-            <Separator />
-            <AudioSettingsControls
-              onChange={updateAudioSettingsDraft}
-              settings={audioSettingsDraft}
-            />
-          </form>
-          <DialogFooter>
-            <Button variant="ghost" disabled={isPending} onClick={cancelPlayerSettings}>
-              Cancel
-            </Button>
-            <Button
-              form="player-settings-form"
-              type="submit"
-              disabled={isPending || !displayNameDraft.trim()}
-            >
-              Save
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      />
 
-      <Dialog
-        open={showBotSetup}
-        onOpenChange={(open) => {
-          if (!open && !isPending) setShowBotSetup(false);
+      <QuickMatchDialog
+        botDifficulty={botDifficulty}
+        disabled={isPending}
+        error={error}
+        onBotDifficultyChange={setBotDifficulty}
+        onOpenChange={setShowBotSetup}
+        onStart={() => {
+          if (!onQuickPlay) {
+            return;
+          }
+          void onQuickPlay({
+            botCount: 3,
+            botDifficulty,
+            settings: { ...DEFAULT_BASE_GAME_SETTINGS },
+          });
         }}
-      >
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Quick Match Setup</DialogTitle>
-            <DialogDescription>Choose rules and bot difficulty.</DialogDescription>
-          </DialogHeader>
-          <div className="max-h-[60vh] overflow-auto">
-            <LobbySettings
-              botCount={quickSettings.botCount}
-              botDifficulty={quickSettings.botDifficulty}
-              disabled={isPending}
-              humanCount={1}
-              minBotCount={toBotCount(quickSettings.settings.maxPlayers - 1)}
-              onChange={(value) => setQuickSettings(normalizeQuickSettings(value))}
-              settings={quickSettings.settings}
-            />
-          </div>
-          <p className="text-xs text-muted-foreground">All open seats will be filled with bots.</p>
-          <DialogFooter>
-            <Button
-              disabled={isPending}
-              onClick={() => {
-                if (onQuickPlay) void onQuickPlay(quickSettings);
-              }}
-              className="w-full sm:w-auto"
-            >
-              <Icon icon={botIcon} />
-              {pendingAction === "quick" ? (
-                <>
-                  <Spinner data-icon="inline-start" /> Starting...
-                </>
-              ) : (
-                "Start Quick Match"
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        open={showBotSetup}
+        pending={pendingAction === "quick"}
+      />
     </main>
   );
 }
 
-function normalizeQuickSettings(next: LobbySettingsValue): LobbySettingsValue {
-  return { ...next, botCount: toBotCount(next.settings.maxPlayers - 1) };
+const voyageCardClassName = cn(
+  "group flex w-full overflow-hidden rounded-4xl",
+  "bg-gradient-to-b from-card/55 to-card/70 shadow-sm shadow-background/40",
+  "focus-visible:ring-3 focus-visible:ring-ring/30 focus-visible:outline-none",
+  "disabled:pointer-events-none disabled:opacity-50",
+);
+
+function PlayModeButton({
+  actionLabel,
+  artSrc,
+  className,
+  disabled,
+  onClick,
+  pending,
+  title,
+}: {
+  actionLabel: string;
+  artSrc: string;
+  className?: string;
+  disabled: boolean;
+  onClick(): void;
+  pending: boolean;
+  title: string;
+}) {
+  return (
+    <button
+      className={cn(voyageCardClassName, "flex-col text-center", className)}
+      disabled={disabled}
+      onClick={onClick}
+      type="button"
+    >
+      <div className="flex items-center justify-center px-6 pt-8">
+        <Image
+          alt=""
+          className="h-64 w-auto object-contain drop-shadow-lg transition-transform duration-300 group-hover:scale-105 sm:h-72"
+          height={640}
+          src={artSrc}
+          width={640}
+        />
+      </div>
+      <div className="flex flex-col items-center px-5 pt-1 pb-6">
+        <p className="font-heading text-xl font-bold tracking-wide uppercase">{title}</p>
+        <p className="mt-1 max-w-56 text-sm text-muted-foreground">{actionLabel}</p>
+        <span className="mt-4 inline-flex size-11 items-center justify-center rounded-full bg-primary text-primary-foreground">
+          {pending ? <Spinner /> : <Icon className="size-5" icon={arrowRightIcon} />}
+        </span>
+      </div>
+    </button>
+  );
 }

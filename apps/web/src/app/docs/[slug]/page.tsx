@@ -1,4 +1,4 @@
-import arrowLeftIcon from "@iconify-icons/solar/arrow-left-line-duotone";
+import arrowLeftIcon from "@iconify-icons/solar/arrow-left-bold";
 import { Icon } from "@iconify/react";
 import type { Metadata } from "next";
 import Link from "next/link";

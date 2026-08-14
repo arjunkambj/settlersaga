@@ -32,7 +32,9 @@ export async function listDocs(): Promise<DocSummary[]> {
     return [];
   }
 
-  const slugs = entries.filter((entry) => entry.endsWith(".md")).map((entry) => entry.replace(/\.md$/, ""));
+  const slugs = entries
+    .filter((entry) => entry.endsWith(".md"))
+    .map((entry) => entry.replace(/\.md$/, ""));
 
   const docs = await Promise.all(
     slugs.map(async (slug) => {

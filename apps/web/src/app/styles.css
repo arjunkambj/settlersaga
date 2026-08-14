@@ -8,9 +8,9 @@
    the tile shape. */
 @import "./game.css";
 
-@custom-variant dark (&:is(.dark *));
+@custom-variant dark (&:where(.dark, .dark *));
 
-/* Congress Blue — dark only. Light mode removed. */
+/* Single dark felt table. Text is near-white or sage; parchment cream on buttons. */
 :root {
   color-scheme: dark;
   --font-ui:
@@ -18,87 +18,50 @@
     sans-serif;
   font-family: var(--font-ui);
 
-  /* Congress Blue palette */
-  --congress-50: #eff4ff;
-  --congress-100: #dfeeff;
-  --congress-200: #b7ddff;
-  --congress-300: #77c1ff;
-  --congress-400: #2fa3ff;
-  --congress-500: #0489f3;
-  --congress-600: #006ed0;
-  --congress-700: #0057a9;
-  --congress-800: #014a8e;
-  --congress-900: #073d73;
-  --congress-950: #05264c;
-
-  --background: #01519c;
-  --foreground: #f0f6ff;
-  --card: #0c5aa3;
-  --card-foreground: #f0f6ff;
-  --popover: #0c5aa3;
-  --popover-foreground: #f0f6ff;
-  --primary: #77c1ff;
-  --primary-foreground: #05264c;
-  --secondary: #0a6bcf;
-  --secondary-foreground: #f0f6ff;
-  --muted: #0a6bcf;
-  --muted-foreground: #b8cfe9;
-  --accent: #b7ddff;
-  --accent-foreground: #05264c;
-  --destructive: oklch(0.62 0.21 25);
-  --border: rgba(184, 207, 233, 0.22);
-  --input: rgba(184, 207, 233, 0.22);
-  --ring: #77c1ff;
-  --chart-1: #b7ddff;
-  --chart-2: #77c1ff;
-  --chart-3: #dfeeff;
-  --chart-4: #2fa3ff;
-  --chart-5: #0489f3;
+  --background: #145043;
+  --foreground: #f6f8f7;
+  --card: #0f3a31;
+  --card-foreground: var(--foreground);
+  --popover: color-mix(in oklch, #0c322b 88%, transparent);
+  --popover-foreground: var(--foreground);
+  --primary: #f3e3b0;
+  --primary-foreground: #1f1608;
+  --secondary: #1a6858;
+  --secondary-foreground: var(--foreground);
+  --muted: #1c5f52;
+  --muted-foreground: #e4ece8;
+  --accent: #3dcaa0;
+  --accent-foreground: #062019;
+  --destructive: #e11d48;
+  --destructive-foreground: #fff1f2;
+  --border: color-mix(in oklch, var(--foreground) 16%, transparent);
+  --input: color-mix(in oklch, var(--foreground) 16%, transparent);
+  --ring: #f3e3b0;
+  --chart-1: #d7e3de;
+  --chart-2: #f3e3b0;
+  --chart-3: #8aa39a;
+  --chart-4: #1a6858;
+  --chart-5: #c94f2d;
   --radius: 0.625rem;
-  --sidebar: #014a8e;
-  --sidebar-foreground: #eff4ff;
-  --sidebar-primary: #77c1ff;
-  --sidebar-primary-foreground: #05264c;
-  --sidebar-accent: #006ed0;
-  --sidebar-accent-foreground: #eff4ff;
-  --sidebar-border: rgba(183, 221, 255, 0.14);
-  --sidebar-ring: #77c1ff;
+  --sidebar: #1c5f52;
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: #f3e3b0;
+  --sidebar-primary-foreground: #1f1608;
+  --sidebar-accent: #1a6858;
+  --sidebar-accent-foreground: var(--foreground);
+  --sidebar-border: color-mix(in oklch, var(--foreground) 14%, transparent);
+  --sidebar-ring: #f3e3b0;
 }
 
-/* Keep .dark identical — app is dark-only (Congress Blue) */
-.dark {
-  color-scheme: dark;
-  --background: #01519c;
-  --foreground: #f0f6ff;
-  --card: #0c5aa3;
-  --card-foreground: #f0f6ff;
-  --popover: #0c5aa3;
-  --popover-foreground: #f0f6ff;
-  --primary: #77c1ff;
-  --primary-foreground: #05264c;
-  --secondary: #0a6bcf;
-  --secondary-foreground: #f0f6ff;
-  --muted: #0a6bcf;
-  --muted-foreground: #b8cfe9;
-  --accent: #b7ddff;
-  --accent-foreground: #05264c;
-  --destructive: oklch(0.62 0.21 25);
-  --border: rgba(184, 207, 233, 0.22);
-  --input: rgba(184, 207, 233, 0.22);
-  --ring: #77c1ff;
-  --chart-1: #b7ddff;
-  --chart-2: #77c1ff;
-  --chart-3: #dfeeff;
-  --chart-4: #2fa3ff;
-  --chart-5: #0489f3;
-  --sidebar: #014a8e;
-  --sidebar-foreground: #eff4ff;
-  --sidebar-primary: #77c1ff;
-  --sidebar-primary-foreground: #05264c;
-  --sidebar-accent: #006ed0;
-  --sidebar-accent-foreground: #eff4ff;
-  --sidebar-border: rgba(183, 221, 255, 0.14);
-  --sidebar-ring: #77c1ff;
+.scene-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -10;
+  overflow: hidden;
+  background: var(--background);
+}
+.scene-backdrop-art {
+  object-fit: cover;
 }
 
 * {
@@ -160,6 +123,7 @@ body {
   --color-input: var(--input);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);

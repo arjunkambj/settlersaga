@@ -1,5 +1,5 @@
-import arrowLeftIcon from "@iconify-icons/solar/arrow-left-line-duotone";
-import documentIcon from "@iconify-icons/solar/document-text-bold-duotone";
+import arrowLeftIcon from "@iconify-icons/solar/arrow-left-bold";
+import documentIcon from "@iconify-icons/solar/document-text-bold";
 import { Icon } from "@iconify/react";
 import type { Metadata } from "next";
 import Link from "next/link";

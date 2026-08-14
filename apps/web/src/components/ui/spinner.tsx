@@ -1,12 +1,12 @@
-import { cn } from "@/lib/utils";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { Loading03Icon } from "@hugeicons/core-free-icons";
+import refreshIcon from "@iconify-icons/solar/refresh-bold";
+import { Icon } from "@iconify/react";
 
-function Spinner({ className, ...props }: Omit<React.ComponentProps<"svg">, "strokeWidth">) {
+import { cn } from "@/lib/utils";
+
+function Spinner({ className, ...props }: Omit<React.ComponentProps<typeof Icon>, "icon">) {
   return (
-    <HugeiconsIcon
-      icon={Loading03Icon}
-      strokeWidth={2}
+    <Icon
+      icon={refreshIcon}
       data-slot="spinner"
       role="status"
       aria-label="Loading"

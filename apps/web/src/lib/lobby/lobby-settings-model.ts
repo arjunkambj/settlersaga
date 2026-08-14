@@ -4,6 +4,7 @@ import {
   type BaseGameSettings,
   type GameMapId,
   type PlayerColor,
+  type PlayerCount,
 } from "@settersaga/game";
 import { getGameMapDefinition } from "@settersaga/game/maps";
 
@@ -64,6 +65,40 @@ export function getCompatiblePlayerCount(
 
 export function toBotCount(value: number): BotCount {
   return clampInteger(value, 0, 7) as BotCount;
+}
+
+export const TABLE_SIZES = [
+  { map: "base", maxPlayers: 3 },
+  { map: "base", maxPlayers: 4 },
+  { map: "extended-6", maxPlayers: 5 },
+  { map: "extended-6", maxPlayers: 6 },
+  { map: "extended-8", maxPlayers: 7 },
+  { map: "extended-8", maxPlayers: 8 },
+] as const satisfies ReadonlyArray<{
+  map: GameMapId;
+  maxPlayers: PlayerCount;
+}>;
+
+export function tableSizeForPlayerCount(playerCount: number): (typeof TABLE_SIZES)[number] | null {
+  return TABLE_SIZES.find((size) => size.maxPlayers === playerCount) ?? null;
+}
+
+export function stepTableSize(
+  mapId: GameMapId,
+  maxPlayers: BaseGameSettings["maxPlayers"],
+  humanCount: number,
+  direction: -1 | 1,
+): (typeof TABLE_SIZES)[number] | null {
+  const currentIndex = TABLE_SIZES.findIndex(
+    (size) => size.map === mapId && size.maxPlayers === maxPlayers,
+  );
+  const startIndex =
+    currentIndex === -1 ? (direction === 1 ? -1 : TABLE_SIZES.length) : currentIndex;
+  const next = TABLE_SIZES[startIndex + direction];
+  if (!next || next.maxPlayers < humanCount) {
+    return null;
+  }
+  return next;
 }
 
 export function createLobbySeatPreview({

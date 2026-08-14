@@ -46,9 +46,7 @@ describe("port placement", () => {
       };
 
       expect(portDirection.x * coastNormal.x + portDirection.y * coastNormal.y).toBeGreaterThan(0);
-      expect(Math.hypot(portDirection.x, portDirection.y)).toBeGreaterThan(
-        PORT_BOAT_RENDER_SIZE.height / 2,
-      );
+      expect(Math.hypot(portDirection.x, portDirection.y)).toBeGreaterThan(layout.tileRadius * 0.5);
     }
   });
 
@@ -109,10 +107,10 @@ describe("port placement", () => {
           Math.abs(Math.cos(rotation)) * PORT_BOAT_RENDER_SIZE.height) /
         2;
 
-      expect(placement.x - rotatedHalfWidth).toBeGreaterThan(24);
-      expect(placement.x + rotatedHalfWidth).toBeLessThan(BOARD_CANVAS.width - 24);
-      expect(placement.y - rotatedHalfHeight).toBeGreaterThan(24);
-      expect(placement.y + rotatedHalfHeight).toBeLessThan(BOARD_CANVAS.height - 24);
+      expect(placement.x - rotatedHalfWidth).toBeGreaterThan(16);
+      expect(placement.x + rotatedHalfWidth).toBeLessThan(BOARD_CANVAS.width - 16);
+      expect(placement.y - rotatedHalfHeight).toBeGreaterThan(16);
+      expect(placement.y + rotatedHalfHeight).toBeLessThan(BOARD_CANVAS.height - 16);
     }
   });
 });

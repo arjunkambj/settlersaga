@@ -5,6 +5,7 @@ import {
   assertGameState,
   assertPlayerGameView,
   createDefaultGame,
+  DEFAULT_BASE_GAME_SETTINGS,
   DEVELOPMENT_CARD_TYPES,
   emptyInventory,
   getLegalActions,
@@ -20,8 +21,10 @@ import { useEffect, useRef, useState } from "react";
 
 import { AuthScreenView } from "@/components/auth/auth-screen";
 import { ActionTile } from "@/components/game/action-tile";
+import { GameHelpDialog } from "@/components/game/game-help-dialog";
 import { GameScreen } from "@/components/game/game-screen";
 import { HomeScreen } from "@/components/home/home-screen";
+import { LobbyScreen } from "@/components/lobby/lobby-screen";
 import { FullPageStatus } from "@/components/ui/full-page-status";
 import { Card } from "@/components/ui/card";
 import {
@@ -30,7 +33,7 @@ import {
 } from "@/constants/game/card-assets";
 import { END_TURN_ICON_ASSET_PATH } from "@/constants/game/ui-assets";
 import { DEFAULT_AUDIO_SETTINGS } from "@/lib/audio-settings";
-import type { RoomEventView } from "@/lib/game/types";
+import type { RoomEventView, RoomView } from "@/lib/game/types";
 
 export type UiPreviewMode =
   | "action-preset"
@@ -41,7 +44,9 @@ export type UiPreviewMode =
   | "game-results"
   | "game-setup"
   | "game-trade-offer"
-  | "home";
+  | "help"
+  | "home"
+  | "lobby";
 
 type GamePreviewMode = Extract<UiPreviewMode, `game${string}`>;
 
@@ -54,7 +59,9 @@ const PREVIEW_MODES = new Set<UiPreviewMode>([
   "game-results",
   "game-setup",
   "game-trade-offer",
+  "help",
   "home",
+  "lobby",
 ]);
 
 const GAME_PREVIEW_MODES = new Set<UiPreviewMode>([
@@ -72,6 +79,28 @@ const PREVIEW_PLAYERS: GamePlayerInput[] = [
   { displayName: "Clark Bot", id: "player-3", isBot: true },
   { displayName: "Peter Bot", id: "player-4", isBot: true },
 ];
+
+const PREVIEW_HOST_ROOM: RoomView = {
+  botDifficulty: "medium",
+  botThinking: false,
+  code: "SPUA6U",
+  events: [],
+  isHost: true,
+  isPaused: false,
+  members: [
+    {
+      controller: "player",
+      displayName: "OxHoney",
+      id: "host-1",
+      playerColor: "red",
+      ready: true,
+      role: "host",
+      seatIndex: 0,
+    },
+  ],
+  settings: { ...DEFAULT_BASE_GAME_SETTINGS },
+  status: "waiting",
+};
 
 export function isUiPreviewMode(value: string | null): value is UiPreviewMode {
   return value !== null && PREVIEW_MODES.has(value as UiPreviewMode);
@@ -107,10 +136,25 @@ export function UiPreview({ mode, seed }: { mode: UiPreviewMode; seed?: string }
     return <AuthScreenView onSignIn={async () => undefined} />;
   }
 
+  if (mode === "lobby") {
+    return (
+      <LobbyScreen
+        error=""
+        onLeave={async () => undefined}
+        onReplacePlayer={async () => undefined}
+        onSaveSettings={async () => undefined}
+        onStart={async () => undefined}
+        pendingAction={null}
+        room={PREVIEW_HOST_ROOM}
+      />
+    );
+  }
+
   if (mode === "home") {
     return (
       <HomeScreen
         accountLabel="Level 24"
+        activeCode="DGZ9J6"
         audioSettings={DEFAULT_AUDIO_SETTINGS}
         displayName="Arjun Kamboj"
         error=""
@@ -123,6 +167,14 @@ export function UiPreview({ mode, seed }: { mode: UiPreviewMode; seed?: string }
         pendingAction={null}
         profileImageUrl="/game-assets/players/red-navigator.png"
       />
+    );
+  }
+
+  if (mode === "help") {
+    return (
+      <main className="min-h-dvh bg-background" id="main-content">
+        <GameHelpDialog onClose={() => undefined} />
+      </main>
     );
   }
 
@@ -390,6 +442,7 @@ function createResultsPreviewGame() {
     phase: { kind: "finished" },
     settings: { ...state.settings, victoryPoints: 3 },
     status: "completed",
+    turnNumber: 18,
     winnerPlayerId: "player-2",
   } satisfies GameState;
 }
@@ -496,18 +549,26 @@ function completePreviewSetup(initialState: GameState) {
 }
 
 const PREVIEW_EVENT_ANCHOR = Date.UTC(2026, 6, 19, 22, 30);
-const PREVIEW_EVENTS: RoomEventView[] = [
-  ["Arjun placed a Settlement", "place_settlement"],
-  ["Arjun received starting resources", "steal"],
-  ["Arjun placed a Road", "place_road"],
-  ["Kara Bot placed a Settlement", "place_settlement"],
-  ["Kara Bot received starting resources", "steal"],
-  ["Clark Bot placed a Road", "place_road"],
-  ["Peter Bot placed a Settlement", "place_settlement"],
-  ["Peter Bot received starting resources", "steal"],
-].map(([text, kind], index) => ({
-  actorPlayerId: index < 3 ? "player-1" : `player-${(index % 3) + 2}`,
-  createdAt: PREVIEW_EVENT_ANCHOR - (8 - index) * 60_000,
+const PREVIEW_EVENTS: RoomEventView[] = (
+  [
+    ["player-1", "Arjun placed a settlement.", "place_settlement"],
+    ["player-1", "Arjun received starting resources.", "steal"],
+    ["player-1", "Arjun placed a road.", "place_road"],
+    ["player-2", "Kara Bot placed a settlement.", "place_settlement"],
+    ["player-2", "Kara Bot received starting resources.", "steal"],
+    ["player-2", "Kara Bot placed a road.", "place_road"],
+    ["player-3", "Clark Bot placed a settlement.", "place_settlement"],
+    ["player-3", "Clark Bot received starting resources.", "steal"],
+    ["player-3", "Clark Bot placed a road.", "place_road"],
+    ["player-4", "Peter Bot placed a settlement.", "place_settlement"],
+    ["player-4", "Peter Bot received starting resources.", "steal"],
+    ["player-4", "Peter Bot placed a road.", "place_road"],
+    ["player-1", "Arjun rolled 4 + 3 (7).", "roll"],
+    ["player-1", "Arjun moved the robber and stole a resource.", "move_robber_and_steal"],
+  ] as const
+).map(([actorPlayerId, text, kind], index) => ({
+  actorPlayerId,
+  createdAt: PREVIEW_EVENT_ANCHOR + index * 45_000,
   kind,
   sequence: index + 1,
   text,

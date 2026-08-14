@@ -48,12 +48,24 @@ export function TerrainBoardPreview() {
                   points={getFlatTopHexagonPoints(
                     point.x,
                     point.y,
-                    TERRAIN_PREVIEW_LAYOUT.tileRadius,
+                    TERRAIN_PREVIEW_LAYOUT.tileRadius - 2.75,
                   )}
                 />
               </clipPath>
             ))}
           </defs>
+
+          {tiles.map(({ point, tile }) => (
+            <polygon
+              className="fill-[#b47a30]"
+              key={`frame-${tile.id}`}
+              points={getFlatTopHexagonPoints(
+                point.x,
+                point.y,
+                TERRAIN_PREVIEW_LAYOUT.tileRadius + 5,
+              )}
+            />
+          ))}
 
           {tiles.map(({ point, tile }) => {
             const frame = getTerrainAtlasFrame(tile.terrain, tile.id);
@@ -75,13 +87,12 @@ export function TerrainBoardPreview() {
             const points = getFlatTopHexagonPoints(
               point.x,
               point.y,
-              TERRAIN_PREVIEW_LAYOUT.tileRadius - 1,
+              TERRAIN_PREVIEW_LAYOUT.tileRadius - 2.75,
             );
             return (
               <g className="fill-none stroke-round" key={`border-${tile.id}`}>
-                <polygon className="stroke-[#100707]/90 stroke-[8px]" points={points} />
-                <polygon className="stroke-[#e5a72e]/95 stroke-[4.5px]" points={points} />
-                <polygon className="stroke-[#ffe082]/80 stroke-[1.5px]" points={points} />
+                <polygon className="stroke-[#301e0e]/40 stroke-[2px]" points={points} />
+                <polygon className="stroke-[#ffe2a2]/50 stroke-[1.25px]" points={points} />
               </g>
             );
           })}

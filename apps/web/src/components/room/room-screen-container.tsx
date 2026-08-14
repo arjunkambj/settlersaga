@@ -122,8 +122,16 @@ export function RoomScreenContainer({ roomCode }: { roomCode: string }) {
     }
   };
 
-  const handleStartGame = async () => {
-    await perform("start", () => startGame({ code: normalizedCode }));
+  const handleStartGame = async (value: LobbySettingsValue) => {
+    await perform("start", async () => {
+      await updateLobbyConfiguration({
+        botCount: value.botCount,
+        botDifficulty: value.botDifficulty,
+        code: normalizedCode,
+        settings: value.settings,
+      });
+      await startGame({ code: normalizedCode });
+    });
   };
 
   const handleReplacePlayer = async (targetSeatId: string) => {

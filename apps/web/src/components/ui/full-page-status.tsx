@@ -1,4 +1,5 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { BrandMark } from "@/components/app/brand-logo";
+import { Card, CardContent } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 
 interface FullPageStatusProps {
@@ -12,11 +13,8 @@ export function FullPageStatus({ label }: FullPageStatusProps) {
       id="main-content"
     >
       <Card className="w-full max-w-sm text-center">
-        <CardHeader className="items-center">
-          <CardTitle className="text-lg">SetterSaga</CardTitle>
-          <CardDescription>Settlers Saga</CardDescription>
-        </CardHeader>
         <CardContent className="flex flex-col items-center gap-4">
+          <BrandMark className="size-16 drop-shadow-none" />
           <Spinner />
           <p className="text-sm font-medium" aria-live="polite" role="status">
             {label}

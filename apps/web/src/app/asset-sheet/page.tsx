@@ -1,7 +1,7 @@
-import arrowLeftIcon from "@iconify-icons/solar/arrow-left-line-duotone";
-import checkIcon from "@iconify-icons/solar/check-circle-bold-duotone";
-import clockIcon from "@iconify-icons/solar/clock-circle-bold-duotone";
-import imageIcon from "@iconify-icons/solar/gallery-bold-duotone";
+import arrowLeftIcon from "@iconify-icons/solar/arrow-left-bold";
+import checkIcon from "@iconify-icons/solar/check-circle-bold";
+import clockIcon from "@iconify-icons/solar/clock-circle-bold";
+import imageIcon from "@iconify-icons/solar/gallery-bold";
 import { Icon } from "@iconify/react";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -132,21 +132,21 @@ const ASSET_CATEGORIES = [
         name: "Quick match",
         description: "Glossy rolling dice on a floating board island.",
         format: "PNG · 1080×1080",
-        path: "/home-assets/menu/quick-match-v2.png",
+        path: "/home-assets/menu/quick-match.png",
         status: "generated",
       },
       {
         name: "Host island",
         description: "Crooked storybook island home with golden roof.",
         format: "PNG · 1080×1080",
-        path: "/home-assets/menu/host-island-v2.png",
+        path: "/home-assets/menu/host-island.png",
         status: "generated",
       },
       {
         name: "Join crew",
         description: "Treasure map with brass compass for joining a room.",
         format: "PNG · 1080×1080",
-        path: "/home-assets/menu/join-crew-v2.png",
+        path: "/home-assets/menu/join-crew.png",
         status: "generated",
       },
     ],
@@ -418,6 +418,21 @@ const ASSET_CATEGORIES = [
     name: "Brand foundations",
     assets: [
       {
+        name: "Wordmark",
+        description: "Stacked gold 3D title: Setter over Saga, with a hexagonal cottage badge.",
+        format: "PNG · 558×605 · transparent",
+        path: "/game-assets/brand/settersaga-wordmark.png",
+        status: "generated",
+      },
+      {
+        name: "Mark",
+        description:
+          "Hexagonal island crest: golden-thatched cottage, pines, rocky cliffs, and a wooden dock.",
+        format: "PNG · 921×921 · transparent",
+        path: "/game-assets/brand/settersaga-mark.png",
+        status: "generated",
+      },
+      {
         name: "Display typography",
         description:
           "DM Sans gives game titles, the logo lockup, and card headings a clean, friendly voice.",
@@ -436,13 +451,13 @@ const ASSET_CATEGORIES = [
         status: "generated",
       },
       {
-        name: "Supercell palette",
+        name: "Felt table palette",
         description:
-          "Congress Blue canvas and deck. #014A8E canvas (800), #0057A9 card (700), #05264C deep, #FFC92C coin gold.",
-        format: "#014A8E · #0057A9 · #05264C · #FFC92C",
+          "Single dark felt theme. Sage-white text, felt green surfaces, mint only on primary actions.",
+        format: "#145043 · #0F3A31 · #F6F8F7 · #E4ECE8 · #3DCAA0",
         kind: "brand",
         status: "generated",
-        swatches: ["#014A8E", "#0057A9", "#05264C", "#FFC92C"],
+        swatches: ["#145043", "#0F3A31", "#F6F8F7", "#E4ECE8", "#3DCAA0"],
       },
       {
         name: "Player seat colors",

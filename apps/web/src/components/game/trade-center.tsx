@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  PLAYER_COLORS,
   RESOURCE_ORDER,
   emptyInventory,
   type GameCommand,
@@ -10,20 +11,21 @@ import {
   type ResourceType,
 } from "@settersaga/game";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Spinner } from "@/components/ui/spinner";
-import handshakeIcon from "@iconify-icons/game-icons/shaking-hands";
-import storeIcon from "@iconify-icons/game-icons/shop";
-import arrowDownIcon from "@iconify-icons/solar/arrow-down-outline";
-import arrowUpIcon from "@iconify-icons/solar/arrow-up-outline";
-import checkIcon from "@iconify-icons/solar/check-circle-outline";
-import closeIcon from "@iconify-icons/solar/close-circle-outline";
+import arrowDownIcon from "@iconify-icons/solar/arrow-down-bold";
+import arrowRightIcon from "@iconify-icons/solar/arrow-right-bold";
+import arrowUpIcon from "@iconify-icons/solar/arrow-up-bold";
+import checkIcon from "@iconify-icons/solar/check-circle-bold";
+import closeIcon from "@iconify-icons/solar/close-circle-bold";
+import handshakeIcon from "@iconify-icons/solar/hand-shake-bold";
+import minusIcon from "@iconify-icons/solar/minus-circle-bold";
+import storeIcon from "@iconify-icons/solar/shop-bold";
 import { Icon } from "@iconify/react";
 import Image from "next/image";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
 import { ACTION_CARD_ASSET_PATHS, RESOURCE_CARD_ASSET_PATHS } from "@/constants/game/card-assets";
-import { getPlayerPortraitPathForSeat } from "@/constants/game/player-assets";
+import { getPlayerPortraitPath } from "@/constants/game/player-assets";
 
 import { ActionTile } from "./action-tile";
 import { HandDockPortal, useHandDock } from "./hand-dock";
@@ -37,14 +39,6 @@ export interface TradeCenterProps {
 }
 
 type TradeDirection = "give" | "receive";
-
-function MinusGlyph() {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 24 24">
-      <path d="M6 12h12" />
-    </svg>
-  );
-}
 
 export function TradeCenter({
   disabled,
@@ -100,7 +94,7 @@ export function TradeCenter({
         ariaExpanded={panelVisible}
         ariaLabel={
           tradeOfferOpen
-            ? "Focus the trade offer beside the game log"
+            ? "Focus the open trade offer"
             : isOpen
               ? "Close trade panel"
               : "Trade with the bank or players"
@@ -141,55 +135,62 @@ export function TradeCenter({
 
       {isOpen && !tradeOfferOpen ? (
         <HandDockPortal>
-          <div className="trade-dock">
-            <section
-              aria-labelledby="trade-dock-title"
-              autoFocus
-              className="rounded-md border bg-card p-3"
-              id="trade-dock"
-              tabIndex={-1}
-            >
-              <TradeDockHeader onClose={closeDock} title="Make a trade" />
-              <TradeComposer
-                disabled={disabled}
-                game={game}
-                me={me}
-                onClose={closeDock}
-                onCommand={onCommand}
-              />
-            </section>
-          </div>
+          <section
+            aria-labelledby="trade-dock-title"
+            autoFocus
+            className="hud-action-panel"
+            id="trade-dock"
+            tabIndex={-1}
+          >
+            <TradePanelHeader
+              eyebrow="Trade"
+              onClose={closeDock}
+              title="Make a trade"
+              titleId="trade-dock-title"
+            />
+            <TradeComposer
+              disabled={disabled}
+              game={game}
+              me={me}
+              onClose={closeDock}
+              onCommand={onCommand}
+            />
+          </section>
         </HandDockPortal>
       ) : null}
     </div>
   );
 }
 
-function TradeDockHeader({
+function TradePanelHeader({
+  eyebrow,
   onClose,
   title,
   titleId = "trade-dock-title",
+  trailing,
 }: {
+  eyebrow?: string;
   onClose?: () => void;
   title: string;
   titleId?: string;
+  trailing?: ReactNode;
 }) {
   return (
-    <header className="trade-dock-header">
+    <header className="hud-action-panel__header">
       <div>
+        {eyebrow ? <p className="eyebrow">{eyebrow}</p> : null}
         <h2 id={titleId}>{title}</h2>
       </div>
+      {trailing}
       {onClose ? (
         <Button
           aria-label="Close trade panel"
-          className="trade-dock-close"
+          className="hud-action-panel__close"
           size="icon-sm"
           onClick={onClose}
           variant="ghost"
         >
-          <svg aria-hidden="true" viewBox="0 0 24 24">
-            <path d="M6 6l12 12M18 6 6 18" />
-          </svg>
+          <Icon aria-hidden="true" icon={closeIcon} />
         </Button>
       ) : null}
     </header>
@@ -242,6 +243,13 @@ function TradeComposer({
     missingResources,
     want,
   });
+  const statusState = canSendOffer
+    ? "ready"
+    : !canAfford || !hasNoOverlap
+      ? "error"
+      : matchingBankTrade
+        ? "ready"
+        : "pending";
 
   const selectFromHand = useCallback(
     (resource: ResourceType) => {
@@ -322,43 +330,43 @@ function TradeComposer({
       </div>
 
       <fieldset className="trade-recipients">
-        <legend className="sr-only">Offer recipients</legend>
+        <legend>Offer to</legend>
         <div className="trade-recipient-list">
-          {opponents.map((player) => (
-            <label
-              key={player.id}
-              htmlFor={`trade-recipient-${player.id}`}
-              className="trade-recipient"
-            >
-              <Checkbox
-                id={`trade-recipient-${player.id}`}
-                checked={recipientPlayerIds.includes(player.id)}
+          {opponents.map((player) => {
+            const selected = recipientPlayerIds.includes(player.id);
+            const theme = playerTheme(player.seatIndex);
+            return (
+              <Button
+                aria-pressed={selected}
+                className={`trade-recipient player-${theme}`}
+                data-selected={selected || undefined}
                 disabled={disabled}
-                onCheckedChange={(checked) => toggleRecipient(player.id, checked === true)}
-              />
-              <span className="trade-recipient-identity">
-                <span className="trade-recipient-avatar" aria-hidden="true">
+                key={player.id}
+                onClick={() => toggleRecipient(player.id, !selected)}
+                variant="ghost"
+              >
+                <span className="trade-player-avatar" aria-hidden="true">
                   <Image
                     alt=""
                     draggable={false}
                     height={256}
-                    sizes="1.45rem"
-                    src={getPlayerPortraitPathForSeat(player.seatIndex)}
+                    sizes="1.6rem"
+                    src={getPlayerPortraitPath(theme)}
                     width={256}
                   />
                 </span>
-                <span className="trade-recipient-name">
-                  <strong>{player.displayName}</strong>
-                </span>
-              </span>
-            </label>
-          ))}
+                <span className="trade-recipient-name">{player.displayName}</span>
+              </Button>
+            );
+          })}
         </div>
       </fieldset>
 
       <footer className="trade-actions">
-        <p id="trade-composer-status" role="status">
-          {validationMessage}
+        <p data-state={statusState} id="trade-composer-status" role="status">
+          {matchingBankTrade
+            ? `Bank ${matchingBankTrade.ratio}:1 ${RESOURCE_LABELS[matchingBankTrade.give]} for ${RESOURCE_LABELS[matchingBankTrade.receive]} is ready.`
+            : validationMessage}
         </p>
         <div>
           <Button
@@ -381,7 +389,7 @@ function TradeComposer({
             variant="secondary"
           >
             <Icon aria-hidden="true" icon={storeIcon} />
-            Bank trade
+            {matchingBankTrade ? `Bank ${matchingBankTrade.ratio}:1` : "Bank trade"}
           </Button>
           <Button
             aria-describedby="trade-composer-status"
@@ -438,7 +446,7 @@ function RequestedResourceRow({
           <Icon aria-hidden="true" icon={arrowDownIcon} />
         </span>
         <span>
-          <strong>Cards you want to receive</strong>
+          <strong>You want</strong>
         </span>
       </legend>
       <div className="trade-picker">
@@ -448,12 +456,16 @@ function RequestedResourceRow({
           const canAdd = !disabled && !conflicts && quantity < 19;
           const quantityDescriptionId = `receive-${resource}-trade-quantity`;
           return (
-            <div className="trade-picker-cell" key={resource}>
+            <div
+              className="trade-picker-cell"
+              data-selected={quantity > 0 || undefined}
+              key={resource}
+            >
               <Button
                 aria-describedby={quantityDescriptionId}
                 aria-label={`Add one ${RESOURCE_LABELS[resource]} to what you receive`}
                 aria-pressed={quantity > 0}
-                className={`trade-picker-button${quantity > 0 ? " is-selected" : ""}`}
+                className="trade-picker-button"
                 disabled={!canAdd}
                 onClick={() => update(resource, 1)}
                 variant="ghost"
@@ -467,20 +479,22 @@ function RequestedResourceRow({
                   src={RESOURCE_CARD_ASSET_PATHS[resource]}
                   width={512}
                 />
-                <span className="trade-picker-quantity" aria-hidden="true">
-                  {quantity}
-                </span>
+                {quantity > 0 ? (
+                  <span className="trade-picker-quantity" aria-hidden="true">
+                    {quantity}
+                  </span>
+                ) : null}
               </Button>
               {quantity > 0 ? (
                 <Button
                   aria-label={`Remove one ${RESOURCE_LABELS[resource]} from what you receive`}
                   className="trade-remove-button"
                   disabled={disabled}
-                  size="icon-sm"
+                  size="icon-xs"
                   onClick={() => update(resource, -1)}
-                  variant="ghost"
+                  variant="secondary"
                 >
-                  <MinusGlyph />
+                  <Icon aria-hidden="true" icon={minusIcon} />
                 </Button>
               ) : null}
               <span className="sr-only" id={quantityDescriptionId}>
@@ -509,7 +523,8 @@ export function ActiveTradeOffer({
   onPausedAction(): void;
 }) {
   const { clearInteraction, setInteraction } = useHandDock();
-  const [pendingResponse, setPendingResponse] = useState<"accept" | "cancel" | "decline" | null>(
+  const surfaceRef = useRef<HTMLElement>(null);
+  const [pendingResponse, setPendingResponse] = useState<"accept" | "cancel" | "reject" | null>(
     null,
   );
   const offer = game.tradeOffer;
@@ -538,6 +553,13 @@ export function ActiveTradeOffer({
     return () => clearInteraction("trade");
   }, [clearInteraction, me.resources, offer, setInteraction, viewerIsProposer]);
 
+  useEffect(() => {
+    if (!offer || viewerIsProposer) {
+      return;
+    }
+    surfaceRef.current?.focus();
+  }, [offer, viewerIsProposer]);
+
   if (!offer) {
     return null;
   }
@@ -548,34 +570,52 @@ export function ActiveTradeOffer({
   const missingResources = getMissingInventory(give, me.resources);
   const viewerCanAfford = inventoryTotal(missingResources) === 0;
   const proposerName = proposer?.displayName ?? "A player";
+  const proposerTheme = proposer ? playerTheme(proposer.seatIndex) : "red";
 
   const respond = (accept: boolean) => {
     if (isPaused) {
       onPausedAction();
       return;
     }
-    setPendingResponse(accept ? "accept" : "decline");
+    setPendingResponse(accept ? "accept" : "reject");
     onCommand(
       {
         accept,
         kind: "respond_trade",
         offerActionNumber: offer.offerActionNumber,
       },
-      accept ? "Trade accepted." : "Trade declined.",
+      accept ? "Trade accepted." : "Trade rejected.",
     );
   };
 
   return (
-    <section
-      aria-labelledby="trade-offer-title"
-      className="rounded-md border bg-card p-3"
-      id="trade-offer-surface"
-      tabIndex={-1}
-    >
-      <div className="trade-offer">
-        <TradeDockHeader
-          title={viewerIsProposer ? "Offer sent" : `Offer from ${proposerName}`}
+    <HandDockPortal>
+      <section
+        aria-labelledby="trade-offer-title"
+        className="hud-action-panel"
+        data-role={viewerIsProposer ? "outgoing" : "incoming"}
+        id="trade-offer-surface"
+        ref={surfaceRef}
+        tabIndex={-1}
+      >
+        <TradePanelHeader
+          eyebrow={viewerIsProposer ? "Your offer" : "Incoming trade"}
+          title={viewerIsProposer ? "Waiting for a reply" : `${proposerName} wants to trade`}
           titleId="trade-offer-title"
+          trailing={
+            proposer && !viewerIsProposer ? (
+              <span aria-hidden="true" className={`trade-offer-portrait player-${proposerTheme}`}>
+                <Image
+                  alt=""
+                  draggable={false}
+                  height={256}
+                  sizes="2.4rem"
+                  src={getPlayerPortraitPath(proposerTheme)}
+                  width={256}
+                />
+              </span>
+            ) : null
+          }
         />
 
         <p className="sr-only" role="status">
@@ -583,14 +623,17 @@ export function ActiveTradeOffer({
           You receive {formatInventory(receive)}. You give {formatInventory(give)}.
         </p>
 
-        <div className="trade-rows">
-          <OfferInventoryRow direction="receive" inventory={receive} label="You receive" />
+        <div className="trade-exchange">
           <OfferInventoryRow
             availability={viewerIsProposer ? undefined : me.resources}
             direction="give"
             inventory={give}
             label="You give"
           />
+          <span aria-hidden="true" className="trade-exchange-divider">
+            <Icon icon={arrowRightIcon} />
+          </span>
+          <OfferInventoryRow direction="receive" inventory={receive} label="You receive" />
         </div>
 
         {viewerIsProposer ? (
@@ -598,13 +641,21 @@ export function ActiveTradeOffer({
             {offer.recipientPlayerIds.map((playerId) => {
               const player = game.players.find((candidate) => candidate.id === playerId);
               const rejected = offer.rejectedPlayerIds.includes(playerId);
+              const theme = player ? playerTheme(player.seatIndex) : "red";
               return (
                 <li data-state={rejected ? "rejected" : "waiting"} key={playerId}>
-                  <span className="trade-response-avatar" aria-hidden="true">
-                    {getPlayerInitial(player?.displayName ?? "?")}
+                  <span aria-hidden="true" className={`trade-player-avatar player-${theme}`}>
+                    <Image
+                      alt=""
+                      draggable={false}
+                      height={256}
+                      sizes="1.6rem"
+                      src={getPlayerPortraitPath(theme)}
+                      width={256}
+                    />
                   </span>
                   <span>{player?.displayName ?? "Invited player"}</span>
-                  <strong>{rejected ? "Declined" : "Waiting"}</strong>
+                  <strong>{rejected ? "Rejected" : "Waiting"}</strong>
                 </li>
               );
             })}
@@ -619,18 +670,23 @@ export function ActiveTradeOffer({
               id="trade-offer-affordability"
             >
               {viewerCanAfford
-                ? `Affordable · you have ${formatInventory(give)} ready`
+                ? `You can afford this · ${formatInventory(give)} ready`
                 : `Cannot accept · short ${formatInventory(missingResources)}`}
             </p>
             <div>
-              <Button disabled={disabled} onClick={() => respond(false)} variant="destructive">
+              <Button
+                data-action="reject"
+                disabled={disabled}
+                onClick={() => respond(false)}
+                variant="outline"
+              >
                 <Icon aria-hidden="true" icon={closeIcon} />
-                {pendingResponse === "decline" ? (
+                {pendingResponse === "reject" ? (
                   <>
-                    <Spinner data-icon="inline-start" /> Declining…
+                    <Spinner data-icon="inline-start" /> Rejecting…
                   </>
                 ) : (
-                  "Decline"
+                  "Reject"
                 )}
               </Button>
               <Button
@@ -678,12 +734,12 @@ export function ActiveTradeOffer({
         ) : (
           <p className="trade-offer-status" role="status">
             {offer.rejectedPlayerIds.includes(game.viewerPlayerId)
-              ? "You declined. Other invited players may still accept."
+              ? "You rejected this offer. Other invited players may still accept."
               : "Waiting for an invited player to answer."}
           </p>
         )}
-      </div>
-    </section>
+      </section>
+    </HandDockPortal>
   );
 }
 
@@ -743,11 +799,11 @@ function OfferInventoryRow({
                     aria-label={`Remove one ${RESOURCE_LABELS[resource]} from your offer`}
                     className="trade-remove-inline"
                     disabled={disabled}
-                    size="icon-sm"
+                    size="icon-xs"
                     onClick={() => onRemove(resource)}
                     variant="ghost"
                   >
-                    <MinusGlyph />
+                    <Icon aria-hidden="true" icon={minusIcon} />
                   </Button>
                 ) : null}
               </li>
@@ -822,10 +878,6 @@ function formatInventory(inventory: Readonly<ResourceInventory>): string {
   return resources.length > 0 ? resources.join(", ") : "no cards";
 }
 
-function getPlayerInitial(displayName: string): string {
-  return displayName.trim().slice(0, 1).toUpperCase() || "?";
-}
-
 function isExactResourceSelection(
   inventory: Readonly<ResourceInventory>,
   selectedResource: ResourceType,
@@ -838,4 +890,8 @@ function isExactResourceSelection(
 
 function inventoryTotal(inventory: Readonly<ResourceInventory>): number {
   return RESOURCE_ORDER.reduce((total, resource) => total + inventory[resource], 0);
+}
+
+function playerTheme(seatIndex: number) {
+  return PLAYER_COLORS[seatIndex % PLAYER_COLORS.length] ?? "red";
 }

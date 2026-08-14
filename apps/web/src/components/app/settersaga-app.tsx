@@ -277,12 +277,20 @@ function AuthenticatedApp({
     }
   };
 
-  const handleStartGame = async () => {
+  const handleStartGame = async (value: LobbySettingsValue) => {
     const code = session.activeCode;
     if (!code) {
       return;
     }
-    await perform("start", () => startGame({ code }));
+    await perform("start", async () => {
+      await updateLobbyConfiguration({
+        botCount: value.botCount,
+        botDifficulty: value.botDifficulty,
+        code,
+        settings: value.settings,
+      });
+      await startGame({ code });
+    });
   };
 
   const handleReplacePlayer = async (targetSeatId: string) => {

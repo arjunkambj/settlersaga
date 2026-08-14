@@ -19,7 +19,6 @@ import {
 import {
   PORT_BOAT_ASSET_PATH,
   PORT_BOAT_RENDER_SIZE,
-  PORT_DOCK_ASSET_PATH,
   TERRAIN_ATLAS,
   TERRAIN_ATLAS_ASSET_PATH,
   getTerrainAtlasFrame,
@@ -88,7 +87,9 @@ const CITY_PIECE_SIZE = 102;
 const ROAD_PIECE_SIZE = 138;
 const ROAD_PIECE_SCALE_Y = 0.82;
 const SETTLEMENT_PIECE_SIZE = 94;
-const PORT_DOCK_RENDER_HEIGHT = 28;
+const PORT_DOCK_WIDTH = 11;
+const TILE_FRAME_OUTSET = 5;
+const TILE_TERRAIN_INSET = 2.75;
 const PORT_TRADE_BADGE_HEIGHT = 42;
 const PORT_TRADE_BADGE_WIDTH = 78;
 const PORT_RESOURCE_MARK_SIZE = 31;
@@ -274,7 +275,6 @@ async function renderStaticScene(
     port.trade === "any" ? [] : [getResourceCardAssetPath(port.trade)],
   );
   const images = await loadImages([
-    PORT_DOCK_ASSET_PATH,
     PORT_BOAT_ASSET_PATH,
     TERRAIN_ATLAS_ASSET_PATH,
     ...portResourcePaths,
@@ -375,6 +375,12 @@ function drawTerrain(
     }))
     .sort((first, second) => first.point.y - second.point.y);
 
+  for (const { point } of tiles) {
+    drawTileFrame(context, point, scene.boardLayout.tileRadius);
+  }
+
+  const terrainRadius = scene.boardLayout.tileRadius - TILE_TERRAIN_INSET;
+
   for (const { point, tile } of tiles) {
     if (terrainAtlas) {
       const textureSize = scene.boardLayout.tileRadius * 2;
@@ -383,7 +389,7 @@ function drawTerrain(
       const sourceY = frame.row * TERRAIN_ATLAS.frameSize;
       const renderSize = textureSize * frame.scale;
       context.save();
-      createRoundedHexagonPath(context, point, scene.boardLayout.tileRadius + 0.75, 5, 0);
+      createRoundedHexagonPath(context, point, terrainRadius, 5, 0);
       context.clip();
       context.drawImage(
         terrainAtlas,
@@ -401,7 +407,7 @@ function drawTerrain(
   }
 
   for (const { point } of tiles) {
-    drawTerrainBorder(context, point, scene.boardLayout.tileRadius);
+    drawTerrainRim(context, point, terrainRadius);
   }
 
   for (const { point, tile } of tiles) {
@@ -411,33 +417,41 @@ function drawTerrain(
   }
 }
 
-function drawTerrainBorder(
-  context: CanvasRenderingContext2D,
-  point: PixelCoordinate,
-  radius: number,
-) {
-  const canvasStyle = getComputedStyle(context.canvas);
-  const getChannelColor = (token: string, alpha: number, fallback: string) => {
-    const channels = canvasStyle.getPropertyValue(token).trim();
-    return channels ? `rgb(${channels} / ${alpha})` : fallback;
-  };
-
+function drawTileFrame(context: CanvasRenderingContext2D, point: PixelCoordinate, radius: number) {
   context.save();
   context.lineJoin = "round";
 
-  createRoundedHexagonPath(context, point, radius - 1, 7, 0);
-  context.lineWidth = 8;
-  context.strokeStyle = getChannelColor("--hud-shadow-deep", 0.96, "rgba(32, 22, 18, 0.96)");
+  createRoundedHexagonPath(context, point, radius + TILE_FRAME_OUTSET + 2, 9, 0);
+  context.fillStyle = "rgba(28, 18, 10, 0.38)";
+  context.fill();
+
+  createRoundedHexagonPath(context, point, radius + TILE_FRAME_OUTSET, 8, 0);
+  const wood = context.createLinearGradient(
+    point.x - radius,
+    point.y - radius,
+    point.x + radius,
+    point.y + radius,
+  );
+  wood.addColorStop(0, "#d8a85c");
+  wood.addColorStop(0.48, "#b47a30");
+  wood.addColorStop(1, "#7a4a18");
+  context.fillStyle = wood;
+  context.fill();
+  context.restore();
+}
+
+function drawTerrainRim(context: CanvasRenderingContext2D, point: PixelCoordinate, radius: number) {
+  context.save();
+  context.lineJoin = "round";
+
+  createRoundedHexagonPath(context, point, radius, 5, 0);
+  context.lineWidth = 2;
+  context.strokeStyle = "rgba(48, 30, 14, 0.42)";
   context.stroke();
 
-  createRoundedHexagonPath(context, point, radius - 1, 7, 0);
-  context.lineWidth = 4.5;
-  context.strokeStyle = getChannelColor("--hud-gold-line", 0.98, "rgba(126, 72, 18, 0.98)");
-  context.stroke();
-
-  createRoundedHexagonPath(context, point, radius - 2, 6, 0);
-  context.lineWidth = 1.5;
-  context.strokeStyle = getChannelColor("--hud-gold-shine", 0.82, "rgba(255, 228, 158, 0.82)");
+  createRoundedHexagonPath(context, point, radius - 0.9, 5, 0);
+  context.lineWidth = 1.25;
+  context.strokeStyle = "rgba(255, 226, 162, 0.5)";
   context.stroke();
   context.restore();
 }
@@ -453,70 +467,71 @@ function drawNumberToken(
     return;
   }
 
-  const point = { x: tilePoint.x, y: tilePoint.y + tileSize * 0.18 + 2 };
-  const radius = Math.min(39, tileSize * 0.11);
+  const point = { x: tilePoint.x, y: tilePoint.y + tileSize * 0.11 };
+  const radius = Math.min(44, tileSize * 0.125);
   const isHot = number === 6 || number === 8;
+  const ink = isHot ? "#c4332a" : "#2d2a28";
 
   context.save();
-  context.shadowBlur = 7;
-  context.shadowColor = "rgba(75, 45, 25, 0.32)";
+  context.shadowBlur = 8;
+  context.shadowColor = "rgba(28, 36, 48, 0.28)";
   context.shadowOffsetY = 3;
   context.beginPath();
   context.arc(point.x, point.y, radius, 0, Math.PI * 2);
-  context.fillStyle = isHot ? "#9d3930" : "#a66c28";
+  context.fillStyle = "#f4f1ea";
   context.fill();
   context.restore();
 
   context.beginPath();
-  context.arc(point.x, point.y, radius - 2, 0, Math.PI * 2);
-  const rim = context.createLinearGradient(
-    point.x - radius,
-    point.y - radius,
-    point.x + radius,
-    point.y + radius,
+  context.arc(point.x, point.y, radius - 1.2, 0, Math.PI * 2);
+  const face = context.createRadialGradient(
+    point.x - radius * 0.28,
+    point.y - radius * 0.34,
+    radius * 0.15,
+    point.x,
+    point.y,
+    radius,
   );
-  rim.addColorStop(0, isHot ? "#ef9b72" : "#f2ce78");
-  rim.addColorStop(0.52, isHot ? "#db6750" : "#d79a3d");
-  rim.addColorStop(1, isHot ? "#b43e35" : "#b97728");
-  context.fillStyle = rim;
-  context.fill();
-
-  context.beginPath();
-  context.arc(point.x, point.y, radius - 6, 0, Math.PI * 2);
-  const face = context.createLinearGradient(
-    point.x - radius,
-    point.y - radius,
-    point.x + radius,
-    point.y + radius,
-  );
-  face.addColorStop(0, "#fff8e6");
-  face.addColorStop(0.58, isHot ? "#ffedcf" : "#f9e9ca");
-  face.addColorStop(1, isHot ? "#f2cf9f" : "#efd5aa");
+  face.addColorStop(0, "#fffdf8");
+  face.addColorStop(0.72, "#f3efe6");
+  face.addColorStop(1, "#e4ddd0");
   context.fillStyle = face;
   context.fill();
-  context.lineWidth = 1.4;
-  context.strokeStyle = "rgba(255, 255, 255, 0.58)";
+  context.lineWidth = 2;
+  context.strokeStyle = isHot ? "rgba(196, 51, 42, 0.22)" : "rgba(72, 62, 52, 0.22)";
   context.stroke();
 
-  context.beginPath();
-  context.arc(point.x, point.y, radius - 8, Math.PI * 1.08, Math.PI * 1.75);
-  context.lineWidth = 1.8;
-  context.strokeStyle = "rgba(255, 255, 255, 0.5)";
-  context.stroke();
+  if (isHot) {
+    context.save();
+    context.translate(point.x, point.y + 1);
+    createRoundedHexagonPath(context, { x: 0, y: 0 }, radius - 9, 4, Math.PI / 6);
+    context.fillStyle = "rgba(255, 236, 232, 0.96)";
+    context.fill();
+    context.lineWidth = 2.4;
+    context.strokeStyle = "#d6453b";
+    context.stroke();
+    context.restore();
+  }
 
-  context.fillStyle = isHot ? "#b63b31" : "#4b3b48";
-  context.font = "900 32px ui-rounded, system-ui, sans-serif";
+  context.fillStyle = ink;
+  context.font = `800 ${Math.round(radius * 0.92)}px ui-rounded, system-ui, sans-serif`;
   context.textAlign = "center";
   context.textBaseline = "middle";
-  context.fillText(String(number), point.x, point.y - 5.5);
+  context.fillText(String(number), point.x, point.y - radius * 0.08);
 
   const pips = NUMBER_TOKEN_PIPS[number] ?? 0;
-  const pipGap = 7.5;
+  const pipGap = Math.max(6.2, radius * 0.2);
   const firstPipX = point.x - ((pips - 1) * pipGap) / 2;
-  context.fillStyle = isHot ? "#bf5142" : "#9a7650";
+  context.fillStyle = ink;
   for (let index = 0; index < pips; index += 1) {
     context.beginPath();
-    context.arc(firstPipX + index * pipGap, point.y + 15.5, 2.8, 0, Math.PI * 2);
+    context.arc(
+      firstPipX + index * pipGap,
+      point.y + radius * 0.42,
+      radius * 0.075,
+      0,
+      Math.PI * 2,
+    );
     context.fill();
   }
 }
@@ -533,7 +548,7 @@ function drawPorts(
 
   for (const { placement } of ports) {
     for (const dock of placement.docks) {
-      drawDock(context, dock.start, dock.end, images.get(PORT_DOCK_ASSET_PATH) ?? null);
+      drawDock(context, dock.start, dock.end);
     }
   }
 
@@ -548,50 +563,73 @@ function drawPorts(
   }
 }
 
-function drawDock(
-  context: CanvasRenderingContext2D,
-  start: PixelCoordinate,
-  end: PixelCoordinate,
-  image: HTMLImageElement | null,
-) {
-  const length = Math.hypot(end.x - start.x, end.y - start.y);
-  const angle = Math.atan2(end.y - start.y, end.x - start.x);
-  const centerX = (start.x + end.x) / 2;
-  const centerY = (start.y + end.y) / 2;
-
-  if (image) {
-    context.save();
-    context.translate(centerX, centerY);
-    context.rotate(angle);
-    context.filter = "brightness(0.28) saturate(0.72)";
-    context.globalAlpha = 0.82;
-    context.drawImage(
-      image,
-      -length / 2 - 2,
-      -PORT_DOCK_RENDER_HEIGHT / 2 - 2,
-      length + 4,
-      PORT_DOCK_RENDER_HEIGHT + 4,
-    );
-    context.filter = "saturate(0.92) brightness(0.96) contrast(1.12)";
-    context.globalAlpha = 0.98;
-    context.shadowBlur = 4;
-    context.shadowColor = "rgba(62, 42, 22, 0.42)";
-    context.shadowOffsetY = 2;
-    context.drawImage(
-      image,
-      -length / 2,
-      -PORT_DOCK_RENDER_HEIGHT / 2,
-      length,
-      PORT_DOCK_RENDER_HEIGHT,
-    );
-    context.restore();
+function drawDock(context: CanvasRenderingContext2D, start: PixelCoordinate, end: PixelCoordinate) {
+  const dx = end.x - start.x;
+  const dy = end.y - start.y;
+  const length = Math.hypot(dx, dy);
+  if (length < 4) {
     return;
   }
 
+  const inset = 7;
+  const trimmedStart = {
+    x: start.x + (dx / length) * inset,
+    y: start.y + (dy / length) * inset,
+  };
+  const plankLength = Math.hypot(end.x - trimmedStart.x, end.y - trimmedStart.y);
+  const angle = Math.atan2(end.y - trimmedStart.y, end.x - trimmedStart.x);
+  const centerX = (trimmedStart.x + end.x) / 2;
+  const centerY = (trimmedStart.y + end.y) / 2;
+  const half = PORT_DOCK_WIDTH / 2;
+
   context.save();
-  context.lineCap = "round";
-  strokeLine(context, start, end, 20, "rgba(91, 57, 28, 0.64)");
-  strokeLine(context, start, end, 12, "rgba(216, 155, 61, 0.94)");
+  context.translate(centerX, centerY);
+  context.rotate(angle);
+  context.lineJoin = "round";
+
+  context.fillStyle = "rgba(28, 18, 10, 0.32)";
+  createRoundedRectPath(
+    context,
+    -plankLength / 2 + 1,
+    -half + 1.5,
+    plankLength,
+    PORT_DOCK_WIDTH,
+    3,
+  );
+  context.fill();
+
+  const wood = context.createLinearGradient(0, -half, 0, half);
+  wood.addColorStop(0, "#e2b56a");
+  wood.addColorStop(0.45, "#c48a3a");
+  wood.addColorStop(1, "#8a5420");
+  createRoundedRectPath(context, -plankLength / 2, -half, plankLength, PORT_DOCK_WIDTH, 3);
+  context.fillStyle = wood;
+  context.fill();
+
+  context.fillStyle = "rgba(72, 42, 16, 0.78)";
+  createRoundedRectPath(context, -plankLength / 2, -half, plankLength, 2.1, 1);
+  context.fill();
+  createRoundedRectPath(context, -plankLength / 2, half - 2.1, plankLength, 2.1, 1);
+  context.fill();
+
+  context.strokeStyle = "rgba(255, 226, 162, 0.28)";
+  context.lineWidth = 1;
+  context.beginPath();
+  context.moveTo(-plankLength / 2 + 4, -half + 3.2);
+  context.lineTo(plankLength / 2 - 4, -half + 3.2);
+  context.stroke();
+
+  context.strokeStyle = "rgba(62, 36, 14, 0.22)";
+  context.lineWidth = 1;
+  const seamCount = Math.max(2, Math.round(plankLength / 22));
+  for (let index = 1; index < seamCount; index += 1) {
+    const x = -plankLength / 2 + (plankLength * index) / seamCount;
+    context.beginPath();
+    context.moveTo(x, -half + 2.4);
+    context.lineTo(x, half - 2.4);
+    context.stroke();
+  }
+
   context.restore();
 }
 
@@ -1106,21 +1144,6 @@ function drawAnyResourceMark(context: CanvasRenderingContext2D, point: PixelCoor
     context.stroke();
   });
   context.restore();
-}
-
-function strokeLine(
-  context: CanvasRenderingContext2D,
-  start: PixelCoordinate,
-  end: PixelCoordinate,
-  width: number,
-  color: string,
-) {
-  context.beginPath();
-  context.moveTo(start.x, start.y);
-  context.lineTo(end.x, end.y);
-  context.lineWidth = width;
-  context.strokeStyle = color;
-  context.stroke();
 }
 
 function createRoundedHexagonPath(

@@ -2,13 +2,14 @@
 
 import { api } from "@settersaga/backend/convex/_generated/api";
 import { Icon } from "@iconify/react";
-import usersIcon from "@iconify-icons/solar/users-group-rounded-outline";
-import backIcon from "@iconify-icons/solar/arrow-left-linear";
+import backIcon from "@iconify-icons/solar/arrow-left-bold";
+import usersIcon from "@iconify-icons/solar/users-group-rounded-bold";
 import { useMutation } from "convex/react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 
+import { BrandMark } from "@/components/app/brand-logo";
 import { useAppSession } from "@/components/app/app-session-context";
 import { Button } from "@/components/ui/button";
 import { Field, FieldLabel } from "@/components/ui/field";
@@ -73,9 +74,7 @@ function JoinCrewScreenInner() {
         >
           <Icon icon={backIcon} className="h-5 w-5" />
         </Button>
-        <span aria-hidden="true" className="text-lg font-black leading-none tracking-tight">
-          S
-        </span>
+        <BrandMark className="size-8 drop-shadow-none" />
         <div>
           <p className="text-sm font-bold leading-none">Join Crew</p>
           <p className="text-xs text-muted-foreground">Private Room Entry</p>
@@ -83,12 +82,12 @@ function JoinCrewScreenInner() {
       </div>
 
       <div className="mx-auto max-w-xl p-4 sm:p-6">
-        <div className="mb-6 flex flex-col sm:flex-row items-center gap-4 rounded-xl border bg-card p-4">
+        <div className="mb-6 flex flex-col sm:flex-row items-center gap-4 rounded-xl bg-card p-4">
           <Image
             alt="Join Crew"
             className="h-24 w-auto object-contain rounded-md"
             height={200}
-            src="/home-assets/menu/join-crew-v2.png"
+            src="/home-assets/menu/join-crew.png"
             width={320}
           />
           <div>
@@ -99,7 +98,7 @@ function JoinCrewScreenInner() {
           </div>
         </div>
 
-        <div className="rounded-xl border bg-card p-6 space-y-6">
+        <div className="rounded-xl bg-card p-6 space-y-6">
           <form
             onSubmit={(event) => {
               event.preventDefault();

@@ -175,3 +175,7 @@ export function useAppSession() {
   }
   return context;
 }
+
+export function useOptionalAppSession() {
+  return useContext(AppSessionContext);
+}

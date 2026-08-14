@@ -4,8 +4,6 @@ import {
   BUILD_COSTS,
   DEVELOPMENT_CARD_COST,
   getLongestRoadLength,
-  LARGEST_ARMY_VICTORY_POINTS,
-  LONGEST_ROAD_VICTORY_POINTS,
   RESOURCE_ORDER,
   type GameCommand,
   type PlayableDevelopmentCardType,
@@ -15,24 +13,27 @@ import {
 } from "@settersaga/game";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import botIcon from "@iconify-icons/game-icons/robot-golem";
-import crownIcon from "@iconify-icons/game-icons/crown";
-import hammerIcon from "@iconify-icons/game-icons/hammer-nails";
-import moveIcon from "@iconify-icons/game-icons/move";
-import playerIcon from "@iconify-icons/game-icons/player-base";
-import scrollIcon from "@iconify-icons/game-icons/scroll-unfurled";
-import trophyIcon from "@iconify-icons/game-icons/trophy-cup";
+import crownIcon from "@iconify-icons/solar/crown-bold";
+import botIcon from "@iconify-icons/solar/cpu-bolt-bold";
+import helpIcon from "@iconify-icons/solar/help-bold";
+import logoutIcon from "@iconify-icons/solar/logout-2-bold";
+import settingsIcon from "@iconify-icons/solar/settings-minimalistic-bold";
+import chatIcon from "@iconify-icons/solar/chat-round-line-bold";
+import pauseIcon from "@iconify-icons/solar/pause-bold";
+import playIcon from "@iconify-icons/solar/play-bold";
+import playerIcon from "@iconify-icons/solar/user-rounded-bold";
 import { Icon } from "@iconify/react";
 import Image from "next/image";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 
+import { useOptionalAppSession } from "@/components/app/app-session-context";
+import { PlayerSettingsDialog } from "@/components/app/player-settings-dialog";
 import { GameAudio } from "@/components/audio/game-audio";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import {
   ACTION_CARD_ASSET_PATHS,
   DEVELOPMENT_CARD_BACK_ASSET_PATH,
-  DEVELOPMENT_CARD_ASSETS,
+  RESOURCE_CARD_ASSET_PATHS,
   UNKNOWN_RESOURCE_CARD_ASSET_PATH,
 } from "@/constants/game/card-assets";
 import { AWARD_ASSET_PATHS } from "@/constants/game/award-assets";
@@ -41,33 +42,27 @@ import { WAIT_ICON_ASSET_PATH } from "@/constants/game/ui-assets";
 import type { BoardTargetMode } from "@/lib/game/board-canvas-model";
 import { getTurnControlKind } from "@/lib/game/game-footer-model";
 import type { RoomEventView } from "@/lib/game/types";
+import { eventActionLabel, getEventTone, groupRoomEvents } from "@/lib/game/event-log-model";
 import { getPhaseCopy, getPlayerHudOrder } from "@/lib/game/view";
 import type { AudioSettings } from "@/lib/audio-settings";
 
 import { ActionTile } from "./action-tile";
+import { DieFace } from "./die-face";
 import { DiscardPanel } from "./discard-panel";
 import { DevelopmentCardDialog } from "./development-card-dialog";
 import { GameBoard, getPlayerTheme, type BuildMode } from "./game-board";
 import { BOARD_INSPECTOR_DOCK_ROOT_ID, HandDockProvider } from "./hand-dock";
-import { RESOURCE_LABELS, ResourceIcon } from "./resource-icon";
+import { RESOURCE_LABELS } from "./resource-icon";
 import { ResourceHand } from "./resource-hand";
 import { ActiveTradeOffer, TradeCenter } from "./trade-center";
 import { GameHelpDialog } from "./game-help-dialog";
 import { useActionCountdown } from "./use-action-countdown";
+import { WinOverlay } from "./win-overlay";
 
 type GameConfirmation =
   | { kind: "leave" }
   | { displayName: string; kind: "replace"; playerId: string };
 type DevelopmentCardChoice = "monopoly" | "year-of-plenty";
-
-const DIE_PIPS: Record<number, readonly number[]> = {
-  1: [4],
-  2: [0, 8],
-  3: [0, 4, 8],
-  4: [0, 2, 6, 8],
-  5: [0, 2, 4, 6, 8],
-  6: [0, 2, 3, 5, 6, 8],
-};
 
 const UTC_EVENT_TIME_FORMATTER = new Intl.DateTimeFormat("en-US", {
   hour: "numeric",
@@ -116,6 +111,11 @@ export function GameScreen({
   );
   const [confirming, setConfirming] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const session = useOptionalAppSession();
+  const settingsAudio = session?.audioSettings ?? audioSettings;
+  const settingsDisplayName =
+    session?.displayName || game.players.find((player) => player.isViewer)?.displayName || "";
   const [announcement, setAnnouncement] = useState("");
   const [error, setError] = useState("");
   const [pausedNoticeVisible, setPausedNoticeVisible] = useState(false);
@@ -306,7 +306,6 @@ export function GameScreen({
       setConfirming(false);
     }
   };
-  const gameMetaPillClassName = "game-pill";
   const gameHeaderActionClassName = "game-icon-button";
 
   return (
@@ -315,17 +314,14 @@ export function GameScreen({
         activePlayerId={game.activePlayerId}
         events={events}
         phaseKind={game.phase.kind}
-        soundEffectsVolume={audioSettings.soundEffectsVolume}
+        soundEffectsVolume={settingsAudio.soundEffectsVolume}
         viewerPlayerId={me.id}
         winnerPlayerId={game.winnerPlayerId}
       />
       <div className="game-topbar">
-        <div>
-          <span className={gameMetaPillClassName}>Turn {game.turnNumber}</span>
-          <span className={`${gameMetaPillClassName} victory-target-pill`}>
-            <Icon aria-hidden="true" icon={trophyIcon} /> First to {game.settings.victoryPoints} VP
-          </span>
-        </div>
+        <p className="sr-only">
+          Turn {game.turnNumber}. First to {game.settings.victoryPoints} victory points.
+        </p>
         <div>
           {isHost && game.status !== "completed" ? (
             <Button
@@ -338,9 +334,20 @@ export function GameScreen({
               size="icon"
               variant="ghost"
             >
-              <Icon aria-hidden="true" icon={isPaused ? "hugeicons:play" : "hugeicons:pause"} />
+              <Icon aria-hidden="true" icon={isPaused ? playIcon : pauseIcon} />
             </Button>
           ) : null}
+          <Button
+            aria-haspopup="dialog"
+            aria-label="Open settings"
+            className={`${gameHeaderActionClassName} game-settings-button`}
+            data-icon-only
+            onClick={() => setIsSettingsOpen(true)}
+            size="icon"
+            variant="ghost"
+          >
+            <Icon aria-hidden="true" icon={settingsIcon} />
+          </Button>
           <Button
             aria-controls="game-help-dialog"
             aria-expanded={isHelpOpen}
@@ -352,7 +359,7 @@ export function GameScreen({
             size="icon"
             variant="ghost"
           >
-            <Icon aria-hidden="true" icon="hugeicons:help-circle" />
+            <Icon aria-hidden="true" icon={helpIcon} />
           </Button>
           <Button
             aria-label="Leave game"
@@ -360,9 +367,9 @@ export function GameScreen({
             data-icon-only
             onClick={() => setConfirmation({ kind: "leave" })}
             size="icon"
-            variant="ghost"
+            variant="destructive"
           >
-            <Icon aria-hidden="true" icon="hugeicons:logout-01" />
+            <Icon aria-hidden="true" icon={logoutIcon} />
           </Button>
         </div>
       </div>
@@ -370,26 +377,17 @@ export function GameScreen({
       <HandDockProvider>
         <aside aria-label="Table status" className="game-rail">
           <div className="game-rail__panels">
-            <EventLog events={events} />
+            <EventLog events={events} players={game.players} />
             <BankPanel bank={game.bank} developmentCardSupply={game.developmentCardSupply} />
           </div>
-
-          {game.tradeOffer ? (
-            <ActiveTradeOffer
-              disabled={pendingCommand !== null}
-              game={game}
-              isPaused={isPaused}
-              me={me}
-              onCommand={(command, message) => void sendCommand(command, message)}
-              onPausedAction={showPausedNotice}
-            />
-          ) : null}
 
           <PlayerStrip
             activePlayerId={game.activePlayerId}
             board={game.board}
             isHost={isHost}
+            largestArmyPlayerId={game.largestArmyPlayerId}
             lastDiceRoll={game.lastDiceRoll}
+            longestRoadPlayerId={game.longestRoadPlayerId}
             onReplacePlayer={requestBotReplacement}
             pendingReplacementId={pendingReplacementId}
             players={game.players}
@@ -418,10 +416,10 @@ export function GameScreen({
                 <div
                   aria-atomic="true"
                   aria-live="polite"
-                  className="flex items-center gap-2 rounded-md border bg-muted p-2 text-sm"
+                  className="flex items-center gap-2 rounded-md bg-muted p-2 text-sm"
                   role="status"
                 >
-                  <Icon aria-hidden="true" icon="hugeicons:pause" />
+                  <Icon aria-hidden="true" icon={pauseIcon} />
                   <span>
                     {isHost
                       ? "The game is paused. Use the play button in the header to resume."
@@ -435,7 +433,7 @@ export function GameScreen({
             playableDevelopmentCards={game.legalActions.playableDevelopmentCards}
           />
 
-          <div className="game-footer__column">
+          <div className="game-footer__actions">
             <section aria-labelledby="phase-title" className="phase-card">
               <span aria-hidden="true" className="phase-card__icon">
                 <Icon icon={playerIcon} />
@@ -454,7 +452,13 @@ export function GameScreen({
                 />
               ) : null}
             </section>
-
+            {game.legalActions.discardCount === null ? (
+              <TurnClock
+                botThinking={botThinking}
+                isPaused={isPaused}
+                nextActionAt={nextActionAt}
+              />
+            ) : null}
             <ActionDock
               buildMode={buildMode}
               game={game}
@@ -465,16 +469,6 @@ export function GameScreen({
               onPausedAction={showPausedNotice}
               pending={pendingCommand !== null}
             />
-          </div>
-
-          <div className="game-footer__column">
-            {game.legalActions.discardCount === null ? (
-              <TurnClock
-                botThinking={botThinking}
-                isPaused={isPaused}
-                nextActionAt={nextActionAt}
-              />
-            ) : null}
             <TurnControl
               game={game}
               onCommand={(command, message) => void sendCommand(command, message)}
@@ -482,6 +476,16 @@ export function GameScreen({
             />
           </div>
         </footer>
+        {game.tradeOffer ? (
+          <ActiveTradeOffer
+            disabled={pendingCommand !== null}
+            game={game}
+            isPaused={isPaused}
+            me={me}
+            onCommand={(command, message) => void sendCommand(command, message)}
+            onPausedAction={showPausedNotice}
+          />
+        ) : null}
         {game.legalActions.discardCount === null ? null : (
           <DiscardPanel
             count={game.legalActions.discardCount}
@@ -507,6 +511,16 @@ export function GameScreen({
       </HandDockProvider>
 
       {isHelpOpen ? <GameHelpDialog onClose={() => setIsHelpOpen(false)} /> : null}
+
+      <PlayerSettingsDialog
+        audioSettings={settingsAudio}
+        displayName={settingsDisplayName}
+        isPending={session?.pendingAction != null}
+        onAudioSettingsChange={session?.onAudioSettingsChange}
+        onDisplayNameChange={session?.onDisplayNameChange}
+        onOpenChange={setIsSettingsOpen}
+        open={isSettingsOpen}
+      />
 
       {confirmation ? (
         <ConfirmationDialog
@@ -550,7 +564,9 @@ function PlayerStrip({
   activePlayerId,
   board,
   isHost,
+  largestArmyPlayerId,
   lastDiceRoll,
+  longestRoadPlayerId,
   onReplacePlayer,
   pendingReplacementId,
   players,
@@ -560,7 +576,9 @@ function PlayerStrip({
   activePlayerId: string;
   board: PlayerGameView["board"];
   isHost: boolean;
+  largestArmyPlayerId: string | null;
   lastDiceRoll: PlayerGameView["lastDiceRoll"];
+  longestRoadPlayerId: string | null;
   onReplacePlayer(playerId: string): void;
   pendingReplacementId: string | null;
   players: PlayerGameView["players"];
@@ -622,6 +640,15 @@ function PlayerStrip({
           : 0;
         const displayedVictoryPoints = player.victoryPoints + hiddenVictoryPointCount;
         const isActive = player.id === activePlayerId;
+        const knightCount = player.playedDevelopmentCards.filter(
+          (card) => card === "knight",
+        ).length;
+        const holdsLongestRoad = player.id === longestRoadPlayerId;
+        const holdsLargestArmy = player.id === largestArmyPlayerId;
+        const victoryPercent = Math.min(
+          100,
+          Math.round((displayedVictoryPoints / Math.max(victoryTarget, 1)) * 100),
+        );
         const avatarSrc =
           player.isViewer && viewerProfileImageUrl
             ? viewerProfileImageUrl
@@ -660,100 +687,124 @@ function PlayerStrip({
                 width={256}
               />
             </span>
-            <div className="player-name">
+            <div className="player-body">
               <div className="player-identity-line">
-                <strong title={player.displayName}>{player.displayName}</strong>
-              </div>
-            </div>
-            <div className="player-victory-progress">
-              <span
-                aria-label={
-                  hiddenVictoryPointCount > 0
-                    ? `${displayedVictoryPoints} of ${victoryTarget} victory points, including ${hiddenVictoryPointCount} from hidden victory point cards`
-                    : `${displayedVictoryPoints} of ${victoryTarget} victory points`
-                }
-                className="player-stat player-victory-stat"
-              >
-                <Icon aria-hidden="true" icon={crownIcon} />
-                <span className="player-victory-score" aria-hidden="true">
-                  <strong>{displayedVictoryPoints}</strong>
-                  <small>/{victoryTarget}</small>
-                </span>
-                <em aria-hidden="true">Victory</em>
-              </span>
-            </div>
-            <div aria-label="Cards and awards" className="player-table-supply" role="group">
-              <span
-                aria-label={`${player.resourceCount} resource cards`}
-                className="player-table-fact player-card-fact player-resource-card-fact"
-              >
-                <Image
-                  alt=""
-                  aria-hidden="true"
-                  draggable={false}
-                  height={768}
-                  sizes="2.25rem"
-                  src={UNKNOWN_RESOURCE_CARD_ASSET_PATH}
-                  width={512}
-                />
-                <strong>{player.resourceCount}</strong>
-                <small aria-hidden="true">Resources</small>
-              </span>
-              <span
-                aria-label={`${developmentCardCount} development cards`}
-                className="player-table-fact player-card-fact"
-              >
-                <Image
-                  alt=""
-                  aria-hidden="true"
-                  draggable={false}
-                  height={768}
-                  sizes="2.25rem"
-                  src={DEVELOPMENT_CARD_BACK_ASSET_PATH}
-                  width={512}
-                />
-                <strong>{developmentCardCount}</strong>
-                <small aria-hidden="true">Dev cards</small>
-              </span>
-              <span
-                aria-label={`Longest road length ${longestRoad}`}
-                className="player-table-fact player-award-fact"
-                data-empty={longestRoad === 0 ? "true" : undefined}
-              >
-                <Image
-                  alt=""
-                  aria-hidden="true"
-                  draggable={false}
-                  height={512}
-                  sizes="2.5rem"
-                  src={AWARD_ASSET_PATHS.longestRoad}
-                  width={512}
-                />
-                <strong>{longestRoad}</strong>
-                <small aria-hidden="true">Road</small>
-              </span>
-              <span
-                aria-label={`${player.playedDevelopmentCards.filter((card) => card === "knight").length} knights played toward Largest Army`}
-                className="player-table-fact player-award-fact"
-                data-empty={
-                  player.playedDevelopmentCards.every((card) => card !== "knight")
-                    ? "true"
-                    : undefined
-                }
-              >
-                <Image
-                  alt=""
-                  aria-hidden="true"
-                  draggable={false}
-                  height={512}
-                  sizes="2.5rem"
-                  src={AWARD_ASSET_PATHS.largestArmy}
-                  width={512}
-                />
-                <strong>
-                  {player.playedDevelopmentCards.filter((card) => card === "knight").length}
+                <strong title={player.displayName}>
+                  {player.displayName}
+                  {player.isViewer ? <span className="sr-only"> (you)</span> : null}
                 </strong>
-                <small aria-hidden="true">Army</small>
+                {player.isViewer ? (
+                  <span className="player-chip is-you" aria-hidden="true">
+                    You
+                  </span>
+                ) : null}
+                {player.isBot && !/\bbot\b/i.test(player.displayName) ? (
+                  <span className="player-chip is-bot" aria-hidden="true">
+                    Bot
+                  </span>
+                ) : null}
+                {isActive ? <span className="player-chip is-turn">Turn</span> : null}
+                <span
+                  aria-label={
+                    hiddenVictoryPointCount > 0
+                      ? `${displayedVictoryPoints} of ${victoryTarget} victory points, including ${hiddenVictoryPointCount} from hidden victory point cards`
+                      : `${displayedVictoryPoints} of ${victoryTarget} victory points`
+                  }
+                  className="player-stat player-victory-stat"
+                >
+                  <Icon aria-hidden="true" icon={crownIcon} />
+                  <span className="player-victory-score" aria-hidden="true">
+                    <strong>{displayedVictoryPoints}</strong>
+                    <small>/{victoryTarget}</small>
+                  </span>
+                </span>
+              </div>
+              <div aria-label="Cards and awards" className="player-table-supply" role="group">
+                <span
+                  aria-label={`${player.resourceCount} resource cards`}
+                  className="player-table-fact player-card-fact player-resource-card-fact"
+                  title={`${player.resourceCount} resource cards`}
+                >
+                  <Image
+                    alt=""
+                    aria-hidden="true"
+                    draggable={false}
+                    height={768}
+                    sizes="2.25rem"
+                    src={UNKNOWN_RESOURCE_CARD_ASSET_PATH}
+                    width={512}
+                  />
+                  <strong>{player.resourceCount}</strong>
+                  <small aria-hidden="true">Cards</small>
+                </span>
+                <span
+                  aria-label={`${developmentCardCount} development cards`}
+                  className="player-table-fact player-card-fact"
+                  title={`${developmentCardCount} development cards`}
+                >
+                  <Image
+                    alt=""
+                    aria-hidden="true"
+                    draggable={false}
+                    height={768}
+                    sizes="2.25rem"
+                    src={DEVELOPMENT_CARD_BACK_ASSET_PATH}
+                    width={512}
+                  />
+                  <strong>{developmentCardCount}</strong>
+                  <small aria-hidden="true">Dev</small>
+                </span>
+                <span
+                  aria-label={
+                    holdsLongestRoad
+                      ? `Longest Road held, length ${longestRoad}`
+                      : `Longest road length ${longestRoad}`
+                  }
+                  className={`player-table-fact player-award-fact${holdsLongestRoad ? " is-held" : ""}`}
+                  data-empty={longestRoad === 0 ? "true" : undefined}
+                  title={holdsLongestRoad ? "Longest Road" : `Road length ${longestRoad}`}
+                >
+                  <Image
+                    alt=""
+                    aria-hidden="true"
+                    draggable={false}
+                    height={512}
+                    sizes="2.5rem"
+                    src={AWARD_ASSET_PATHS.longestRoad}
+                    width={512}
+                  />
+                  <strong>{longestRoad}</strong>
+                  <small aria-hidden="true">Road</small>
+                </span>
+                <span
+                  aria-label={
+                    holdsLargestArmy
+                      ? `Largest Army held, ${knightCount} knights played`
+                      : `${knightCount} knights played toward Largest Army`
+                  }
+                  className={`player-table-fact player-award-fact${holdsLargestArmy ? " is-held" : ""}`}
+                  data-empty={knightCount === 0 ? "true" : undefined}
+                  title={holdsLargestArmy ? "Largest Army" : `${knightCount} knights`}
+                >
+                  <Image
+                    alt=""
+                    aria-hidden="true"
+                    draggable={false}
+                    height={512}
+                    sizes="2.5rem"
+                    src={AWARD_ASSET_PATHS.largestArmy}
+                    width={512}
+                  />
+                  <strong>{knightCount}</strong>
+                  <small aria-hidden="true">Army</small>
+                </span>
+              </div>
+              <span
+                aria-hidden="true"
+                className="player-victory-bar"
+                style={{ "--player-vp": `${victoryPercent}%` } as CSSProperties}
+              >
+                <i />
               </span>
             </div>
             {isHost && !player.isViewer && !player.isBot ? (
@@ -790,9 +841,9 @@ function CompactDiceResult({
       aria-label={`${roll.first} and ${roll.second}, total ${roll.sum}`}
       role="group"
     >
-      <span aria-hidden="true">
-        <DieFace value={roll.first} />
-        <DieFace value={roll.second} />
+      <span aria-hidden="true" className="die-pair">
+        <DieFace tone="ivory" value={roll.first} />
+        <DieFace tone="ember" value={roll.second} />
       </span>
       {showTotal ? (
         <strong aria-hidden="true" className="compact-dice-total">
@@ -800,17 +851,6 @@ function CompactDiceResult({
         </strong>
       ) : null}
     </div>
-  );
-}
-
-function DieFace({ value }: { value: number }) {
-  const visiblePips = DIE_PIPS[value] ?? [];
-  return (
-    <span aria-hidden="true" className="die-face">
-      {Array.from({ length: 9 }, (_, index) => (
-        <i className={visiblePips.includes(index) ? "is-visible" : ""} key={index} />
-      ))}
-    </span>
   );
 }
 
@@ -827,36 +867,87 @@ function BankPanel({
         {RESOURCE_ORDER.map((resource) => (
           <li
             aria-label={`${RESOURCE_LABELS[resource]}: ${bank ? bank[resource] : "unknown"}`}
+            className="resource-card-face"
             key={resource}
           >
-            <ResourceIcon decorative resource={resource} size={72} />
-            <strong aria-hidden="true">{bank ? bank[resource] : "?"}</strong>
+            <span aria-hidden="true" className="resource-card-art">
+              <Image
+                alt=""
+                className="resource-card-image"
+                draggable={false}
+                height={768}
+                sizes="3.5rem"
+                src={RESOURCE_CARD_ASSET_PATHS[resource]}
+                width={512}
+              />
+            </span>
+            <strong aria-hidden="true" className="resource-card-count">
+              {bank ? bank[resource] : "?"}
+            </strong>
           </li>
         ))}
-        <li aria-label={`Development cards: ${developmentCardSupply}`}>
-          <Image
-            alt=""
-            className="resource-icon"
-            draggable={false}
-            height={768}
-            sizes="4.5rem"
-            src={DEVELOPMENT_CARD_BACK_ASSET_PATH}
-            width={512}
-          />
-          <strong aria-hidden="true">{developmentCardSupply}</strong>
+        <li
+          aria-label={`Development cards: ${developmentCardSupply}`}
+          className="resource-card-face"
+        >
+          <span aria-hidden="true" className="resource-card-art">
+            <Image
+              alt=""
+              className="resource-card-image"
+              draggable={false}
+              height={768}
+              sizes="3.5rem"
+              src={DEVELOPMENT_CARD_BACK_ASSET_PATH}
+              width={512}
+            />
+          </span>
+          <strong aria-hidden="true" className="resource-card-count">
+            {developmentCardSupply}
+          </strong>
         </li>
       </ul>
     </section>
   );
 }
 
-function EventLog({ events }: { events: RoomEventView[] }) {
+function EventLog({
+  events,
+  players,
+}: {
+  events: RoomEventView[];
+  players: PlayerGameView["players"];
+}) {
   const [showLocalTime, setShowLocalTime] = useState(false);
-  const visibleEvents = events.slice(-30).reverse();
+  const [pinnedToLatest, setPinnedToLatest] = useState(true);
+  const [hasUnseen, setHasUnseen] = useState(false);
+  const listRef = useRef<HTMLOListElement>(null);
+  const lastSequence = events.at(-1)?.sequence ?? 0;
+  const groups = useMemo(() => groupRoomEvents(events), [events]);
+  const playersById = useMemo(
+    () => new Map(players.map((player) => [player.id, player])),
+    [players],
+  );
 
   useEffect(() => {
     setShowLocalTime(true);
   }, []);
+
+  useEffect(() => {
+    const frameId = requestAnimationFrame(() => {
+      const list = listRef.current;
+      if (!list) {
+        return;
+      }
+      if (pinnedToLatest) {
+        list.scrollTop = list.scrollHeight;
+        setHasUnseen(false);
+        return;
+      }
+      setHasUnseen(true);
+    });
+
+    return () => cancelAnimationFrame(frameId);
+  }, [lastSequence, pinnedToLatest]);
 
   const timeFormatter = showLocalTime ? LOCAL_EVENT_TIME_FORMATTER : UTC_EVENT_TIME_FORMATTER;
 
@@ -864,28 +955,69 @@ function EventLog({ events }: { events: RoomEventView[] }) {
     <section className="side-card event-card" aria-labelledby="events-title">
       <div className="side-card-title">
         <h2 id="events-title">Game Log</h2>
-        <Icon aria-hidden="true" icon={scrollIcon} />
+        <Icon aria-hidden="true" icon={chatIcon} />
       </div>
-      <ol className="event-list">
-        {visibleEvents.length > 0 ? (
-          visibleEvents.map((event) => (
-            <li key={event.sequence}>
-              <span aria-hidden="true" />
-              <div className="event-copy">
-                <p>{event.text}</p>
-                <time dateTime={new Date(event.createdAt).toISOString()}>
-                  {timeFormatter.format(event.createdAt)}
-                </time>
-              </div>
-            </li>
-          ))
+      <ol
+        className="event-list"
+        onScroll={(event) => {
+          const list = event.currentTarget;
+          const atBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 40;
+          setPinnedToLatest(atBottom);
+          if (atBottom) {
+            setHasUnseen(false);
+          }
+        }}
+        ref={listRef}
+      >
+        {groups.length > 0 ? (
+          groups.map((group, groupIndex) => {
+            const actor = playersById.get(group.actorPlayerId);
+            const theme = actor ? getPlayerTheme(actor) : undefined;
+            const actorName = actor?.displayName ?? "Table";
+            const latest = group.events.at(-1);
+            const isLatestGroup = groupIndex === groups.length - 1;
+            return (
+              <li
+                className={`event-group${theme ? ` player-${theme}` : ""}${actor?.isViewer ? " is-viewer" : ""}${isLatestGroup ? " is-latest" : ""}`}
+                key={group.key}
+              >
+                <span aria-hidden="true" className="event-group-dot" />
+                <div className="event-group-body">
+                  <div className="event-group-head">
+                    <strong>{actorName}</strong>
+                    {latest ? (
+                      <time dateTime={new Date(latest.createdAt).toISOString()}>
+                        {timeFormatter.format(latest.createdAt)}
+                      </time>
+                    ) : null}
+                  </div>
+                  <ol className="event-actions">
+                    {group.events.map((item) => (
+                      <li data-tone={getEventTone(item.kind)} key={item.sequence}>
+                        <p>{eventActionLabel(item.text, actor?.displayName)}</p>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              </li>
+            );
+          })
         ) : (
-          <li>
-            <span aria-hidden="true" />
+          <li className="event-empty">
             <p>No moves yet.</p>
           </li>
         )}
       </ol>
+      {hasUnseen ? (
+        <Button
+          className="event-jump"
+          onClick={() => setPinnedToLatest(true)}
+          size="sm"
+          variant="secondary"
+        >
+          Latest
+        </Button>
+      ) : null}
     </section>
   );
 }
@@ -975,18 +1107,17 @@ function ActionDock({
 
   if (game.phase.kind === "move_robber") {
     return (
-      <section className="action-dock is-waiting" aria-label="Move the robber">
-        <Icon aria-hidden="true" icon={moveIcon} />
-        <div>
-          <strong>Move the Robber</strong>
-          <span>Choose a glowing hex, not a house.</span>
-          <span>
-            {game.settings.friendlyRobber
-              ? "Friendly Robber protects players with 2 or fewer visible victory points."
-              : "That hex will not produce resources while the robber remains."}
-          </span>
-        </div>
-      </section>
+      <BuildingActionsDock
+        buildMode={buildMode}
+        disabledReasonOverride="Move the robber on the board"
+        game={game}
+        isPaused={isPaused}
+        me={me}
+        onBuildMode={onBuildMode}
+        onCommand={onCommand}
+        onPausedAction={onPausedAction}
+        pending={pending}
+      />
     );
   }
 
@@ -1008,13 +1139,17 @@ function ActionDock({
 
   if (game.phase.kind !== "build_and_trade") {
     return (
-      <section className="action-dock is-waiting" aria-label="Required action">
-        <Icon aria-hidden="true" icon={hammerIcon} />
-        <div>
-          <strong>Choose a highlighted board target</strong>
-          <span>The board shows every legal option.</span>
-        </div>
-      </section>
+      <BuildingActionsDock
+        buildMode={buildMode}
+        disabledReasonOverride="Choose a highlighted board target"
+        game={game}
+        isPaused={isPaused}
+        me={me}
+        onBuildMode={onBuildMode}
+        onCommand={onCommand}
+        onPausedAction={onPausedAction}
+        pending={pending}
+      />
     );
   }
 
@@ -1097,7 +1232,7 @@ function BuildingActionsDock({
     });
   return (
     <section aria-labelledby="building-actions-title" className="action-dock">
-      <div className="action-heading">
+      <div className="action-heading sr-only">
         <strong id="building-actions-title">Build & Trade</strong>
         <span>
           {disabledReasonOverride ??
@@ -1171,8 +1306,8 @@ function TurnControl({
     return (
       <section className={turnControlClassName} aria-label="Turn control">
         <div aria-label="Dice ready to roll" className="roll-preview-card" role="img">
-          <DieFace value={1} />
-          <DieFace value={5} />
+          <DieFace tone="ivory" value={1} />
+          <DieFace tone="ember" value={5} />
         </div>
         <Button disabled={pending} onClick={() => onCommand({ kind: "roll" }, "Dice rolled.")}>
           <span className="inline-flex items-center gap-2">
@@ -1524,296 +1659,6 @@ function TurnClock({
       <strong>{isExpired ? "…" : seconds === null ? "—" : `${seconds}s`}</strong>
     </div>
   );
-}
-
-function WinOverlay({
-  game,
-  onLeave,
-  viewerProfileImageUrl,
-}: {
-  game: PlayerGameView;
-  onLeave(): Promise<void>;
-  viewerProfileImageUrl: string | null;
-}) {
-  const standings = [...game.players]
-    .map((player) => ({
-      player,
-      score: getFinalVictoryPointTotal(player),
-    }))
-    .sort(
-      (left, right) => right.score - left.score || left.player.seatIndex - right.player.seatIndex,
-    );
-  const winner = game.players.find((player) => player.id === game.winnerPlayerId);
-  const featuredPlayer = winner ?? standings[0]?.player;
-  const isDraw = game.winnerPlayerId === null;
-  const isViewer = winner?.isViewer === true;
-  const featuredTheme = featuredPlayer ? getPlayerTheme(featuredPlayer) : "purple";
-  const featuredScore = featuredPlayer ? getFinalVictoryPointTotal(featuredPlayer) : 0;
-  const pointBreakdown = featuredPlayer ? getVictoryPointBreakdown(game, featuredPlayer) : [];
-  const longestRoad = featuredPlayer ? getLongestRoadLength(game.board, featuredPlayer.id) : 0;
-  const featuredPortrait = featuredPlayer
-    ? getResultPortraitPath(featuredPlayer, viewerProfileImageUrl)
-    : getPlayerPortraitPath("purple");
-
-  return (
-    <Dialog open>
-      <DialogContent
-        showCloseButton={false}
-        className={`win-overlay !fixed !inset-0 !grid !max-w-none !max-h-none !translate-x-0 !translate-y-0 bg-transparent border-0 p-0-none !place-items-center`}
-      >
-        <div className={`win-card player-${featuredTheme}`}>
-          <DialogHeader className="win-card-header">
-            <Image
-              alt=""
-              aria-hidden="true"
-              className="win-flourish"
-              draggable={false}
-              height={512}
-              priority
-              sizes="(max-width: 700px) 88vw, 42rem"
-              src="/game-assets/results/victory-flourish.png"
-              width={1536}
-            />
-            <div className="win-hero">
-              <span className="win-avatar" aria-hidden="true">
-                <Image
-                  alt=""
-                  draggable={false}
-                  height={256}
-                  src={featuredPortrait}
-                  unoptimized
-                  width={256}
-                />
-                <span className="win-crown">
-                  <Icon icon={crownIcon} />
-                </span>
-              </span>
-              <div className="win-hero-copy">
-                <p className="eyebrow">{isDraw ? "Match Complete" : "Island Conquered"}</p>
-                <DialogTitle id="win-title">
-                  {isDraw
-                    ? "The Island Rests in a Draw"
-                    : isViewer
-                      ? "You Rule the Island!"
-                      : `${winner?.displayName ?? "A Player"} Wins!`}
-                </DialogTitle>
-                <p>
-                  {isDraw
-                    ? `No player reached ${game.settings.victoryPoints} victory points.`
-                    : `${winner?.displayName ?? "The winner"} claimed the island in ${game.turnNumber} turns.`}
-                </p>
-              </div>
-            </div>
-          </DialogHeader>
-          <div className="win-card-body">
-            <section aria-labelledby="score-breakdown-title" className="win-score-panel">
-              <div className="win-score-heading">
-                <div>
-                  <p className="eyebrow">{isDraw ? "Top Score" : "Final Score"}</p>
-                  <h3 id="score-breakdown-title">Victory point breakdown</h3>
-                </div>
-                <strong className="win-total-score">
-                  <span>{featuredScore}</span>
-                  <small>VP</small>
-                </strong>
-              </div>
-              <ul className="win-point-breakdown">
-                {pointBreakdown.map((source) => (
-                  <li className="win-point-source" key={source.label}>
-                    <span className="win-point-source-art" aria-hidden="true">
-                      <Image
-                        alt=""
-                        draggable={false}
-                        height={source.assetHeight}
-                        sizes="3.25rem"
-                        src={source.asset}
-                        width={source.assetWidth}
-                      />
-                    </span>
-                    <span>
-                      <strong>{source.label}</strong>
-                      <small>{source.detail}</small>
-                    </span>
-                    <b>{source.points}</b>
-                  </li>
-                ))}
-              </ul>
-              {featuredPlayer ? (
-                <div aria-label="Match statistics" className="win-match-stats">
-                  <span>
-                    <small>Turns</small>
-                    <strong>{game.turnNumber}</strong>
-                  </span>
-                  <span>
-                    <small>Longest road</small>
-                    <strong>{longestRoad}</strong>
-                  </span>
-                  <span>
-                    <small>Knights played</small>
-                    <strong>
-                      {
-                        featuredPlayer.playedDevelopmentCards.filter((card) => card === "knight")
-                          .length
-                      }
-                    </strong>
-                  </span>
-                </div>
-              ) : null}
-            </section>
-
-            <section aria-labelledby="final-standings-title" className="win-standings">
-              <div className="win-standings-heading">
-                <p className="eyebrow">Final Standings</p>
-                <h3 id="final-standings-title">The table</h3>
-              </div>
-              <ol>
-                {standings.map(({ player, score }, index) => {
-                  const theme = getPlayerTheme(player);
-                  return (
-                    <li
-                      className={`player-${theme}${player.id === game.winnerPlayerId ? " is-winner" : ""}`}
-                      key={player.id}
-                    >
-                      <span className="win-rank">{index + 1}</span>
-                      <Image
-                        alt=""
-                        aria-hidden="true"
-                        draggable={false}
-                        height={96}
-                        src={getResultPortraitPath(player, viewerProfileImageUrl)}
-                        unoptimized
-                        width={96}
-                      />
-                      <span className="win-standing-name">
-                        <strong>{player.displayName}</strong>
-                        <small>
-                          {player.id === game.winnerPlayerId
-                            ? "Island champion"
-                            : player.isViewer
-                              ? "You"
-                              : player.isBot
-                                ? "Bot"
-                                : "Explorer"}
-                        </small>
-                      </span>
-                      <strong className="win-standing-score">
-                        {score}
-                        <small> VP</small>
-                      </strong>
-                    </li>
-                  );
-                })}
-              </ol>
-            </section>
-          </div>
-          <div className="win-card-footer">
-            <Button className="win-home-button" onClick={onLeave}>
-              Return Home
-            </Button>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-interface VictoryPointSource {
-  asset: string;
-  assetHeight: number;
-  assetWidth: number;
-  detail: string;
-  label: string;
-  points: number;
-}
-
-const VICTORY_POINT_CARD_ASSET =
-  DEVELOPMENT_CARD_ASSETS.find((card) => card.id === "victory-point")?.path ??
-  "/game-assets/cards/development/victory-point.png";
-
-function getRevealedVictoryPointCards(player: PlayerGameView["players"][number]): number {
-  return player.isViewer
-    ? player.developmentCards.filter((card) => card === "victory-point").length
-    : (player.revealedVictoryPointCards ?? 0);
-}
-
-function getFinalVictoryPointTotal(player: PlayerGameView["players"][number]): number {
-  return player.victoryPoints + getRevealedVictoryPointCards(player);
-}
-
-function getVictoryPointBreakdown(
-  game: PlayerGameView,
-  player: PlayerGameView["players"][number],
-): VictoryPointSource[] {
-  let settlements = 0;
-  let cities = 0;
-  for (const building of game.board.buildings) {
-    if (building.playerId !== player.id) {
-      continue;
-    }
-    if (building.kind === "city") {
-      cities += 1;
-    } else {
-      settlements += 1;
-    }
-  }
-
-  const victoryPointCards = getRevealedVictoryPointCards(player);
-  const largestArmyPoints =
-    game.largestArmyPlayerId === player.id ? LARGEST_ARMY_VICTORY_POINTS : 0;
-  const longestRoadPoints =
-    game.longestRoadPlayerId === player.id ? LONGEST_ROAD_VICTORY_POINTS : 0;
-
-  return [
-    {
-      asset: ACTION_CARD_ASSET_PATHS.settlement,
-      assetHeight: 768,
-      assetWidth: 512,
-      detail: `${settlements} × 1 point`,
-      label: "Settlements",
-      points: settlements,
-    },
-    {
-      asset: ACTION_CARD_ASSET_PATHS.city,
-      assetHeight: 768,
-      assetWidth: 512,
-      detail: `${cities} × 2 points`,
-      label: "Cities",
-      points: cities * 2,
-    },
-    {
-      asset: AWARD_ASSET_PATHS.longestRoad,
-      assetHeight: 512,
-      assetWidth: 512,
-      detail: longestRoadPoints > 0 ? "Award held" : "Not held",
-      label: "Longest Road",
-      points: longestRoadPoints,
-    },
-    {
-      asset: AWARD_ASSET_PATHS.largestArmy,
-      assetHeight: 512,
-      assetWidth: 512,
-      detail: largestArmyPoints > 0 ? "Award held" : "Not held",
-      label: "Largest Army",
-      points: largestArmyPoints,
-    },
-    {
-      asset: VICTORY_POINT_CARD_ASSET,
-      assetHeight: 768,
-      assetWidth: 512,
-      detail: `${victoryPointCards} hidden ${victoryPointCards === 1 ? "card" : "cards"}`,
-      label: "Victory Cards",
-      points: victoryPointCards,
-    },
-  ];
-}
-
-function getResultPortraitPath(
-  player: PlayerGameView["players"][number],
-  viewerProfileImageUrl: string | null,
-): string {
-  return player.isViewer && viewerProfileImageUrl
-    ? viewerProfileImageUrl
-    : getPlayerPortraitPath(getPlayerTheme(player));
 }
 
 function toGameError(cause: unknown): string {

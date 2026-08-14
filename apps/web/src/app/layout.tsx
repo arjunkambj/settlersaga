@@ -22,6 +22,8 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  colorScheme: "dark",
+  themeColor: "#145043",
 };
 
 const dmSans = DM_Sans({
@@ -32,11 +34,7 @@ const dmSans = DM_Sans({
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <html
-      className={cn("dark", dmSans.variable, "font-sans", inter.variable)}
-      data-theme="dark"
-      lang="en"
-    >
+    <html className={cn(dmSans.variable, "dark font-sans", inter.variable)} lang="en">
       <body className="bg-background text-foreground">
         <HexclaveProvider app={hexclaveServerApp}>
           <HexclaveTheme />

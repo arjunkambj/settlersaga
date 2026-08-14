@@ -1,8 +1,8 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import pauseIcon from "@iconify-icons/solar/pause-bold-duotone";
-import playIcon from "@iconify-icons/solar/play-bold-duotone";
+import pauseIcon from "@iconify-icons/solar/pause-bold";
+import playIcon from "@iconify-icons/solar/play-bold";
 import { Icon } from "@iconify/react";
 import { useRef, useState } from "react";
 

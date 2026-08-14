@@ -10,9 +10,9 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import magniferIcon from "@iconify-icons/solar/magnifer-zoom-in-bold-duotone";
-import musicIcon from "@iconify-icons/solar/music-note-2-bold-duotone";
-import sparkleIcon from "@iconify-icons/solar/stars-bold-duotone";
+import magniferIcon from "@iconify-icons/solar/magnifer-zoom-in-bold";
+import musicIcon from "@iconify-icons/solar/music-note-2-bold";
+import sparkleIcon from "@iconify-icons/solar/stars-bold";
 import { Icon } from "@iconify/react";
 import { useCallback, useEffect, useState } from "react";
 
@@ -77,8 +77,8 @@ export function AssetCard({ asset }: { asset: AssetCardItem }) {
   return (
     <div
       className={cn(
-        "group/card relative flex flex-col overflow-hidden rounded-2xl border bg-card text-card-foreground shadow-xs transition-all duration-200",
-        "hover:shadow-md hover:-translate-y-0.5 hover:border-foreground/15 hover:ring-1 hover:ring-foreground/5",
+        "group/card relative flex flex-col overflow-hidden rounded-2xl bg-card text-card-foreground shadow-xs transition-all duration-200",
+        "hover:shadow-md hover:-translate-y-0.5",
         "focus-within:shadow-md focus-within:ring-1 focus-within:ring-foreground/5",
         !isGenerated && "border-dashed opacity-85 hover:translate-y-0 hover:shadow-xs",
       )}

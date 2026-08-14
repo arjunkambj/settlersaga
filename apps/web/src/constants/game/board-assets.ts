@@ -53,8 +53,8 @@ function hashTerrainVariation(value: string) {
 }
 
 export const OCEAN_BOARD_ASSET_PATH = "/game-assets/ui/ocean-board-canvas.webp";
-export const PORT_DOCK_ASSET_PATH = "/game-assets/ui/port-bridge-v2.png";
-export const PORT_BOAT_ASSET_PATH = "/game-assets/ui/port-merchant-v2.png";
+export const PORT_DOCK_ASSET_PATH = "/game-assets/ui/port-bridge.png";
+export const PORT_BOAT_ASSET_PATH = "/game-assets/ui/port-merchant.png";
 export const PORT_BOAT_RENDER_SIZE = {
   height: 138,
   width: 80,

@@ -1,12 +1,12 @@
 "use client";
 
-import { useId } from "react";
+import { useId, type ReactNode } from "react";
 import type { BaseGameSettings, BotDifficulty, GameMapId } from "@settersaga/game";
 import { AVAILABLE_GAME_MAPS, getGameMapDefinition } from "@settersaga/game/maps";
 
 import { Tooltip as TooltipPrimitive } from "@base-ui/react/tooltip";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { InformationCircleIcon } from "@hugeicons/core-free-icons";
+import infoIcon from "@iconify-icons/solar/info-circle-bold";
+import { Icon } from "@iconify/react";
 
 import { Button } from "@/components/ui/button";
 import { Field, FieldLabel } from "@/components/ui/field";
@@ -15,16 +15,20 @@ import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 
+import { BOT_DIFFICULTY_OPTIONS } from "@/lib/lobby/bot-difficulty";
 import {
   getBotCapacity,
   getCompatiblePlayerCount,
   getMinimumPlayerCount,
+  tableSizeForPlayerCount,
   toBotCount,
   type BotCount,
 } from "@/lib/lobby/lobby-settings-model";
@@ -40,11 +44,11 @@ function InfoTooltip({ content }: { readonly content: string }) {
         delay={200}
         type="button"
       >
-        <HugeiconsIcon icon={InformationCircleIcon} className="size-3.5" strokeWidth={1.8} />
+        <Icon icon={infoIcon} className="size-3.5" />
       </TooltipPrimitive.Trigger>
       <TooltipPrimitive.Portal>
         <TooltipPrimitive.Positioner align="center" side="top" sideOffset={8}>
-          <TooltipPrimitive.Popup className="z-50 max-w-[260px] rounded-xl border bg-popover px-3 py-2 text-xs leading-relaxed text-popover-foreground shadow-md outline-none">
+          <TooltipPrimitive.Popup className="z-50 max-w-[260px] rounded-xl bg-popover px-3 py-2 text-xs leading-relaxed text-popover-foreground shadow-md outline-none">
             {content}
           </TooltipPrimitive.Popup>
         </TooltipPrimitive.Positioner>
@@ -53,29 +57,9 @@ function InfoTooltip({ content }: { readonly content: string }) {
   );
 }
 
-const TURN_TIMER_OPTIONS = [0, 30, 60, 90, 120] as const;
-const BOT_DIFFICULTY_OPTIONS = [
-  {
-    description: "Builds legal moves quickly without planning far ahead.",
-    label: "Easy",
-    value: "easy",
-  },
-  {
-    description: "Balances production, expansion, and bank trades.",
-    label: "Medium",
-    value: "medium",
-  },
-  {
-    description: "Prioritizes stronger placements and longer-term upgrades.",
-    label: "Hard",
-    value: "hard",
-  },
-] as const satisfies ReadonlyArray<{
-  description: string;
-  label: string;
-  value: BotDifficulty;
-}>;
+const PLAYER_COUNT_OPTIONS = [4, 5, 6, 7, 8] as const;
 
+const TURN_TIMER_OPTIONS = [0, 30, 60, 90, 120] as const;
 export interface LobbySettingsValue {
   readonly botCount: BotCount;
   readonly botDifficulty: BotDifficulty;
@@ -90,6 +74,7 @@ export interface LobbySettingsProps {
   readonly minBotCount?: BotCount;
   readonly onChange: (value: LobbySettingsValue) => void;
   readonly settings: Readonly<BaseGameSettings>;
+  readonly variant?: "setup" | "rules";
 }
 
 export function LobbySettings({
@@ -100,6 +85,7 @@ export function LobbySettings({
   minBotCount = 0,
   onChange,
   settings,
+  variant = "setup",
 }: LobbySettingsProps) {
   const botLimit = getBotCapacity(settings.maxPlayers, humanCount);
   const botFloor = toBotCount(Math.min(minBotCount, botLimit));
@@ -128,37 +114,179 @@ export function LobbySettings({
     emit({ ...settings, [key]: value });
   };
 
+  const applyMap = (map: GameMapId) => {
+    const maxPlayers = getCompatiblePlayerCount(map, humanCount, settings.maxPlayers);
+    if (maxPlayers === null) {
+      return;
+    }
+    const nextBotLimit = getBotCapacity(maxPlayers, humanCount);
+    const nextBotFloor = toBotCount(Math.min(minBotCount, nextBotLimit));
+    emit(
+      { ...settings, map, maxPlayers },
+      toBotCount(Math.max(nextBotFloor, Math.min(botCount, nextBotLimit))),
+    );
+  };
+
   const id = useId();
 
+  if (variant === "rules") {
+    return (
+      <fieldset className="m-0 flex min-h-0 flex-1 flex-col border-0 p-0" disabled={disabled}>
+        <legend className="sr-only">House rules</legend>
+        <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-3">
+          <SettingsCategory title="Game rules">
+            <SettingPanel>
+              <SliderSetting
+                disabled={disabled}
+                id={`${id}-victory-points`}
+                label="Points to Win"
+                max={13}
+                min={3}
+                onChange={(value) => updateSetting("victoryPoints", value)}
+                value={settings.victoryPoints}
+              />
+            </SettingPanel>
+            <SettingPanel>
+              <SliderSetting
+                disabled={disabled}
+                id={`${id}-discard-limit`}
+                label="Card Discard Limit"
+                max={20}
+                min={5}
+                onChange={(value) => updateSetting("discardLimit", value)}
+                value={settings.discardLimit}
+              />
+            </SettingPanel>
+            <SettingPanel>
+              <TurnTimerField
+                disabled={disabled}
+                id={`${id}-turn-timer`}
+                onChange={(value) => updateSetting("turnTimerSeconds", value)}
+                value={settings.turnTimerSeconds}
+              />
+            </SettingPanel>
+          </SettingsCategory>
+
+          <SettingsCategory title="Bots">
+            <SettingPanel>
+              <BotDifficultyField
+                disabled={disabled || botCount === 0}
+                id={`${id}-bot-difficulty`}
+                onChange={(value) => emit(settings, botCount, value)}
+                tooltip={selectedDifficulty.description}
+                value={botDifficulty}
+              />
+            </SettingPanel>
+          </SettingsCategory>
+
+          <SettingsCategory title="Table">
+            <SettingPanel>
+              <Field className="gap-1">
+                <FieldLabel
+                  htmlFor={`${id}-players`}
+                  className="flex items-center gap-1.5 text-sm font-semibold"
+                >
+                  Players
+                  <InfoTooltip content="How many seats the table has. 4 uses the standard island, 5–6 the wide island, and 7–8 the grand island." />
+                </FieldLabel>
+                <Select
+                  disabled={disabled}
+                  value={String(Math.max(settings.maxPlayers, 4))}
+                  onValueChange={(value) => {
+                    const nextSize = tableSizeForPlayerCount(Number(value));
+                    if (!nextSize || nextSize.maxPlayers < humanCount) return;
+                    const nextBotLimit = getBotCapacity(nextSize.maxPlayers, humanCount);
+                    emit(
+                      { ...settings, map: nextSize.map, maxPlayers: nextSize.maxPlayers },
+                      toBotCount(Math.min(botCount, nextBotLimit)),
+                    );
+                  }}
+                >
+                  <SelectTrigger
+                    id={`${id}-players`}
+                    className="flex h-8 w-full items-center justify-between px-3 text-sm font-medium"
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      {PLAYER_COUNT_OPTIONS.map((playerCount) => (
+                        <SelectItem
+                          key={playerCount}
+                          value={String(playerCount)}
+                          disabled={playerCount < humanCount}
+                        >
+                          {playerCount} players
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </Field>
+            </SettingPanel>
+            <RuleToggle
+              checked={settings.friendlyRobber}
+              description="Robber cannot target a player with 2 VP or fewer."
+              disabled={disabled}
+              id={`${id}-friendly-robber`}
+              label="Friendly Robber"
+              name="friendlyRobber"
+              onChange={(checked) => updateSetting("friendlyRobber", checked)}
+              variant="card"
+            />
+            <RuleToggle
+              checked={settings.balancedDice}
+              description="Reduces short streaks while keeping rolls fair."
+              disabled={disabled}
+              id={`${id}-balanced-dice`}
+              label="Balanced Dice"
+              name="balancedDice"
+              onChange={(checked) => updateSetting("balancedDice", checked)}
+              variant="card"
+            />
+            <RuleToggle
+              checked={settings.hideBankCards}
+              description="Hides exact remaining bank counts."
+              disabled={disabled}
+              id={`${id}-hide-bank-counts`}
+              label="Hide Bank Cards"
+              name="hideBankCards"
+              onChange={(checked) => updateSetting("hideBankCards", checked)}
+              variant="card"
+            />
+          </SettingsCategory>
+        </div>
+      </fieldset>
+    );
+  }
+
   return (
-    <fieldset className="space-y-4 border-0 p-0 m-0" disabled={disabled}>
+    <fieldset className="m-0 flex flex-col gap-4 border-0 p-0" disabled={disabled}>
       <legend className="sr-only">Standard Game Settings</legend>
 
       <div className="grid grid-cols-1 gap-5 md:grid-cols-2 md:gap-6 md:divide-x md:divide-border">
-        <section className="space-y-3">
-          <NumberSetting
-            description="First player to reach this total wins."
+        <section className="flex flex-col gap-3">
+          <SliderSetting
             disabled={disabled}
             id={`${id}-victory-points`}
-            label="Victory Points"
+            label="Points to Win"
             max={13}
             min={3}
             onChange={(value) => updateSetting("victoryPoints", value)}
             value={settings.victoryPoints}
           />
 
-          <NumberSetting
-            description="Players with more cards discard half after a 7."
+          <SliderSetting
             disabled={disabled}
             id={`${id}-discard-limit`}
-            label="Discard Limit"
+            label="Card Discard Limit"
             max={20}
             min={5}
             onChange={(value) => updateSetting("discardLimit", value)}
             value={settings.discardLimit}
           />
 
-          <Field className="space-y-1">
+          <Field className="gap-1">
             <FieldLabel
               htmlFor={`${id}-bot-count`}
               className="flex items-center gap-1.5 text-sm font-semibold text-foreground"
@@ -178,7 +306,7 @@ export function LobbySettings({
               <Button
                 type="button"
                 aria-label="Remove one bot seat"
-                className="h-8 w-8 rounded-lg font-bold shrink-0"
+                className="size-8 shrink-0 font-bold"
                 disabled={disabled || botCount <= botFloor}
                 onClick={() => emit(settings, toBotCount(botCount - 1))}
                 size="icon-sm"
@@ -188,7 +316,7 @@ export function LobbySettings({
               </Button>
               <Input
                 id={`${id}-bot-count`}
-                className="h-8 w-14 text-center font-mono font-bold text-sm bg-muted/30 border rounded-lg px-0 shrink-0"
+                className="h-8 w-14 shrink-0 px-0 text-center font-mono text-sm font-bold"
                 disabled={disabled}
                 readOnly
                 value={String(botCount)}
@@ -196,7 +324,7 @@ export function LobbySettings({
               <Button
                 type="button"
                 aria-label="Add one bot seat"
-                className="h-8 w-8 rounded-lg font-bold shrink-0"
+                className="size-8 shrink-0 font-bold"
                 disabled={disabled || botCount >= botLimit}
                 onClick={() => emit(settings, toBotCount(botCount + 1))}
                 size="icon-sm"
@@ -208,42 +336,15 @@ export function LobbySettings({
           </Field>
         </section>
 
-        <section className="space-y-3 md:pl-6">
-          <Field className="space-y-1">
-            <FieldLabel
-              htmlFor={`${id}-turn-timer`}
-              className="flex items-center gap-1.5 text-sm font-semibold text-foreground"
-            >
-              Turn Timer
-              <InfoTooltip content="Timed turns display a shared turn countdown." />
-            </FieldLabel>
-            <Select
-              disabled={disabled}
-              value={String(settings.turnTimerSeconds)}
-              onValueChange={(value) =>
-                updateSetting(
-                  "turnTimerSeconds",
-                  Number(value) as BaseGameSettings["turnTimerSeconds"],
-                )
-              }
-            >
-              <SelectTrigger
-                id={`${id}-turn-timer`}
-                className="w-full h-8 bg-background border rounded-lg px-3 text-sm flex items-center justify-between font-medium"
-              >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {TURN_TIMER_OPTIONS.map((seconds) => (
-                  <SelectItem key={seconds} value={String(seconds)}>
-                    {seconds === 0 ? "Off (Untimed)" : `${seconds} seconds`}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </Field>
+        <section className="flex flex-col gap-3 md:pl-6">
+          <TurnTimerField
+            disabled={disabled}
+            id={`${id}-turn-timer`}
+            onChange={(value) => updateSetting("turnTimerSeconds", value)}
+            value={settings.turnTimerSeconds}
+          />
 
-          <Field className="space-y-1">
+          <Field className="gap-1">
             <FieldLabel
               htmlFor={`${id}-max-players`}
               className="flex items-center gap-1.5 text-sm font-semibold text-foreground"
@@ -266,54 +367,35 @@ export function LobbySettings({
             >
               <SelectTrigger
                 id={`${id}-max-players`}
-                className="w-full h-8 bg-background border rounded-lg px-3 text-sm flex items-center justify-between font-medium"
+                className="flex h-8 w-full items-center justify-between px-3 text-sm font-medium"
               >
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {selectedMap.playerCounts.map((playerCount) => (
-                  <SelectItem
-                    key={playerCount}
-                    value={String(playerCount)}
-                    disabled={playerCount < minPlayerCount}
-                  >
-                    {playerCount} players
-                  </SelectItem>
-                ))}
+                <SelectGroup>
+                  {selectedMap.playerCounts.map((playerCount) => (
+                    <SelectItem
+                      key={playerCount}
+                      value={String(playerCount)}
+                      disabled={playerCount < minPlayerCount}
+                    >
+                      {playerCount} players
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
               </SelectContent>
             </Select>
           </Field>
 
-          <Field className="space-y-1">
-            <FieldLabel
-              htmlFor={`${id}-bot-difficulty`}
-              className="flex items-center gap-1.5 text-sm font-semibold text-foreground"
-            >
-              Bot Difficulty
-              <InfoTooltip content={selectedDifficulty.description} />
-            </FieldLabel>
-            <Select
-              disabled={disabled || botCount === 0}
-              value={botDifficulty}
-              onValueChange={(value) => emit(settings, botCount, value as BotDifficulty)}
-            >
-              <SelectTrigger
-                id={`${id}-bot-difficulty`}
-                className="w-full h-8 bg-background border rounded-lg px-3 text-sm flex items-center justify-between font-medium"
-              >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {BOT_DIFFICULTY_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </Field>
+          <BotDifficultyField
+            disabled={disabled || botCount === 0}
+            id={`${id}-bot-difficulty`}
+            onChange={(value) => emit(settings, botCount, value)}
+            tooltip={selectedDifficulty.description}
+            value={botDifficulty}
+          />
 
-          <Field className="space-y-1">
+          <Field className="gap-1">
             <FieldLabel
               htmlFor={`${id}-map`}
               className="flex items-center gap-1.5 text-sm font-semibold text-foreground"
@@ -324,49 +406,39 @@ export function LobbySettings({
             <Select
               disabled={disabled}
               value={settings.map}
-              onValueChange={(value) => {
-                const map = value as GameMapId;
-                const maxPlayers = getCompatiblePlayerCount(map, humanCount, settings.maxPlayers);
-                if (maxPlayers === null) {
-                  return;
-                }
-                const nextBotLimit = getBotCapacity(maxPlayers, humanCount);
-                const nextBotFloor = toBotCount(Math.min(minBotCount, nextBotLimit));
-                emit(
-                  { ...settings, map, maxPlayers },
-                  toBotCount(Math.max(nextBotFloor, Math.min(botCount, nextBotLimit))),
-                );
-              }}
+              onValueChange={(value) => applyMap(value as GameMapId)}
             >
               <SelectTrigger
                 id={`${id}-map`}
-                className="w-full h-8 bg-background border rounded-lg px-3 text-sm flex items-center justify-between font-medium"
+                className="flex h-8 w-full items-center justify-between px-3 text-sm font-medium"
               >
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {AVAILABLE_GAME_MAPS.map((map) => (
-                  <SelectItem
-                    key={map.id}
-                    value={map.id}
-                    disabled={
-                      getCompatiblePlayerCount(map.id, humanCount, settings.maxPlayers) === null
-                    }
-                  >
-                    {map.label}
-                  </SelectItem>
-                ))}
+                <SelectGroup>
+                  {AVAILABLE_GAME_MAPS.map((map) => (
+                    <SelectItem
+                      key={map.id}
+                      value={map.id}
+                      disabled={
+                        getCompatiblePlayerCount(map.id, humanCount, settings.maxPlayers) === null
+                      }
+                    >
+                      {map.label}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
               </SelectContent>
             </Select>
           </Field>
         </section>
       </div>
 
-      <section className="border-t pt-4">
-        <div className="grid divide-y divide-border sm:grid-cols-3 sm:divide-y-0 sm:gap-5">
+      <section>
+        <div className="grid sm:grid-cols-3 sm:gap-5">
           <RuleToggle
             checked={settings.friendlyRobber}
-            description="Robber cannot target players with <=2 VP."
+            description="Robber cannot target players with 2 VP or fewer."
             disabled={disabled}
             id={`${id}-friendly-robber`}
             label="Friendly Robber"
@@ -384,7 +456,7 @@ export function LobbySettings({
           />
           <RuleToggle
             checked={settings.hideBankCards}
-            description="Hides exact card counts in bank."
+            description="Hides exact card counts in the bank."
             disabled={disabled}
             id={`${id}-hide-bank-counts`}
             label="Hide Bank Cards"
@@ -397,66 +469,155 @@ export function LobbySettings({
   );
 }
 
-function NumberSetting({
-  description,
+function TurnTimerField({
+  disabled,
+  id,
+  onChange,
+  value,
+}: {
+  readonly disabled: boolean;
+  readonly id: string;
+  readonly onChange: (value: BaseGameSettings["turnTimerSeconds"]) => void;
+  readonly value: BaseGameSettings["turnTimerSeconds"];
+}) {
+  return (
+    <Field className="gap-1">
+      <FieldLabel htmlFor={id} className="flex items-center gap-1.5 text-sm font-semibold">
+        Turn Timer
+        <InfoTooltip content="Timed turns display a shared turn countdown." />
+      </FieldLabel>
+      <Select
+        disabled={disabled}
+        value={String(value)}
+        onValueChange={(next) => onChange(Number(next) as BaseGameSettings["turnTimerSeconds"])}
+      >
+        <SelectTrigger
+          id={id}
+          className="flex h-8 w-full items-center justify-between px-3 text-sm font-medium"
+        >
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectGroup>
+            {TURN_TIMER_OPTIONS.map((seconds) => (
+              <SelectItem key={seconds} value={String(seconds)}>
+                {seconds === 0 ? "Off (Untimed)" : `${seconds} seconds`}
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        </SelectContent>
+      </Select>
+    </Field>
+  );
+}
+
+function BotDifficultyField({
+  disabled,
+  id,
+  onChange,
+  tooltip,
+  value,
+}: {
+  readonly disabled: boolean;
+  readonly id: string;
+  readonly onChange: (value: BotDifficulty) => void;
+  readonly tooltip: string;
+  readonly value: BotDifficulty;
+}) {
+  return (
+    <Field className="gap-1">
+      <FieldLabel htmlFor={id} className="flex items-center gap-1.5 text-sm font-semibold">
+        Bot Difficulty
+        <InfoTooltip content={tooltip} />
+      </FieldLabel>
+      <Select
+        disabled={disabled}
+        value={value}
+        onValueChange={(next) => onChange(next as BotDifficulty)}
+      >
+        <SelectTrigger
+          id={id}
+          className="flex h-8 w-full items-center justify-between px-3 text-sm font-medium"
+        >
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectGroup>
+            {BOT_DIFFICULTY_OPTIONS.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        </SelectContent>
+      </Select>
+    </Field>
+  );
+}
+
+function SettingsCategory({
+  children,
+  title,
+}: {
+  readonly children: ReactNode;
+  readonly title: string;
+}) {
+  return (
+    <section className="flex min-h-0 flex-col gap-2 rounded-2xl bg-muted/30 p-3">
+      <h3 className="px-1 text-sm font-semibold">{title}</h3>
+      <div className="flex flex-col gap-2">{children}</div>
+    </section>
+  );
+}
+
+function SettingPanel({ children }: { readonly children: ReactNode }) {
+  return <div className="rounded-2xl bg-muted/40 px-4 py-3">{children}</div>;
+}
+
+function SliderSetting({
   disabled,
   id,
   label,
   max,
   min,
   onChange,
+  step = 1,
   value,
 }: {
-  readonly description: string;
   readonly disabled: boolean;
   readonly id: string;
   readonly label: string;
   readonly max: number;
   readonly min: number;
   readonly onChange: (value: number) => void;
+  readonly step?: number;
   readonly value: number;
 }) {
-  const decrement = () => onChange(clampInteger(value - 1, min, max));
-  const increment = () => onChange(clampInteger(value + 1, min, max));
   return (
-    <Field className="space-y-1">
-      <FieldLabel
-        htmlFor={id}
-        className="flex items-center gap-1.5 text-sm font-semibold text-foreground"
-      >
-        {label}
-        <InfoTooltip content={`${description} Range: ${min}–${max}.`} />
-      </FieldLabel>
-      <div className="flex items-center gap-2">
-        <Button
-          type="button"
-          aria-label={`Decrease ${label.toLowerCase()}`}
-          className="h-8 w-8 rounded-lg font-bold shrink-0"
-          disabled={disabled || value <= min}
-          onClick={decrement}
-          size="icon-sm"
-          variant="outline"
-        >
-          −
-        </Button>
-        <Input
-          className="h-8 w-14 text-center font-mono font-bold text-sm bg-muted/30 border rounded-lg px-0 shrink-0"
-          id={id}
-          readOnly
-          disabled={disabled}
-          value={String(value)}
-        />
-        <Button
-          type="button"
-          aria-label={`Increase ${label.toLowerCase()}`}
-          className="h-8 w-8 rounded-lg font-bold shrink-0"
-          disabled={disabled || value >= max}
-          onClick={increment}
-          size="icon-sm"
-          variant="outline"
-        >
-          +
-        </Button>
+    <Field className="gap-2">
+      <div className="flex items-center justify-between gap-3">
+        <FieldLabel htmlFor={id} className="text-sm font-semibold">
+          {label}
+        </FieldLabel>
+        <span className="font-mono text-sm font-bold">{value}</span>
+      </div>
+      <Slider
+        disabled={disabled}
+        id={id}
+        max={max}
+        min={min}
+        onValueChange={(next) => {
+          const nextValue = Array.isArray(next) ? next[0] : next;
+          if (typeof nextValue === "number") {
+            onChange(clampInteger(nextValue, min, max));
+          }
+        }}
+        step={step}
+        value={[value]}
+      />
+      <div className="flex justify-between text-xs text-muted-foreground">
+        <span>{min}</span>
+        <span>{max}</span>
       </div>
     </Field>
   );
@@ -470,6 +631,7 @@ function RuleToggle({
   label,
   name,
   onChange,
+  variant = "inline",
 }: {
   readonly checked: boolean;
   readonly description: string;
@@ -478,13 +640,20 @@ function RuleToggle({
   readonly label: string;
   readonly name: string;
   readonly onChange: (checked: boolean) => void;
+  readonly variant?: "card" | "inline";
 }) {
   return (
-    <div className="flex items-center justify-between gap-3 py-3 sm:py-1">
-      <div className="space-y-0.5 min-w-0 flex-1">
+    <div
+      className={
+        variant === "card"
+          ? "flex items-center justify-between gap-3 rounded-2xl bg-muted/40 px-4 py-3"
+          : "flex items-center justify-between gap-3 py-3 sm:py-1"
+      }
+    >
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
         <Label
           htmlFor={id}
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-foreground cursor-pointer"
+          className="inline-flex cursor-pointer items-center gap-1.5 text-sm font-semibold text-foreground"
         >
           {label}
           <InfoTooltip content={description} />
