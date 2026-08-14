@@ -381,7 +381,12 @@ export function GameScreen({
           className="absolute z-30 top-[max(0.4rem,env(safe-area-inset-top))] right-[max(0.45rem,env(safe-area-inset-right))] bottom-[max(0.4rem,env(safe-area-inset-bottom))] flex flex-col w-[clamp(350px,27.5vw,430px)] min-h-0 gap-2 pointer-events-none max-[1100px]:relative max-[1100px]:inset-auto max-[1100px]:w-full max-[1100px]:pointer-events-auto [&>*]:pointer-events-auto"
         >
           <div className="flex flex-col min-h-0 flex-1 gap-2">
-            <EventLog events={events} players={game.players} />
+            <EventLog
+              events={events}
+              players={game.players}
+              viewerPlayerId={me.id}
+              viewerProfileImageUrl={viewerProfileImageUrl}
+            />
             <BankPanel bank={game.bank} developmentCardSupply={game.developmentCardSupply} />
           </div>
 
@@ -997,12 +1002,44 @@ function BankPanel({
   );
 }
 
+function getEventActionIcon(kind: string, text: string): string {
+  const lower = text.toLowerCase();
+  if (kind === "roll" || lower.includes("roll")) return "🎲";
+  if (kind === "place_settlement" || lower.includes("settlement")) return "🏠";
+  if (kind === "place_road" || lower.includes("road")) return "🛣️";
+  if (kind === "build_city" || lower.includes("city")) return "🏰";
+  if (
+    kind === "buy_development_card" ||
+    lower.includes("development card") ||
+    lower.includes("dev card")
+  )
+    return "📜";
+  if (kind === "play_knight" || lower.includes("knight")) return "⚔️";
+  if (
+    kind === "move_robber" ||
+    kind === "move_robber_and_steal" ||
+    kind === "steal" ||
+    lower.includes("robber") ||
+    lower.includes("stole")
+  )
+    return "🕵️";
+  if (kind.startsWith("trade") || lower.includes("trade")) return "🔄";
+  if (lower.includes("monopoly")) return "👑";
+  if (lower.includes("resource") || lower.includes("harvest") || lower.includes("received"))
+    return "🌾";
+  return "•";
+}
+
 function EventLog({
   events,
   players,
+  viewerPlayerId,
+  viewerProfileImageUrl,
 }: {
   events: RoomEventView[];
   players: PlayerGameView["players"];
+  viewerPlayerId?: string;
+  viewerProfileImageUrl?: string | null;
 }) {
   const [showLocalTime, setShowLocalTime] = useState(false);
   const [pinnedToLatest, setPinnedToLatest] = useState(true);
@@ -1040,20 +1077,34 @@ function EventLog({
 
   return (
     <section
-      className="relative flex flex-col min-h-0 flex-1 p-2 rounded-2xl bg-card/90 shadow-md border border-white/10"
+      className="relative flex flex-col min-h-0 flex-1 p-2.5 rounded-2xl bg-card/90 shadow-md border border-white/10"
       aria-labelledby="events-title"
     >
-      <div className="flex items-center justify-between gap-2 mb-1.5 text-muted-foreground shrink-0">
-        <h2
-          className="m-0 text-xs font-black tracking-wider uppercase text-foreground/70"
-          id="events-title"
-        >
-          Game Log
-        </h2>
-        <Icon aria-hidden="true" className="size-4 text-primary" icon={chatIcon} />
+      {/* Header with live activity indicator */}
+      <div className="flex items-center justify-between gap-2 mb-2 px-1 text-muted-foreground shrink-0">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <span
+            className="size-2 rounded-full bg-emerald-400 animate-pulse shadow-sm"
+            aria-hidden="true"
+          />
+          <h2
+            className="m-0 text-xs font-black tracking-wider uppercase text-foreground/80"
+            id="events-title"
+          >
+            Game Log
+          </h2>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="text-[0.58rem] font-bold px-1.5 py-0.5 rounded-full bg-background/50 text-muted-foreground/80 tabular-nums">
+            {events.length} {events.length === 1 ? "event" : "events"}
+          </span>
+          <Icon aria-hidden="true" className="size-4 text-primary" icon={chatIcon} />
+        </div>
       </div>
+
+      {/* Scrollable chat messages feed */}
       <ol
-        className="flex flex-col flex-1 min-h-0 gap-2 p-0.5 m-0 overflow-y-auto list-none [scrollbar-width:thin] text-xs"
+        className="flex flex-col flex-1 min-h-0 gap-1.5 p-0.5 m-0 overflow-y-auto list-none [scrollbar-width:thin] text-xs"
         onScroll={(event) => {
           const list = event.currentTarget;
           const atBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 40;
@@ -1070,59 +1121,112 @@ function EventLog({
             const theme = actor ? getPlayerTheme(actor) : undefined;
             const actorName = actor?.displayName ?? "Table";
             const latest = group.events.at(-1);
+            const isViewer = actor?.id === viewerPlayerId;
             const isLatestGroup = groupIndex === groups.length - 1;
+            const avatarSrc =
+              isViewer && viewerProfileImageUrl
+                ? viewerProfileImageUrl
+                : theme
+                  ? getPlayerPortraitPath(theme)
+                  : undefined;
             return (
               <li
-                className={`grid grid-cols-[0.5rem_minmax(0,1fr)] items-start gap-x-2 gap-y-0.5${theme ? ` player-${theme}` : ""}`}
+                className={`relative flex flex-col gap-1 p-2 rounded-xl border transition-all ${
+                  isViewer
+                    ? "bg-primary/[0.08] border-primary/25"
+                    : "bg-background/40 border-white/5"
+                }${theme ? ` player-${theme}` : ""}`}
                 key={group.key}
               >
-                <span
-                  aria-hidden="true"
-                  className="size-1.5 mt-1.5 rounded-full bg-[var(--player-color,var(--primary))] ring-4 ring-[var(--player-color,var(--primary))]/20"
-                />
-                <div className="grid min-w-0 gap-0.5">
-                  <div className="flex min-w-0 items-baseline justify-between gap-2">
-                    <strong className="truncate text-xs font-bold text-[var(--player-color,var(--foreground))]">
+                {/* Header: Avatar + Name + You Badge + Timestamp */}
+                <div className="flex items-center justify-between gap-1.5 min-w-0">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span
+                      className="relative grid size-5 place-items-center rounded-full border border-[var(--player-color,var(--primary))] bg-background/80 overflow-hidden shadow-inner shrink-0"
+                      aria-hidden="true"
+                    >
+                      <span className="absolute text-[0.5rem] font-black text-foreground">
+                        {actor?.isBot ? (
+                          <Icon aria-hidden="true" className="size-2.5" icon={botIcon} />
+                        ) : (
+                          getPlayerInitials(actorName)
+                        )}
+                      </span>
+                      {avatarSrc ? (
+                        <Image
+                          alt=""
+                          className="relative size-full object-cover"
+                          draggable={false}
+                          height={48}
+                          onError={(event) => {
+                            event.currentTarget.hidden = true;
+                          }}
+                          src={avatarSrc}
+                          unoptimized
+                          width={48}
+                        />
+                      ) : null}
+                    </span>
+                    <strong className="truncate text-[0.72rem] font-bold text-[var(--player-color,var(--foreground))]">
                       {actorName}
                     </strong>
-                    {latest ? (
-                      <time
-                        className="shrink-0 text-[0.6rem] font-mono tabular-nums text-muted-foreground/70"
-                        dateTime={new Date(latest.createdAt).toISOString()}
-                      >
-                        {timeFormatter.format(latest.createdAt)}
-                      </time>
+                    {isViewer ? (
+                      <span className="inline-flex items-center h-3 px-1 rounded-full bg-accent/20 text-[0.45rem] font-black uppercase tracking-wider text-accent shrink-0">
+                        You
+                      </span>
                     ) : null}
                   </div>
-                  <ol className="grid gap-0.5 p-0 m-0 list-none">
-                    {group.events.map((item) => (
-                      <li data-tone={getEventTone(item.kind)} key={item.sequence}>
-                        <p
-                          className={`m-0 text-[0.72rem] leading-snug ${isLatestGroup ? "text-foreground" : "text-muted-foreground"}`}
-                        >
-                          {eventActionLabel(item.text, actor?.displayName)}
-                        </p>
-                      </li>
-                    ))}
-                  </ol>
+                  {latest ? (
+                    <time
+                      className="shrink-0 text-[0.58rem] font-mono tabular-nums text-muted-foreground/60"
+                      dateTime={new Date(latest.createdAt).toISOString()}
+                    >
+                      {timeFormatter.format(latest.createdAt)}
+                    </time>
+                  ) : null}
                 </div>
+
+                {/* Event action lines */}
+                <ol className="flex flex-col gap-0.5 p-0 m-0 list-none pl-6">
+                  {group.events.map((item) => {
+                    const actionText = eventActionLabel(item.text, actor?.displayName);
+                    const icon = getEventActionIcon(item.kind, actionText);
+                    return (
+                      <li
+                        className={`flex items-baseline gap-1.5 text-[0.72rem] leading-snug ${
+                          isLatestGroup ? "text-foreground font-medium" : "text-muted-foreground"
+                        }`}
+                        data-tone={getEventTone(item.kind)}
+                        key={item.sequence}
+                      >
+                        <span
+                          aria-hidden="true"
+                          className="shrink-0 text-[0.68rem] opacity-80 select-none"
+                        >
+                          {icon}
+                        </span>
+                        <p className="m-0 break-words">{actionText}</p>
+                      </li>
+                    );
+                  })}
+                </ol>
               </li>
             );
           })
         ) : (
-          <li className="py-2 text-center text-xs text-muted-foreground/70 italic">
+          <li className="py-4 text-center text-xs text-muted-foreground/70 italic">
             <p>No moves yet.</p>
           </li>
         )}
       </ol>
       {hasUnseen ? (
         <Button
-          className="absolute bottom-2 left-1/2 -translate-x-1/2 min-w-20 shadow-lg text-xs"
+          className="absolute bottom-3 left-1/2 -translate-x-1/2 min-w-20 shadow-lg text-xs rounded-full gap-1"
           onClick={() => setPinnedToLatest(true)}
           size="sm"
           variant="secondary"
         >
-          Latest
+          <span>↓ Latest</span>
         </Button>
       ) : null}
     </section>
