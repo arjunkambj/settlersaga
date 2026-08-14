@@ -82,34 +82,49 @@ export function DevelopmentCardDialog({
 
   return (
     <HandDockPortal>
-      <div className="dev-card-dialog">
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/60 backdrop-blur-sm animate-in fade-in duration-200">
         <section
           aria-label={isMonopoly ? "Choose a Monopoly resource" : "Choose two resources"}
-          className="dev-card-dialog__panel"
+          className="grid gap-3 p-4 sm:p-5 rounded-2xl bg-card border border-primary/20 shadow-2xl backdrop-blur-xl max-w-lg w-full text-card-foreground animate-in zoom-in-95 duration-200 focus:outline-none"
           ref={dialogRef}
           role="dialog"
           tabIndex={-1}
         >
-          <header className="dev-card-dialog__header">
+          <header className="flex items-center justify-between gap-2">
             <div>
-              <p className="eyebrow">Development card</p>
-              <h2>{isMonopoly ? "Play Monopoly" : "Year of Plenty"}</h2>
+              <p className="m-0 text-[0.65rem] font-black tracking-wider uppercase text-foreground/60">
+                Development card
+              </p>
+              <h2 className="m-0 text-lg font-extrabold text-foreground leading-tight">
+                {isMonopoly ? "Play Monopoly" : "Year of Plenty"}
+              </h2>
             </div>
-            <Button disabled={pending} onClick={onClose} size="icon-sm" variant="ghost">
+            <Button
+              className="size-8 rounded-full text-muted-foreground hover:text-foreground"
+              disabled={pending}
+              onClick={onClose}
+              size="icon-sm"
+              variant="ghost"
+            >
               <span className="sr-only">Close</span>
-              <svg aria-hidden="true" viewBox="0 0 24 24">
-                <path d="M6 6l12 12M18 6 6 18" />
+              <svg
+                aria-hidden="true"
+                className="size-4 stroke-current stroke-2"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <path d="M6 6l12 12M18 6 6 18" strokeLinecap="round" />
               </svg>
             </Button>
           </header>
 
-          <p className="dev-card-dialog__hint">
+          <p className="m-0 text-xs text-muted-foreground">
             {isMonopoly
               ? "Choose one resource. Every opponent gives you all cards of that type."
               : "Choose exactly two available bank cards. You can choose the same type twice."}
           </p>
 
-          <div className="dev-card-dialog__grid">
+          <div className="grid grid-cols-5 gap-2">
             {RESOURCE_ORDER.map((resource) => {
               const selected = isMonopoly
                 ? monopolyResource === resource
@@ -124,12 +139,20 @@ export function DevelopmentCardDialog({
                     (knownAvailable !== undefined && selected >= knownAvailable)));
 
               return (
-                <article className="dev-card-option" data-selected={selected > 0} key={resource}>
+                <article
+                  className={`grid justify-items-center gap-1 p-2 rounded-xl border text-center transition-all ${
+                    selected > 0
+                      ? "bg-primary/15 border-primary/40 ring-2 ring-primary/20"
+                      : "bg-background/40 border-white/10 hover:bg-background/60"
+                  }`}
+                  data-selected={selected > 0}
+                  key={resource}
+                >
                   {isMonopoly ? (
                     <Button
                       aria-label={`Choose ${RESOURCE_LABELS[resource]}`}
                       aria-pressed={selected > 0}
-                      className="dev-card-option__button"
+                      className="grid h-auto w-full justify-items-center gap-1 p-0 bg-transparent hover:bg-transparent shadow-none"
                       disabled={pending}
                       onClick={() => setMonopolyResource(resource)}
                       variant="ghost"
@@ -141,9 +164,10 @@ export function DevelopmentCardDialog({
                   )}
 
                   {!isMonopoly ? (
-                    <div className="dev-card-option__stepper">
+                    <div className="inline-flex items-center gap-1 tabular-nums mt-1">
                       <Button
                         aria-label={`Remove one ${RESOURCE_LABELS[resource]}`}
+                        className="size-6 p-0 rounded-full text-xs font-bold"
                         disabled={pending || selected === 0}
                         onClick={() => changePlentyResource(resource, -1)}
                         size="icon-sm"
@@ -151,9 +175,15 @@ export function DevelopmentCardDialog({
                       >
                         −
                       </Button>
-                      <span aria-label={`${selected} selected`}>{selected}</span>
+                      <span
+                        aria-label={`${selected} selected`}
+                        className="text-xs font-extrabold px-1"
+                      >
+                        {selected}
+                      </span>
                       <Button
                         aria-label={`Add one ${RESOURCE_LABELS[resource]}`}
+                        className="size-6 p-0 rounded-full text-xs font-bold"
                         disabled={cannotAdd}
                         onClick={() => changePlentyResource(resource, 1)}
                         size="icon-sm"
@@ -168,15 +198,15 @@ export function DevelopmentCardDialog({
             })}
           </div>
 
-          <footer className="dev-card-dialog__footer">
-            <span aria-live="polite">
+          <footer className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-white/10">
+            <span aria-live="polite" className="text-xs font-bold text-muted-foreground">
               {isMonopoly
                 ? monopolyResource
                   ? `${RESOURCE_LABELS[monopolyResource]} selected`
                   : "Choose a resource"
                 : `${selectedCount} of 2 cards selected`}
             </span>
-            <div>
+            <div className="flex items-center gap-2">
               <Button disabled={pending} onClick={onClose} variant="secondary">
                 Cancel
               </Button>
@@ -204,9 +234,10 @@ export function DevelopmentCardDialog({
 function ResourceCard({ resource, selected }: { resource: ResourceType; selected: number }) {
   return (
     <>
-      <span className="dev-card-option__art">
+      <span className="relative inline-grid place-items-center">
         <Image
           alt=""
+          className="w-10 h-14 object-contain rounded"
           draggable={false}
           height={192}
           sizes="4rem"
@@ -214,12 +245,17 @@ function ResourceCard({ resource, selected }: { resource: ResourceType; selected
           width={128}
         />
         {selected > 0 ? (
-          <span aria-hidden="true" className="dev-card-option__count">
+          <span
+            aria-hidden="true"
+            className="absolute -top-1.5 -right-1.5 grid min-w-5 h-5 place-items-center px-1 rounded-full bg-primary text-primary-foreground text-[0.62rem] font-black tabular-nums"
+          >
             {selected}
           </span>
         ) : null}
       </span>
-      <strong>{RESOURCE_LABELS[resource]}</strong>
+      <strong className="text-[0.68rem] font-bold truncate max-w-full text-foreground">
+        {RESOURCE_LABELS[resource]}
+      </strong>
     </>
   );
 }

@@ -88,7 +88,7 @@ export function TradeCenter({
   }, [closeDock, isOpen]);
 
   return (
-    <div className="trade-center" ref={tradeCenterRef}>
+    <div className="contents" ref={tradeCenterRef}>
       <ActionTile
         ariaControls={tradeOfferOpen ? "trade-offer-surface" : "trade-dock"}
         ariaExpanded={panelVisible}
@@ -102,7 +102,7 @@ export function TradeCenter({
         art={
           <Image
             alt=""
-            className="action-art action-card-art"
+            className="size-full rounded object-contain"
             draggable={false}
             height={768}
             loading="eager"
@@ -138,7 +138,7 @@ export function TradeCenter({
           <section
             aria-labelledby="trade-dock-title"
             autoFocus
-            className="hud-action-panel"
+            className="grid gap-3 p-4 rounded-2xl bg-card/95 border border-primary/20 shadow-2xl backdrop-blur-xl max-w-lg w-full text-card-foreground animate-in zoom-in-95 duration-200 focus:outline-none"
             id="trade-dock"
             tabIndex={-1}
           >
@@ -176,21 +176,27 @@ function TradePanelHeader({
   trailing?: ReactNode;
 }) {
   return (
-    <header className="hud-action-panel__header">
+    <header className="flex items-center justify-between gap-2">
       <div>
-        {eyebrow ? <p className="eyebrow">{eyebrow}</p> : null}
-        <h2 id={titleId}>{title}</h2>
+        {eyebrow ? (
+          <p className="m-0 text-[0.65rem] font-black tracking-wider uppercase text-foreground/60">
+            {eyebrow}
+          </p>
+        ) : null}
+        <h2 className="m-0 text-lg font-extrabold text-foreground leading-tight" id={titleId}>
+          {title}
+        </h2>
       </div>
       {trailing}
       {onClose ? (
         <Button
           aria-label="Close trade panel"
-          className="hud-action-panel__close"
+          className="size-8 rounded-full text-muted-foreground hover:text-foreground"
           size="icon-sm"
           onClick={onClose}
           variant="ghost"
         >
-          <Icon aria-hidden="true" icon={closeIcon} />
+          <Icon aria-hidden="true" className="size-4" icon={closeIcon} />
         </Button>
       ) : null}
     </header>
@@ -311,8 +317,8 @@ function TradeComposer({
   };
 
   return (
-    <div className="trade-composer">
-      <div className="trade-rows">
+    <div className="grid gap-3">
+      <div className="grid gap-2">
         <RequestedResourceRow
           disabled={disabled || !canComposeTrade}
           excludedResources={give}
@@ -329,25 +335,33 @@ function TradeComposer({
         />
       </div>
 
-      <fieldset className="trade-recipients">
-        <legend>Offer to</legend>
-        <div className="trade-recipient-list">
+      <fieldset className="grid gap-1.5 border border-white/10 rounded-xl p-2.5 bg-background/30">
+        <legend className="text-xs font-bold text-muted-foreground px-1">Offer to</legend>
+        <div className="flex flex-wrap gap-1.5">
           {opponents.map((player) => {
             const selected = recipientPlayerIds.includes(player.id);
             const theme = playerTheme(player.seatIndex);
             return (
               <Button
                 aria-pressed={selected}
-                className={`trade-recipient player-${theme}`}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-bold transition-all player-${theme} ${
+                  selected
+                    ? "bg-primary/15 border-primary text-foreground ring-2 ring-primary/20"
+                    : "bg-card/50 border-white/10 text-muted-foreground hover:text-foreground"
+                }`}
                 data-selected={selected || undefined}
                 disabled={disabled}
                 key={player.id}
                 onClick={() => toggleRecipient(player.id, !selected)}
                 variant="ghost"
               >
-                <span className="trade-player-avatar" aria-hidden="true">
+                <span
+                  className="size-4 rounded-full border border-[var(--player-color,var(--primary))] overflow-hidden"
+                  aria-hidden="true"
+                >
                   <Image
                     alt=""
+                    className="size-full object-cover"
                     draggable={false}
                     height={256}
                     sizes="1.6rem"
@@ -355,20 +369,31 @@ function TradeComposer({
                     width={256}
                   />
                 </span>
-                <span className="trade-recipient-name">{player.displayName}</span>
+                <span className="truncate max-w-[7rem]">{player.displayName}</span>
               </Button>
             );
           })}
         </div>
       </fieldset>
 
-      <footer className="trade-actions">
-        <p data-state={statusState} id="trade-composer-status" role="status">
+      <footer className="flex flex-col gap-2 pt-2 border-t border-white/10">
+        <p
+          className={`m-0 text-xs font-bold leading-normal ${
+            statusState === "ready"
+              ? "text-accent"
+              : statusState === "error"
+                ? "text-destructive"
+                : "text-muted-foreground"
+          }`}
+          data-state={statusState}
+          id="trade-composer-status"
+          role="status"
+        >
           {matchingBankTrade
             ? `Bank ${matchingBankTrade.ratio}:1 ${RESOURCE_LABELS[matchingBankTrade.give]} for ${RESOURCE_LABELS[matchingBankTrade.receive]} is ready.`
             : validationMessage}
         </p>
-        <div>
+        <div className="flex items-center justify-end gap-2">
           <Button
             aria-describedby="bank-trade-match-status"
             disabled={disabled || !matchingBankTrade}
@@ -388,7 +413,7 @@ function TradeComposer({
             }}
             variant="secondary"
           >
-            <Icon aria-hidden="true" icon={storeIcon} />
+            <Icon aria-hidden="true" className="size-4" icon={storeIcon} />
             {matchingBankTrade ? `Bank ${matchingBankTrade.ratio}:1` : "Bank trade"}
           </Button>
           <Button
@@ -401,7 +426,7 @@ function TradeComposer({
               )
             }
           >
-            <Icon aria-hidden="true" icon={handshakeIcon} />
+            <Icon aria-hidden="true" className="size-4" icon={handshakeIcon} />
             {disabled ? (
               <>
                 <Spinner data-icon="inline-start" /> Sending…
@@ -440,16 +465,12 @@ function RequestedResourceRow({
   };
 
   return (
-    <fieldset className="trade-row" data-direction="receive">
-      <legend>
-        <span className="trade-row-direction">
-          <Icon aria-hidden="true" icon={arrowDownIcon} />
-        </span>
-        <span>
-          <strong>You want</strong>
-        </span>
+    <fieldset className="grid gap-1.5 border border-white/10 rounded-xl p-2.5 bg-background/40">
+      <legend className="inline-flex items-center gap-1 text-xs font-bold text-foreground px-1">
+        <Icon aria-hidden="true" className="size-3.5 text-accent" icon={arrowDownIcon} />
+        <span>You want</span>
       </legend>
-      <div className="trade-picker">
+      <div className="grid grid-cols-5 gap-1.5">
         {RESOURCE_ORDER.map((resource) => {
           const quantity = inventory[resource];
           const conflicts = excludedResources[resource] > 0;
@@ -457,7 +478,11 @@ function RequestedResourceRow({
           const quantityDescriptionId = `receive-${resource}-trade-quantity`;
           return (
             <div
-              className="trade-picker-cell"
+              className={`relative grid justify-items-center rounded-xl border p-1 text-center transition-all ${
+                quantity > 0
+                  ? "bg-accent/15 border-accent/40 ring-2 ring-accent/20"
+                  : "bg-background/40 border-white/10 hover:bg-background/60"
+              }`}
               data-selected={quantity > 0 || undefined}
               key={resource}
             >
@@ -465,14 +490,14 @@ function RequestedResourceRow({
                 aria-describedby={quantityDescriptionId}
                 aria-label={`Add one ${RESOURCE_LABELS[resource]} to what you receive`}
                 aria-pressed={quantity > 0}
-                className="trade-picker-button"
+                className="grid size-full justify-items-center p-0 bg-transparent hover:bg-transparent shadow-none"
                 disabled={!canAdd}
                 onClick={() => update(resource, 1)}
                 variant="ghost"
               >
                 <Image
                   alt=""
-                  className="trade-picker-image"
+                  className="w-9 h-13 object-contain rounded"
                   draggable={false}
                   height={768}
                   sizes="3.5rem"
@@ -480,7 +505,10 @@ function RequestedResourceRow({
                   width={512}
                 />
                 {quantity > 0 ? (
-                  <span className="trade-picker-quantity" aria-hidden="true">
+                  <span
+                    className="absolute -top-1.5 -right-1.5 z-10 grid min-w-4 h-4 place-items-center px-1 rounded-full bg-accent text-accent-foreground text-[0.58rem] font-black tabular-nums shadow-sm"
+                    aria-hidden="true"
+                  >
                     {quantity}
                   </span>
                 ) : null}
@@ -488,13 +516,13 @@ function RequestedResourceRow({
               {quantity > 0 ? (
                 <Button
                   aria-label={`Remove one ${RESOURCE_LABELS[resource]} from what you receive`}
-                  className="trade-remove-button"
+                  className="size-5 p-0 rounded-full text-xs mt-1"
                   disabled={disabled}
                   size="icon-xs"
                   onClick={() => update(resource, -1)}
                   variant="secondary"
                 >
-                  <Icon aria-hidden="true" icon={minusIcon} />
+                  <Icon aria-hidden="true" className="size-3" icon={minusIcon} />
                 </Button>
               ) : null}
               <span className="sr-only" id={quantityDescriptionId}>
@@ -592,7 +620,7 @@ export function ActiveTradeOffer({
     <HandDockPortal>
       <section
         aria-labelledby="trade-offer-title"
-        className="hud-action-panel"
+        className="grid gap-3 p-4 rounded-2xl bg-card/95 border border-primary/20 shadow-2xl backdrop-blur-xl max-w-lg w-full text-card-foreground animate-in zoom-in-95 duration-200 focus:outline-none"
         data-role={viewerIsProposer ? "outgoing" : "incoming"}
         id="trade-offer-surface"
         ref={surfaceRef}
@@ -604,9 +632,13 @@ export function ActiveTradeOffer({
           titleId="trade-offer-title"
           trailing={
             proposer && !viewerIsProposer ? (
-              <span aria-hidden="true" className={`trade-offer-portrait player-${proposerTheme}`}>
+              <span
+                aria-hidden="true"
+                className={`size-8 rounded-full border-2 border-[var(--player-color,var(--primary))] overflow-hidden player-${proposerTheme}`}
+              >
                 <Image
                   alt=""
+                  className="size-full object-cover"
                   draggable={false}
                   height={256}
                   sizes="2.4rem"
@@ -623,30 +655,43 @@ export function ActiveTradeOffer({
           You receive {formatInventory(receive)}. You give {formatInventory(give)}.
         </p>
 
-        <div className="trade-exchange">
+        <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-stretch gap-2">
           <OfferInventoryRow
             availability={viewerIsProposer ? undefined : me.resources}
             direction="give"
             inventory={give}
             label="You give"
           />
-          <span aria-hidden="true" className="trade-exchange-divider">
-            <Icon icon={arrowRightIcon} />
+          <span
+            aria-hidden="true"
+            className="flex items-center justify-center text-muted-foreground"
+          >
+            <Icon className="size-5" icon={arrowRightIcon} />
           </span>
           <OfferInventoryRow direction="receive" inventory={receive} label="You receive" />
         </div>
 
         {viewerIsProposer ? (
-          <ul aria-label="Trade responses" className="trade-offer-responses">
+          <ul aria-label="Trade responses" className="grid gap-1.5 m-0 p-0 list-none">
             {offer.recipientPlayerIds.map((playerId) => {
               const player = game.players.find((candidate) => candidate.id === playerId);
               const rejected = offer.rejectedPlayerIds.includes(playerId);
               const theme = player ? playerTheme(player.seatIndex) : "red";
               return (
-                <li data-state={rejected ? "rejected" : "waiting"} key={playerId}>
-                  <span aria-hidden="true" className={`trade-player-avatar player-${theme}`}>
+                <li
+                  className={`flex items-center gap-2 p-2 rounded-lg border border-white/10 ${
+                    rejected ? "bg-destructive/15 text-destructive" : "bg-card/50 text-foreground"
+                  }`}
+                  data-state={rejected ? "rejected" : "waiting"}
+                  key={playerId}
+                >
+                  <span
+                    aria-hidden="true"
+                    className={`size-5 rounded-full border border-[var(--player-color,var(--primary))] overflow-hidden player-${theme}`}
+                  >
                     <Image
                       alt=""
+                      className="size-full object-cover"
                       draggable={false}
                       height={256}
                       sizes="1.6rem"
@@ -654,8 +699,12 @@ export function ActiveTradeOffer({
                       width={256}
                     />
                   </span>
-                  <span>{player?.displayName ?? "Invited player"}</span>
-                  <strong>{rejected ? "Rejected" : "Waiting"}</strong>
+                  <span className="text-xs font-bold">
+                    {player?.displayName ?? "Invited player"}
+                  </span>
+                  <strong className="ml-auto text-[0.65rem] font-black uppercase tracking-wider">
+                    {rejected ? "Rejected" : "Waiting"}
+                  </strong>
                 </li>
               );
             })}
@@ -663,9 +712,12 @@ export function ActiveTradeOffer({
         ) : null}
 
         {game.legalActions.canRespondToTrade ? (
-          <footer className="trade-offer-actions">
+          <footer className="flex flex-col gap-2 pt-2 border-t border-white/10">
             <p
               aria-live="polite"
+              className={`m-0 text-xs font-bold leading-normal ${
+                viewerCanAfford ? "text-accent" : "text-destructive"
+              }`}
               data-state={viewerCanAfford ? "ready" : "error"}
               id="trade-offer-affordability"
             >
@@ -673,14 +725,14 @@ export function ActiveTradeOffer({
                 ? `You can afford this · ${formatInventory(give)} ready`
                 : `Cannot accept · short ${formatInventory(missingResources)}`}
             </p>
-            <div>
+            <div className="flex items-center justify-end gap-2">
               <Button
                 data-action="reject"
                 disabled={disabled}
                 onClick={() => respond(false)}
                 variant="outline"
               >
-                <Icon aria-hidden="true" icon={closeIcon} />
+                <Icon aria-hidden="true" className="size-4" icon={closeIcon} />
                 {pendingResponse === "reject" ? (
                   <>
                     <Spinner data-icon="inline-start" /> Rejecting…
@@ -694,7 +746,7 @@ export function ActiveTradeOffer({
                 disabled={disabled || !viewerCanAfford}
                 onClick={() => respond(true)}
               >
-                <Icon aria-hidden="true" icon={checkIcon} />
+                <Icon aria-hidden="true" className="size-4" icon={checkIcon} />
                 {pendingResponse === "accept" ? (
                   <>
                     <Spinner data-icon="inline-start" /> Accepting…
@@ -706,7 +758,7 @@ export function ActiveTradeOffer({
             </div>
           </footer>
         ) : game.legalActions.canCancelTrade ? (
-          <footer className="trade-offer-actions">
+          <footer className="flex justify-end pt-2 border-t border-white/10">
             <Button
               disabled={disabled}
               onClick={() => {
@@ -732,7 +784,7 @@ export function ActiveTradeOffer({
             </Button>
           </footer>
         ) : (
-          <p className="trade-offer-status" role="status">
+          <p className="m-0 text-xs text-muted-foreground" role="status">
             {offer.rejectedPlayerIds.includes(game.viewerPlayerId)
               ? "You rejected this offer. Other invited players may still accept."
               : "Waiting for an invited player to answer."}
@@ -765,45 +817,54 @@ function OfferInventoryRow({
 
   return (
     <section
-      className="trade-row"
+      className="grid gap-1.5 border border-white/10 rounded-xl p-2.5 bg-background/40"
       data-direction={direction}
       data-removable={onRemove ? "true" : undefined}
     >
-      <header>
-        <span className="trade-row-direction">
-          <Icon aria-hidden="true" icon={directionIcon} />
-        </span>
+      <header className="inline-flex items-center gap-1 text-xs font-bold text-foreground">
+        <Icon aria-hidden="true" className="size-3.5 text-accent" icon={directionIcon} />
         <strong>{label}</strong>
       </header>
       {resources.length > 0 ? (
-        <ul>
+        <ul className="flex flex-wrap gap-2 m-0 p-0 list-none">
           {resources.map((resource) => {
             const missing = Math.max(0, inventory[resource] - (availability?.[resource] ?? 19));
             return (
-              <li data-missing={missing > 0 || undefined} key={resource}>
+              <li
+                className="relative inline-flex items-center gap-1.5 p-1 rounded-lg bg-card/60 border border-white/10"
+                data-missing={missing > 0 || undefined}
+                key={resource}
+              >
                 <Image
                   alt=""
-                  className="trade-card-thumb"
+                  className="w-7 h-10 object-contain rounded"
                   draggable={false}
                   height={768}
                   sizes="2.8rem"
                   src={RESOURCE_CARD_ASSET_PATHS[resource]}
                   width={512}
                 />
-                <strong aria-label={`${inventory[resource]} ${RESOURCE_LABELS[resource]}`}>
+                <strong
+                  aria-label={`${inventory[resource]} ${RESOURCE_LABELS[resource]}`}
+                  className="text-xs font-black tabular-nums text-foreground"
+                >
                   {inventory[resource]}
                 </strong>
-                {missing > 0 ? <small>Need {missing}</small> : null}
+                {missing > 0 ? (
+                  <small className="text-[0.62rem] font-bold text-destructive">
+                    Need {missing}
+                  </small>
+                ) : null}
                 {onRemove ? (
                   <Button
                     aria-label={`Remove one ${RESOURCE_LABELS[resource]} from your offer`}
-                    className="trade-remove-inline"
+                    className="size-5 p-0 rounded-full text-xs text-muted-foreground hover:text-foreground"
                     disabled={disabled}
                     size="icon-xs"
                     onClick={() => onRemove(resource)}
                     variant="ghost"
                   >
-                    <Icon aria-hidden="true" icon={minusIcon} />
+                    <Icon aria-hidden="true" className="size-3" icon={minusIcon} />
                   </Button>
                 ) : null}
               </li>
@@ -811,7 +872,9 @@ function OfferInventoryRow({
           })}
         </ul>
       ) : (
-        <p className="trade-row-empty">{emptyMessage ?? "No cards selected."}</p>
+        <p className="m-0 text-xs italic text-muted-foreground/70 py-1">
+          {emptyMessage ?? "No cards selected."}
+        </p>
       )}
     </section>
   );

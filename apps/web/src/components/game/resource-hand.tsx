@@ -183,17 +183,23 @@ export function ResourceHand({
   };
 
   return (
-    <section aria-label="Your cards" className="resource-hand">
+    <section
+      aria-label="Your cards"
+      className="relative grid w-max max-w-full min-w-0 content-start gap-1 p-1 sm:p-1.5 rounded-2xl bg-card/85 backdrop-blur-md shadow-xl border border-white/10"
+    >
       {notice}
-      <div className="hand-dock" id={HAND_DOCK_ROOT_ID} />
-      <div className="hand-viewport">
+      <div
+        className="absolute z-60 bottom-[calc(100%+0.5rem)] left-0 w-[min(34rem,92vw)]"
+        id={HAND_DOCK_ROOT_ID}
+      />
+      <div className="relative min-w-0">
         <ul
           aria-label={
             resourceListOverflows
               ? "Your private cards. Use the left and right arrow keys to scroll."
               : undefined
           }
-          className="resource-card-list"
+          className="flex w-max max-w-full min-w-0 items-stretch gap-1.5 pt-1 m-0 overflow-x-auto overflow-y-hidden list-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           ref={resourceListRef}
           tabIndex={resourceListOverflows ? 0 : undefined}
         >
@@ -205,6 +211,7 @@ export function ResourceHand({
             const available = me.resources[resource] - selected;
             const preserveHandAppearance = interaction?.preserveHandAppearance === true;
             const displayedCount = preserveHandAppearance ? me.resources[resource] : available;
+            const isEmpty = displayedCount === 0;
 
             return (
               <li
@@ -213,15 +220,13 @@ export function ResourceHand({
                     ? `${RESOURCE_LABELS[resource]}: ${available} available, ${selected} selected for ${interaction.label}`
                     : `${RESOURCE_LABELS[resource]}: ${me.resources[resource]}`
                 }
-                className={[
-                  "resource-card",
-                  "resource-card-face",
-                  `resource-${resource}`,
-                  selected > 0 && !preserveHandAppearance ? "is-selected" : "",
-                  interaction && interactionMatchesSource ? "is-selectable" : "",
-                ]
-                  .filter(Boolean)
-                  .join(" ")}
+                className={`relative grid w-16 min-w-16 grid-rows-[auto_0.75rem] gap-0.5 rounded-lg transition-all duration-150 ${
+                  selected > 0 && !preserveHandAppearance ? "brightness-110 -translate-y-0.5" : ""
+                } ${interaction && interactionMatchesSource ? "cursor-pointer" : ""} ${
+                  isEmpty
+                    ? "opacity-60 saturate-50 brightness-75"
+                    : "hover:brightness-105 hover:-translate-y-0.5"
+                }`}
                 data-empty={displayedCount === 0 ? "true" : undefined}
                 data-selected={selected > 0 && !preserveHandAppearance ? "true" : undefined}
                 key={resource}
@@ -229,28 +234,40 @@ export function ResourceHand({
                   selected > 0 ? ` · ${selected} selected` : ""
                 }`}
               >
-                <span className="resource-card-art" aria-hidden="true">
+                <span
+                  className="block w-full aspect-[2/3] rounded-lg overflow-hidden"
+                  aria-hidden="true"
+                >
                   <GameCardArtwork
-                    className="resource-card-image"
+                    className="size-full rounded-lg object-contain"
                     path={RESOURCE_CARD_ASSET_PATHS[resource]}
                     sizes="4.5rem"
                   />
                 </span>
-                <span aria-hidden="true" className="resource-card-count">
+                <span
+                  aria-hidden="true"
+                  className="absolute -top-1.5 -right-1.5 z-10 grid min-w-5 h-5 place-items-center px-1 rounded-full bg-primary text-primary-foreground text-[0.66rem] font-black tabular-nums pointer-events-none shadow-sm"
+                >
                   {displayedCount}
                 </span>
                 {selected > 0 && !preserveHandAppearance ? (
-                  <span aria-hidden="true" className="resource-card-selected">
+                  <span
+                    aria-hidden="true"
+                    className="absolute z-10 right-1/2 bottom-3.5 translate-x-1/2 px-1.5 py-0.5 rounded-full bg-accent text-accent-foreground text-[0.55rem] font-black pointer-events-none whitespace-nowrap shadow-sm"
+                  >
                     {selected} selected
                   </span>
                 ) : null}
-                <span aria-hidden="true" className="resource-card-name">
+                <span
+                  aria-hidden="true"
+                  className="self-center truncate text-center text-[0.52rem] font-extrabold text-muted-foreground leading-none"
+                >
                   {RESOURCE_LABELS[resource]}
                 </span>
                 {interaction && interactionMatchesSource ? (
                   <Button
                     aria-label={`Move one ${RESOURCE_LABELS[resource]} from your hand to ${interaction.label}`}
-                    className="resource-card-select"
+                    className="absolute inset-0 z-10 size-full p-0 rounded-lg bg-transparent hover:bg-transparent"
                     disabled={interaction.disabled || available === 0}
                     onClick={() => interaction.onSelect(resource)}
                     variant="ghost"
@@ -264,7 +281,10 @@ export function ResourceHand({
             );
           })}
           {developmentCardCounts.length > 0 ? (
-            <li aria-hidden="true" className="hand-card-divider" />
+            <li
+              aria-hidden="true"
+              className="w-0.5 min-w-0.5 self-center h-4/5 rounded-full bg-gradient-to-b from-transparent via-white/20 to-transparent pointer-events-none"
+            />
           ) : null}
           {developmentCardCounts.map((card) => {
             const playable =
@@ -272,18 +292,20 @@ export function ResourceHand({
             return (
               <li
                 aria-label={`${card.label} development cards: ${card.count}. ${card.description}`}
-                className={[
-                  "resource-card resource-card-face development-card-face",
-                  playable ? "is-playable" : "",
-                ]
-                  .filter(Boolean)
-                  .join(" ")}
+                className={`relative grid w-16 min-w-16 grid-rows-[auto_0.75rem] gap-0.5 rounded-lg transition-all duration-150 ${
+                  playable
+                    ? "cursor-pointer hover:brightness-105 hover:-translate-y-0.5"
+                    : "opacity-80"
+                }`}
                 key={card.id}
               >
-                <span className="resource-card-art" aria-hidden="true">
+                <span
+                  className="block w-full aspect-[2/3] rounded-lg overflow-hidden"
+                  aria-hidden="true"
+                >
                   <Image
                     alt=""
-                    className="resource-card-image"
+                    className="size-full rounded-lg object-contain"
                     draggable={false}
                     height={768}
                     loading="eager"
@@ -292,10 +314,16 @@ export function ResourceHand({
                     width={512}
                   />
                 </span>
-                <span aria-hidden="true" className="resource-card-count">
+                <span
+                  aria-hidden="true"
+                  className="absolute -top-1.5 -right-1.5 z-10 grid min-w-5 h-5 place-items-center px-1 rounded-full bg-primary text-primary-foreground text-[0.66rem] font-black tabular-nums pointer-events-none shadow-sm"
+                >
                   {card.count}
                 </span>
-                <span aria-hidden="true" className="resource-card-name">
+                <span
+                  aria-hidden="true"
+                  className="self-center truncate text-center text-[0.52rem] font-extrabold text-muted-foreground leading-none"
+                >
                   {card.label}
                 </span>
                 <DevelopmentCardButton
@@ -375,7 +403,7 @@ function DevelopmentCardButton({
   return (
     <Button
       aria-label={`${label} development cards: ${count}. ${description} ${status}`}
-      className="resource-card-select"
+      className="absolute inset-0 z-10 size-full p-0 rounded-lg bg-transparent hover:bg-transparent"
       disabled={pending || !playable}
       onClick={() => {
         if (card !== "victory-point") {

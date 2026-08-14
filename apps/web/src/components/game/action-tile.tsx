@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import type { ReactNode } from "react";
 
 export type ActionTileSize = "dock" | "poster";
@@ -55,33 +56,50 @@ export function ActionTile({
       aria-haspopup={ariaHasPopup}
       aria-label={ariaLabel}
       aria-pressed={pressed}
-      className={[
-        "action-button",
-        "action-tile",
-        "action-tile-preset",
-        `action-tile-preset--${size}`,
-        pressed ? "is-selected" : "",
-        unavailable ? "is-unavailable" : "",
+      className={cn(
+        "relative grid justify-items-center h-auto min-h-0 p-1 text-center select-none transition-all duration-150",
+        size === "dock"
+          ? "w-[3.9rem] bg-transparent hover:bg-transparent border-0 rounded-md gap-0.5"
+          : "w-[4.6rem] bg-background/40 hover:bg-card/80 border border-white/5 rounded-lg gap-1 p-1.5",
+        pressed && (size === "dock" ? "brightness-110" : "bg-primary/20 border-primary/40"),
+        unavailable && "opacity-60 cursor-not-allowed",
         className,
-      ]
-        .filter(Boolean)
-        .join(" ")}
+      )}
       data-action-kind={kind}
       disabled={disabled || unavailable}
       onClick={handleClick}
       variant="secondary"
     >
       {count === undefined ? null : (
-        <span aria-hidden="true" className="action-count">
+        <span
+          aria-hidden="true"
+          className="absolute -top-1.5 -right-1.5 z-10 grid min-w-5 h-5 place-items-center px-1 rounded-full bg-primary text-primary-foreground text-[0.62rem] font-black tabular-nums leading-none pointer-events-none shadow-sm"
+        >
           {count}
         </span>
       )}
-      <span aria-hidden="true" className="action-tile-preset__art">
+      <span
+        aria-hidden="true"
+        className={cn(
+          "grid w-full place-items-center aspect-[2/3] object-contain transition-transform duration-150",
+          size === "dock" && !unavailable && "hover:-translate-y-0.5 hover:brightness-105",
+        )}
+      >
         {art}
       </span>
-      <strong className="action-tile-preset__title">{title}</strong>
-      {meta ? <span className="action-tile-preset__meta">{meta}</span> : null}
-      {caption ? <small className="action-tile-preset__caption">{caption}</small> : null}
+      <strong className="text-[0.66rem] font-extrabold leading-tight text-foreground max-w-full truncate">
+        {title}
+      </strong>
+      {meta ? (
+        <span className="text-[0.58rem] text-muted-foreground leading-tight max-w-full truncate">
+          {meta}
+        </span>
+      ) : null}
+      {caption ? (
+        <small className="text-[0.55rem] text-muted-foreground/80 leading-tight max-w-full truncate">
+          {caption}
+        </small>
+      ) : null}
     </Button>
   );
 }

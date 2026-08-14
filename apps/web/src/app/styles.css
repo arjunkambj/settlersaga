@@ -2,11 +2,6 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @plugin "@tailwindcss/typography";
-/* Game table styles. Deliberately unlayered: several game surfaces reshape a
-   shadcn Button (action tiles, card hit areas), and unlayered rules win over
-   Tailwind's layered utilities, so the component's own sizing does not fight
-   the tile shape. */
-@import "./game.css";
 
 @custom-variant dark (&:where(.dark, .dark *));
 
@@ -160,5 +155,510 @@ body {
   }
   html {
     @apply font-sans;
+  }
+}
+
+/* ============================================================================
+   Game Table, Board Canvas, Piece SVGs, and Animations
+   ========================================================================= */
+
+.game-shell {
+  /* Surfaces */
+  --hud-surface: color-mix(in oklch, var(--card) 82%, transparent);
+  --hud-surface-deep: color-mix(in oklch, var(--background) 78%, black 8%);
+  --hud-surface-raised: color-mix(in oklch, var(--card), var(--accent) 8%);
+
+  /* Lines, glows and shadows */
+  --hud-line: color-mix(in oklch, var(--accent) 18%, transparent);
+  --hud-line-strong: color-mix(in oklch, var(--accent) 38%, transparent);
+  --hud-glow: var(--primary);
+  --hud-shadow: 0 14px 34px color-mix(in oklch, var(--background) 70%, black);
+  --hud-shadow-sm: 0 6px 16px color-mix(in oklch, var(--background) 65%, black);
+  --hud-inset: max(0.7rem, env(safe-area-inset-top));
+  --hud-inset-x: max(0.85rem, env(safe-area-inset-right));
+  --hud-inset-bottom: max(0.7rem, env(safe-area-inset-bottom));
+  --hud-inset-left: max(0.85rem, env(safe-area-inset-left));
+
+  /* Text ramp */
+  --hud-text: var(--foreground);
+  --hud-text-muted: color-mix(in oklch, var(--foreground) 86%, transparent);
+  --hud-text-faint: color-mix(in oklch, var(--foreground) 68%, transparent);
+
+  /* Rhythm */
+  --hud-gap: 0.75rem;
+  --hud-rail: clamp(360px, 30vw, 460px);
+  --hud-radius: var(--radius-lg);
+
+  /* Dice — ivory + ember pairing from the menu art, mixed from theme tokens */
+  --die-ivory-body: var(--primary);
+  --die-ivory-base: color-mix(in oklch, var(--primary) 62%, var(--primary-foreground));
+  --die-ivory-well: color-mix(in oklch, var(--primary) 88%, var(--primary-foreground));
+  --die-ivory-shine: color-mix(in oklch, var(--primary) 38%, white);
+  --die-ivory-pip: var(--accent);
+  --die-ivory-pip-core: color-mix(in oklch, var(--accent) 42%, white);
+  --die-ember-body: var(--chart-5);
+  --die-ember-base: color-mix(in oklch, var(--chart-5) 68%, black);
+  --die-ember-well: color-mix(in oklch, var(--chart-5) 82%, black);
+  --die-ember-shine: color-mix(in oklch, var(--chart-5) 48%, var(--primary));
+  --die-ember-pip: var(--primary);
+  --die-ember-pip-core: color-mix(in oklch, var(--primary) 55%, white);
+
+  position: relative;
+  isolation: isolate;
+  display: block;
+  width: 100%;
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--background);
+  color: var(--hud-text);
+}
+
+/* --------------------------------------------------------------------------
+   Board scene
+   ----------------------------------------------------------------------- */
+
+.board-shell {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  display: grid;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  place-items: center;
+  /* Keep the island in the open well so floating HUD does not cover ports. */
+  padding: 3.25rem calc(var(--hud-rail) + var(--hud-inset-x) + 0.6rem) 8.5rem var(--hud-inset-left);
+  border: 0;
+  border-radius: 0;
+  overflow: hidden;
+  background: url("/game-assets/ui/ocean-board-canvas.webp") center / cover no-repeat;
+  box-shadow: none;
+  container-type: size;
+  cursor: default;
+  touch-action: none;
+  user-select: none;
+}
+
+.board-shell.is-dragging {
+  cursor: grabbing;
+}
+
+.board-shell.is-placing {
+  box-shadow: none;
+}
+
+/* The stage keeps the board's 10:11 aspect ratio inside whatever space the
+   shell has, using container query units so it tracks the shell, not the
+   viewport. */
+.board-stage {
+  position: relative;
+  width: min(100cqw, calc(100cqh * 0.9091));
+  isolation: isolate;
+}
+
+.game-board {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  inset: 0;
+  isolation: isolate;
+  /* Overwritten inline by the board camera; this is the at-rest value. */
+  transform: translate3d(0, 0, 0) scale(1);
+  transform-origin: center;
+  backface-visibility: hidden;
+  will-change: transform;
+}
+
+.board-canvas-layer {
+  display: block;
+}
+
+.board-canvas-static {
+  z-index: 0;
+}
+
+.board-canvas-dynamic {
+  z-index: 1;
+}
+
+/* Invisible hover/focus targets layered over the canvas artwork. */
+.board-hit-target {
+  position: absolute;
+  z-index: 10;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: inherit;
+  outline: none;
+  transform: translate(-50%, -50%) rotate(var(--hit-rotation, 0deg));
+}
+
+.port-hit-target {
+  width: clamp(42px, 7%, 64px);
+  aspect-ratio: 3 / 4;
+}
+
+.piece-hit-target-road {
+  width: 10.6%;
+  aspect-ratio: 2 / 1;
+}
+
+.board-inspectable {
+  cursor: inherit;
+  outline: none;
+}
+
+.board-hit-target:focus-visible {
+  z-index: 30;
+  outline: 3px solid var(--hud-glow);
+  outline-offset: 3px;
+  filter: drop-shadow(0 0 8px var(--hud-glow));
+}
+
+/* Legal placement targets. */
+.build-target {
+  position: absolute;
+  z-index: 20;
+  display: grid;
+  width: max(46px, 5.8%);
+  height: max(46px, 5.8%);
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  box-shadow: none;
+  cursor: pointer;
+  transform: translate(-50%, -50%) rotate(var(--target-rotation, 0deg));
+}
+
+.build-target:focus-visible {
+  outline: 2px solid var(--hud-glow);
+  outline-offset: 2px;
+}
+
+.board-shell.is-interacting .board-hit-target,
+.board-shell.is-interacting .build-target {
+  pointer-events: none;
+}
+
+/* --------------------------------------------------------------------------
+   Resource gain/spend flights
+   ----------------------------------------------------------------------- */
+
+.resource-flight-layer {
+  position: absolute;
+  z-index: 8;
+  inset: 0;
+  display: grid;
+  grid-template-columns: repeat(5, 3.9rem);
+  grid-template-rows: minmax(0, 1fr);
+  align-items: center;
+  justify-content: start;
+  justify-items: center;
+  gap: 0.4rem;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.resource-flight-anchor {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  grid-row: 1;
+  pointer-events: none;
+}
+
+.resource-flight {
+  --resource-flight-delay: 0ms;
+  --resource-flight-tilt: 0deg;
+  --resource-flight-x: 0rem;
+  --resource-flight-y: 5rem;
+
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: min(72%, 2.65rem);
+  aspect-ratio: 2 / 3;
+  border-radius: 0.4rem;
+  box-shadow: none;
+  opacity: 0;
+  pointer-events: none;
+  transform-origin: center;
+  will-change: opacity, transform;
+}
+
+.resource-flight--receive {
+  animation: receive-resource-card 560ms cubic-bezier(0.22, 0.74, 0.2, 1)
+    var(--resource-flight-delay) both;
+}
+
+.resource-flight--spend {
+  animation: spend-resource-card 540ms cubic-bezier(0.42, 0, 0.26, 1) var(--resource-flight-delay)
+    both;
+}
+
+.resource-flight-image {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: contain;
+}
+
+.resource-flight-badge {
+  position: absolute;
+  top: -0.35rem;
+  right: -0.45rem;
+  display: grid;
+  min-width: 1.4rem;
+  min-height: 1.4rem;
+  place-items: center;
+  padding-inline: 0.25rem;
+  border: 2px solid var(--background);
+  border-radius: 999px;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-size: 0.64rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.resource-flight--spend .resource-flight-badge {
+  background: var(--destructive);
+  color: var(--destructive-foreground);
+}
+
+@keyframes receive-resource-card {
+  0% {
+    opacity: 0;
+    transform: translate(
+        calc(-50% + var(--resource-flight-x)),
+        calc(-50% - var(--resource-flight-y))
+      )
+      rotate(var(--resource-flight-tilt)) scale(0.56);
+  }
+
+  16% {
+    opacity: 1;
+  }
+
+  88% {
+    opacity: 1;
+    transform: translate(-50%, -50%) rotate(0deg) scale(1.04);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(0deg) scale(1);
+  }
+}
+
+@keyframes spend-resource-card {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) rotate(0deg) scale(0.96);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(
+        calc(-50% + var(--resource-flight-x)),
+        calc(-50% - var(--resource-flight-y))
+      )
+      rotate(var(--resource-flight-tilt)) scale(0.54);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Piece icons, dice, and player palettes
+   ----------------------------------------------------------------------- */
+
+/* Piece icons tint a PNG silhouette with the owning player's colour. */
+.piece-icon {
+  position: relative;
+  display: inline-grid;
+  width: 1.5rem;
+  height: 1.5rem;
+  place-items: center;
+}
+
+.piece-icon > img,
+.piece-icon > .piece-color {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  inset: 0;
+  object-fit: contain;
+}
+
+.piece-icon > .piece-color {
+  background: var(--player-color, var(--primary));
+  mask: var(--piece-mask) center / contain no-repeat;
+}
+
+.piece-icon-road > img,
+.piece-icon-road > .piece-color {
+  transform: rotate(-30deg);
+}
+
+/* Dice */
+.die-pair {
+  display: flex;
+  align-items: center;
+  gap: 0.18rem;
+}
+
+.die-face {
+  display: block;
+  flex: none;
+  width: 1.75rem;
+  height: 1.75rem;
+  overflow: visible;
+  transform-origin: center;
+}
+
+.die-face--ivory {
+  --die-body: var(--die-ivory-body);
+  --die-base: var(--die-ivory-base);
+  --die-well: var(--die-ivory-well);
+  --die-shine: var(--die-ivory-shine);
+  --die-pip: var(--die-ivory-pip);
+  --die-pip-core: var(--die-ivory-pip-core);
+}
+
+.die-face--ember {
+  --die-body: var(--die-ember-body);
+  --die-base: var(--die-ember-base);
+  --die-well: var(--die-ember-well);
+  --die-shine: var(--die-ember-shine);
+  --die-pip: var(--die-ember-pip);
+  --die-pip-core: var(--die-ember-pip-core);
+}
+
+.die-face__shadow {
+  fill: color-mix(in oklch, var(--background) 40%, black);
+  opacity: 0.42;
+}
+
+.die-face__base {
+  fill: var(--die-base);
+}
+
+.die-face__body {
+  fill: var(--die-body);
+}
+
+.die-face__well {
+  fill: var(--die-well);
+}
+
+.die-face__shine {
+  fill: var(--die-shine);
+  opacity: 0.55;
+}
+
+.die-face__pip {
+  fill: var(--die-pip);
+}
+
+.die-face__pip-core {
+  fill: var(--die-pip-core);
+  opacity: 0.55;
+}
+
+@keyframes die-idle {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-5deg);
+  }
+
+  50% {
+    transform: translateY(-0.12rem) rotate(4deg);
+  }
+}
+
+/* Player palette — keep in sync with `@settersaga/game` PLAYER_COLORS. */
+.player-red {
+  --player-color: #f36159;
+}
+
+.player-blue {
+  --player-color: #4fb0ff;
+}
+
+.player-orange {
+  --player-color: #f79a3c;
+}
+
+.player-green {
+  --player-color: #3fc97c;
+}
+
+.player-purple {
+  --player-color: #9b74ea;
+}
+
+.player-teal {
+  --player-color: #2bb8b8;
+}
+
+.player-yellow {
+  --player-color: #e0b23a;
+}
+
+.player-pink {
+  --player-color: #ec6aa0;
+}
+
+/* --------------------------------------------------------------------------
+   Responsive & Accessibility
+   ----------------------------------------------------------------------- */
+
+@media (max-width: 1100px) {
+  .game-shell {
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    min-height: 100dvh;
+    gap: var(--hud-gap);
+    padding: var(--hud-inset) var(--hud-inset-x) var(--hud-inset-bottom) var(--hud-inset-left);
+    overflow: visible;
+  }
+
+  .board-shell {
+    position: relative;
+    inset: auto;
+    z-index: auto;
+    width: auto;
+    height: 58vh;
+    min-height: 20rem;
+    flex: 0 0 auto;
+    order: 2;
+    padding: 0.35rem;
+    border: 0;
+    border-radius: var(--hud-radius);
+    box-shadow: none;
+    pointer-events: auto;
+  }
+}
+
+@media (max-width: 720px) {
+  .game-shell {
+    --hud-gap: 0.5rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .resource-flight {
+    display: none;
+    animation: none;
+  }
+
+  .target-robber::after {
+    transition: none;
+    animation: none;
   }
 }

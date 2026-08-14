@@ -78,25 +78,30 @@ export function WinOverlay({
       aria-describedby="win-detail"
       aria-labelledby="win-title"
       aria-modal="true"
-      className="win-overlay"
+      className="fixed inset-0 z-40 flex h-dvh w-full flex-col items-center overflow-auto p-3 sm:p-4 text-foreground"
       role="dialog"
     >
-      <div aria-hidden="true" className="win-scene">
+      <div
+        aria-hidden="true"
+        className="fixed inset-0 z-0 overflow-hidden pointer-events-none after:absolute after:inset-0 after:bg-[radial-gradient(58rem_28rem_at_50%_18%,color-mix(in_oklch,var(--primary)_22%,transparent),transparent_70%)] after:bg-background/70"
+      >
         <Image
           alt=""
-          className="win-scene-art"
+          className="object-cover"
           fill
           priority
           sizes="100vw"
           src={VICTORY_SCENE_PATH}
         />
       </div>
-      <div className={`win-card player-${featuredTheme}`}>
-        <header className="win-card-header">
+      <div
+        className={`relative z-10 grid w-full max-w-[52rem] my-auto gap-4 rounded-2xl border border-primary/30 bg-card/90 p-4 sm:p-5 shadow-2xl text-card-foreground backdrop-blur-xl animate-in fade-in zoom-in-95 duration-300 player-${featuredTheme}`}
+      >
+        <header className="relative grid justify-items-center text-center gap-0">
           <Image
             alt=""
             aria-hidden="true"
-            className="win-flourish"
+            className="w-full max-w-[34rem] max-h-[8.5rem] -mb-6 object-contain drop-shadow-xl animate-in fade-in duration-500"
             draggable={false}
             height={512}
             priority
@@ -104,11 +109,15 @@ export function WinOverlay({
             src={VICTORY_FLOURISH_PATH}
             width={1536}
           />
-          <div className="win-hero">
+          <div className="grid justify-items-center gap-2.5">
             {featuredPlayer ? (
-              <span className="win-avatar" aria-hidden="true">
+              <span
+                aria-hidden="true"
+                className="relative grid size-24 sm:size-28 place-items-center rounded-full border-3 border-[var(--player-color,var(--primary))] bg-card shadow-2xl shadow-black/60 ring-6 ring-[var(--player-color,var(--primary))]/20"
+              >
                 <Image
                   alt=""
+                  className="size-full rounded-full object-cover"
                   draggable={false}
                   height={256}
                   src={featuredPortrait}
@@ -117,39 +126,56 @@ export function WinOverlay({
                 />
               </span>
             ) : null}
-            <div className="win-hero-copy">
-              <p className="eyebrow">{copy.kicker}</p>
-              <h2 className="win-title" id="win-title">
+            <div className="grid min-w-0 justify-items-center gap-1">
+              <p className="m-0 text-[0.65rem] font-black tracking-wider uppercase text-foreground/60">
+                {copy.kicker}
+              </p>
+              <h2
+                className="m-0 max-w-full text-2xl sm:text-3xl font-extrabold leading-tight text-balance text-foreground"
+                id="win-title"
+              >
                 {copy.title}
               </h2>
-              <p className="win-detail" id="win-detail">
+              <p className="m-0 max-w-md text-sm text-muted-foreground text-pretty" id="win-detail">
                 {copy.detail}
               </p>
             </div>
           </div>
         </header>
-        <div className="win-card-body">
-          <section aria-labelledby="score-breakdown-title" className="win-score-panel">
-            <div className="win-score-heading">
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <section
+            aria-labelledby="score-breakdown-title"
+            className="grid content-start gap-2.5 rounded-xl border border-white/10 bg-background/40 p-3.5"
+          >
+            <div className="flex items-center justify-between gap-2">
               <div>
-                <p className="eyebrow">{isDraw ? "Top score" : "Champion score"}</p>
-                <h3 id="score-breakdown-title">How the points landed</h3>
+                <p className="m-0 text-[0.6rem] font-black tracking-wider uppercase text-foreground/60">
+                  {isDraw ? "Top score" : "Champion score"}
+                </p>
+                <h3 className="m-0 text-sm font-bold text-foreground" id="score-breakdown-title">
+                  How the points landed
+                </h3>
               </div>
-              <strong className="win-total-score">
+              <strong className="inline-flex items-baseline gap-1 min-w-14 justify-center px-2.5 py-1 rounded-full border border-primary/40 bg-primary/15 text-primary text-xl font-black tabular-nums leading-none">
                 <span>{featuredScore}</span>
-                <small>VP</small>
+                <small className="text-[0.62rem] font-extrabold">VP</small>
               </strong>
             </div>
-            <ul className="win-point-breakdown">
+
+            <ul className="grid gap-0.5 m-0 p-0 list-none">
               {pointBreakdown.map((source) => (
                 <li
-                  className="win-point-source"
+                  className={`grid grid-cols-[2.4rem_minmax(0,1fr)_auto] items-center gap-2 py-1.5 border-t border-white/10 first:border-t-0 ${
+                    source.points === 0 ? "opacity-50" : ""
+                  }`}
                   data-empty={source.points === 0 ? "true" : undefined}
                   key={source.label}
                 >
-                  <span className="win-point-source-art" aria-hidden="true">
+                  <span className="grid size-9 place-items-center" aria-hidden="true">
                     <Image
                       alt=""
+                      className="size-9 object-contain"
                       draggable={false}
                       height={source.assetHeight}
                       sizes="3.25rem"
@@ -157,27 +183,42 @@ export function WinOverlay({
                       width={source.assetWidth}
                     />
                   </span>
-                  <span>
-                    <strong>{source.label}</strong>
-                    <small>{source.detail}</small>
+                  <span className="grid min-w-0 gap-0.5">
+                    <strong className="text-xs font-bold text-foreground">{source.label}</strong>
+                    <small className="text-[0.68rem] text-muted-foreground">{source.detail}</small>
                   </span>
-                  <b>{source.points}</b>
+                  <b
+                    className={`text-base font-black tabular-nums ${
+                      source.points === 0 ? "text-muted-foreground" : "text-primary"
+                    }`}
+                  >
+                    {source.points}
+                  </b>
                 </li>
               ))}
             </ul>
+
             {featuredPlayer ? (
-              <div aria-label="Match statistics" className="win-match-stats">
-                <span>
-                  <small>Turns</small>
-                  <strong>{game.turnNumber}</strong>
+              <div aria-label="Match statistics" className="grid grid-cols-3 gap-1.5 pt-1">
+                <span className="grid justify-items-center gap-0.5 rounded-lg border border-white/10 bg-card/40 p-2 text-center">
+                  <small className="text-[0.62rem] font-bold text-muted-foreground">Turns</small>
+                  <strong className="text-base font-extrabold tabular-nums text-foreground">
+                    {game.turnNumber}
+                  </strong>
                 </span>
-                <span>
-                  <small>Longest road</small>
-                  <strong>{longestRoad}</strong>
+                <span className="grid justify-items-center gap-0.5 rounded-lg border border-white/10 bg-card/40 p-2 text-center">
+                  <small className="text-[0.62rem] font-bold text-muted-foreground">
+                    Longest road
+                  </small>
+                  <strong className="text-base font-extrabold tabular-nums text-foreground">
+                    {longestRoad}
+                  </strong>
                 </span>
-                <span>
-                  <small>Knights played</small>
-                  <strong>
+                <span className="grid justify-items-center gap-0.5 rounded-lg border border-white/10 bg-card/40 p-2 text-center">
+                  <small className="text-[0.62rem] font-bold text-muted-foreground">
+                    Knights played
+                  </small>
+                  <strong className="text-base font-extrabold tabular-nums text-foreground">
                     {
                       featuredPlayer.playedDevelopmentCards.filter((card) => card === "knight")
                         .length
@@ -188,35 +229,63 @@ export function WinOverlay({
             ) : null}
           </section>
 
-          <section aria-labelledby="final-standings-title" className="win-standings">
-            <div className="win-standings-heading">
-              <p className="eyebrow">Final standings</p>
-              <h3 id="final-standings-title">The table</h3>
+          <section
+            aria-labelledby="final-standings-title"
+            className="grid content-start gap-2.5 rounded-xl border border-white/10 bg-background/40 p-3.5"
+          >
+            <div className="flex flex-col gap-0.5">
+              <p className="m-0 text-[0.6rem] font-black tracking-wider uppercase text-foreground/60">
+                Final standings
+              </p>
+              <h3 className="m-0 text-sm font-bold text-foreground" id="final-standings-title">
+                The table
+              </h3>
             </div>
-            <ol>
+            <ol className="grid gap-1.5 m-0 p-0 list-none">
               {standings.map(({ player, score }, index) => {
                 const theme = getPlayerTheme(player);
                 const place = index + 1;
+                const isWinner = player.id === game.winnerPlayerId;
                 return (
                   <li
-                    className={`player-${theme}${player.id === game.winnerPlayerId ? " is-winner" : ""}${player.isViewer ? " is-viewer" : ""}`}
+                    className={`grid grid-cols-[1.5rem_2.25rem_minmax(0,1fr)_auto] items-center gap-2 rounded-lg p-2 border border-transparent border-l-4 border-l-[var(--player-color,var(--primary))] player-${theme} ${
+                      isWinner
+                        ? "bg-primary/15 border-primary/40"
+                        : player.isViewer
+                          ? "bg-accent/15"
+                          : "bg-card/60"
+                    }`}
                     key={player.id}
                   >
-                    <span className="win-rank" data-place={place}>
+                    <span
+                      className={`grid size-6 place-items-center rounded-full text-xs font-black tabular-nums ${
+                        place === 1
+                          ? "bg-primary text-primary-foreground"
+                          : place === 2
+                            ? "bg-foreground/20 text-foreground"
+                            : place === 3
+                              ? "bg-amber-600/80 text-white"
+                              : "bg-foreground/10 text-muted-foreground"
+                      }`}
+                      data-place={place}
+                    >
                       {place}
                     </span>
                     <Image
                       alt=""
                       aria-hidden="true"
+                      className="size-9 rounded-full border-2 border-[var(--player-color,var(--primary))] object-cover"
                       draggable={false}
                       height={96}
                       src={getResultPortraitPath(player, viewerProfileImageUrl)}
                       unoptimized
                       width={96}
                     />
-                    <span className="win-standing-name">
-                      <strong>{player.displayName}</strong>
-                      <small>
+                    <span className="grid min-w-0 gap-0.5">
+                      <strong className="truncate text-xs font-bold text-foreground">
+                        {player.displayName}
+                      </strong>
+                      <small className="text-[0.65rem] text-muted-foreground">
                         {player.id === game.winnerPlayerId
                           ? "Island champion"
                           : player.isViewer
@@ -226,9 +295,9 @@ export function WinOverlay({
                               : "Explorer"}
                       </small>
                     </span>
-                    <strong className="win-standing-score">
+                    <strong className="text-sm font-black tabular-nums text-foreground">
                       {score}
-                      <small> VP</small>
+                      <small className="text-[0.62rem] font-bold text-muted-foreground"> VP</small>
                     </strong>
                   </li>
                 );
@@ -236,10 +305,11 @@ export function WinOverlay({
             </ol>
           </section>
         </div>
-        <div className="win-card-footer">
+
+        <div className="flex justify-center pt-2">
           <Button
             autoFocus
-            className="win-home-button"
+            className="min-w-[13rem]"
             disabled={leaving}
             onClick={() => void leave()}
             size="lg"

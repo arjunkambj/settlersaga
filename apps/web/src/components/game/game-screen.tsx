@@ -24,7 +24,7 @@ import playIcon from "@iconify-icons/solar/play-bold";
 import playerIcon from "@iconify-icons/solar/user-rounded-bold";
 import { Icon } from "@iconify/react";
 import Image from "next/image";
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useOptionalAppSession } from "@/components/app/app-session-context";
 import { PlayerSettingsDialog } from "@/components/app/player-settings-dialog";
@@ -306,7 +306,8 @@ export function GameScreen({
       setConfirming(false);
     }
   };
-  const gameHeaderActionClassName = "game-icon-button";
+  const gameHeaderActionClassName =
+    "inline-flex size-9 items-center justify-center rounded-full border-0 bg-card/75 text-muted-foreground backdrop-blur-md hover:bg-card hover:text-foreground shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary";
 
   return (
     <main data-game-shell className="game-shell" id="main-content">
@@ -318,16 +319,16 @@ export function GameScreen({
         viewerPlayerId={me.id}
         winnerPlayerId={game.winnerPlayerId}
       />
-      <div className="game-topbar">
+      <div className="absolute z-30 top-[max(0.7rem,env(safe-area-inset-top))] left-[max(0.85rem,env(safe-area-inset-left))] flex items-center gap-2 pointer-events-none max-[1100px]:relative max-[1100px]:inset-auto max-[1100px]:w-full max-[1100px]:justify-between max-[1100px]:flex-wrap max-[1100px]:pointer-events-auto [&>*]:pointer-events-auto">
         <p className="sr-only">
           Turn {game.turnNumber}. First to {game.settings.victoryPoints} victory points.
         </p>
-        <div>
+        <div className="flex items-center gap-1.5">
           {isHost && game.status !== "completed" ? (
             <Button
               aria-label={isPaused ? "Resume game" : "Pause game"}
               aria-pressed={isPaused}
-              className={`${gameHeaderActionClassName} game-pause-button`}
+              className={gameHeaderActionClassName}
               disabled={pauseChangePending}
               data-icon-only
               onClick={() => void changePauseState(!isPaused)}
@@ -340,7 +341,7 @@ export function GameScreen({
           <Button
             aria-haspopup="dialog"
             aria-label="Open settings"
-            className={`${gameHeaderActionClassName} game-settings-button`}
+            className={gameHeaderActionClassName}
             data-icon-only
             onClick={() => setIsSettingsOpen(true)}
             size="icon"
@@ -353,7 +354,7 @@ export function GameScreen({
             aria-expanded={isHelpOpen}
             aria-haspopup="dialog"
             aria-label="Open game help"
-            className={`${gameHeaderActionClassName} game-help-button`}
+            className={gameHeaderActionClassName}
             data-icon-only
             onClick={() => setIsHelpOpen(true)}
             size="icon"
@@ -363,7 +364,7 @@ export function GameScreen({
           </Button>
           <Button
             aria-label="Leave game"
-            className={`${gameHeaderActionClassName} player-menu-button`}
+            className="inline-flex size-9 items-center justify-center rounded-full border-0 bg-destructive text-destructive-foreground hover:bg-destructive/80 shadow-sm transition-all"
             data-icon-only
             onClick={() => setConfirmation({ kind: "leave" })}
             size="icon"
@@ -375,8 +376,11 @@ export function GameScreen({
       </div>
 
       <HandDockProvider>
-        <aside aria-label="Table status" className="game-rail">
-          <div className="game-rail__panels">
+        <aside
+          aria-label="Table status"
+          className="absolute z-30 top-[max(0.7rem,env(safe-area-inset-top))] right-[max(0.85rem,env(safe-area-inset-right))] bottom-[max(0.7rem,env(safe-area-inset-bottom))] flex flex-col w-[clamp(360px,30vw,460px)] min-h-0 gap-3 pointer-events-none max-[1100px]:relative max-[1100px]:inset-auto max-[1100px]:w-full max-[1100px]:pointer-events-auto [&>*]:pointer-events-auto"
+        >
+          <div className="grid min-h-0 flex-[1_1_55%] grid-rows-[minmax(0,1fr)_auto] gap-3">
             <EventLog events={events} players={game.players} />
             <BankPanel bank={game.bank} developmentCardSupply={game.developmentCardSupply} />
           </div>
@@ -396,7 +400,10 @@ export function GameScreen({
           />
         </aside>
 
-        <div className="board-inspector-dock" id={BOARD_INSPECTOR_DOCK_ROOT_ID} />
+        <div
+          className="absolute z-40 left-[max(0.85rem,env(safe-area-inset-left))] bottom-[calc(8.75rem+max(0.7rem,env(safe-area-inset-bottom)))] block w-[min(17rem,42%)] pointer-events-none max-[1100px]:relative max-[1100px]:inset-auto max-[1100px]:w-[min(17rem,60%)] max-[1100px]:pointer-events-auto"
+          id={BOARD_INSPECTOR_DOCK_ROOT_ID}
+        />
 
         <GameBoard
           buildMode={buildMode}
@@ -407,7 +414,7 @@ export function GameScreen({
           pending={pendingCommand !== null}
         />
 
-        <footer className="game-footer">
+        <footer className="absolute z-30 right-[calc(clamp(360px,30vw,460px)+max(0.85rem,env(safe-area-inset-right))+0.75rem)] bottom-[max(0.7rem,env(safe-area-inset-bottom))] left-[max(0.85rem,env(safe-area-inset-left))] grid grid-cols-[minmax(0,max-content)_max-content] justify-start items-stretch gap-3 pointer-events-none max-[1100px]:relative max-[1100px]:inset-auto max-[1100px]:w-full max-[1100px]:grid-cols-1 max-[1100px]:pointer-events-auto [&>*]:pointer-events-auto">
           <ResourceHand
             actionNumber={game.actionNumber}
             me={me}
@@ -433,20 +440,31 @@ export function GameScreen({
             playableDevelopmentCards={game.legalActions.playableDevelopmentCards}
           />
 
-          <div className="game-footer__actions">
-            <section aria-labelledby="phase-title" className="phase-card">
-              <span aria-hidden="true" className="phase-card__icon">
-                <Icon icon={playerIcon} />
+          <div className="grid grid-cols-[max-content_minmax(5.5rem,auto)] max-[1100px]:grid-cols-[minmax(0,1fr)_auto] gap-1.5 pointer-events-none [&>*]:pointer-events-auto">
+            <section
+              aria-labelledby="phase-title"
+              className="flex min-w-[16rem] items-center gap-2.5 px-3 py-2 rounded-2xl bg-card/85 backdrop-blur-md shadow-lg border border-white/10 text-card-foreground"
+            >
+              <span
+                aria-hidden="true"
+                className="grid size-8 shrink-0 place-items-center rounded-full bg-primary/20 text-primary"
+              >
+                <Icon className="size-4" icon={playerIcon} />
               </span>
-              <div className="flex-1">
-                <h1 id="phase-title" ref={phaseHeadingRef} tabIndex={-1}>
+              <div className="flex-1 min-w-0">
+                <h1
+                  className="m-0 text-sm font-bold truncate text-foreground"
+                  id="phase-title"
+                  ref={phaseHeadingRef}
+                  tabIndex={-1}
+                >
                   {phaseCopy.title}
                 </h1>
                 <span className="sr-only">{phaseCopy.detail}</span>
               </div>
               {isViewerTurn && game.lastDiceRoll ? (
                 <CompactDiceResult
-                  className="turn-summary-dice"
+                  className="flex items-center gap-1.5"
                   roll={game.lastDiceRoll}
                   showTotal
                 />
@@ -590,9 +608,6 @@ function PlayerStrip({
   const tableStats = useMemo(() => {
     return new Map(players.map((player) => [player.id, getLongestRoadLength(board, player.id)]));
   }, [board, players]);
-  const hasSideDice = Boolean(
-    lastDiceRoll && players.some((player) => player.id === activePlayerId && !player.isViewer),
-  );
 
   useEffect(() => {
     const frameId = requestAnimationFrame(() => {
@@ -625,7 +640,7 @@ function PlayerStrip({
 
   return (
     <ol
-      className={`player-strip${hasSideDice ? " has-active-dice" : ""}`}
+      className="grid w-full min-w-0 min-h-32 flex-[1_1_45%] content-start gap-1.5 p-0 m-0 overflow-y-auto list-none [scrollbar-width:thin]"
       aria-label="Players"
       ref={stripRef}
     >
@@ -656,27 +671,38 @@ function PlayerStrip({
         return (
           <li
             aria-current={isActive ? "true" : undefined}
-            className={`player-summary player-${theme}${isActive ? " is-active" : ""}${player.isViewer ? " is-viewer" : ""}${isActive && !player.isViewer && lastDiceRoll ? " has-side-dice" : ""}`}
+            className={`relative grid w-full grid-cols-[2.6rem_minmax(0,1fr)] items-center gap-x-2.5 gap-y-1.5 p-2 rounded-xl border border-white/10 shadow-md backdrop-blur-md transition-all player-${theme} ${
+              isActive
+                ? "bg-card/95 ring-2 ring-[var(--player-color,var(--primary))]/40"
+                : player.isViewer
+                  ? "bg-card/85"
+                  : "bg-card/70"
+            } before:absolute before:top-2 before:bottom-2 before:left-0 before:w-1 before:rounded-r-full before:bg-[var(--player-color,var(--primary))]`}
             data-player-id={player.id}
             key={player.id}
           >
             {isActive && !player.isViewer && lastDiceRoll ? (
-              <CompactDiceResult className="player-side-dice" roll={lastDiceRoll} />
+              <CompactDiceResult
+                className="absolute right-2 bottom-2 flex gap-1"
+                roll={lastDiceRoll}
+              />
             ) : null}
             <span
-              className={player.isBot ? "player-avatar is-bot" : "player-avatar is-human"}
+              className={`relative grid size-10 place-items-center rounded-full border-2 border-[var(--player-color,var(--primary))] bg-card/80 overflow-hidden shadow-inner ${
+                isActive ? "ring-2 ring-[var(--player-color,var(--primary))]/50 animate-pulse" : ""
+              }`}
               aria-hidden="true"
             >
-              <span className="player-avatar-fallback">
+              <span className="absolute text-xs font-black text-foreground">
                 {player.isBot ? (
-                  <Icon aria-hidden="true" icon={botIcon} />
+                  <Icon aria-hidden="true" className="size-4" icon={botIcon} />
                 ) : (
                   getPlayerInitials(player.displayName)
                 )}
               </span>
               <Image
                 alt=""
-                className="player-avatar-image"
+                className="relative size-full object-cover"
                 draggable={false}
                 height={256}
                 onError={(event) => {
@@ -687,47 +713,70 @@ function PlayerStrip({
                 width={256}
               />
             </span>
-            <div className="player-body">
-              <div className="player-identity-line">
-                <strong title={player.displayName}>
+            <div className="grid min-w-0 gap-1">
+              <div className="flex w-full min-w-0 items-center gap-1.5">
+                <strong
+                  className="truncate text-xs font-bold text-foreground"
+                  title={player.displayName}
+                >
                   {player.displayName}
                   {player.isViewer ? <span className="sr-only"> (you)</span> : null}
                 </strong>
                 {player.isViewer ? (
-                  <span className="player-chip is-you" aria-hidden="true">
+                  <span
+                    className="inline-flex items-center h-4 px-1.5 rounded-full bg-accent/20 text-[0.52rem] font-black uppercase tracking-wider text-accent"
+                    aria-hidden="true"
+                  >
                     You
                   </span>
                 ) : null}
                 {player.isBot && !/\bbot\b/i.test(player.displayName) ? (
-                  <span className="player-chip is-bot" aria-hidden="true">
+                  <span
+                    className="inline-flex items-center h-4 px-1.5 rounded-full bg-background/50 text-[0.52rem] font-black uppercase tracking-wider text-muted-foreground"
+                    aria-hidden="true"
+                  >
                     Bot
                   </span>
                 ) : null}
-                {isActive ? <span className="player-chip is-turn">Turn</span> : null}
+                {isActive ? (
+                  <span className="inline-flex items-center h-4 px-1.5 rounded-full bg-[var(--player-color,var(--primary))]/20 text-[0.52rem] font-black uppercase tracking-wider text-foreground">
+                    Turn
+                  </span>
+                ) : null}
                 <span
                   aria-label={
                     hiddenVictoryPointCount > 0
                       ? `${displayedVictoryPoints} of ${victoryTarget} victory points, including ${hiddenVictoryPointCount} from hidden victory point cards`
                       : `${displayedVictoryPoints} of ${victoryTarget} victory points`
                   }
-                  className="player-stat player-victory-stat"
+                  className="ml-auto inline-flex items-center gap-1 shrink-0"
                 >
-                  <Icon aria-hidden="true" icon={crownIcon} />
-                  <span className="player-victory-score" aria-hidden="true">
-                    <strong>{displayedVictoryPoints}</strong>
-                    <small>/{victoryTarget}</small>
+                  <Icon aria-hidden="true" className="size-3.5 text-primary" icon={crownIcon} />
+                  <span
+                    className="inline-flex items-baseline text-xs text-foreground font-bold"
+                    aria-hidden="true"
+                  >
+                    <strong className="text-sm font-extrabold tabular-nums">
+                      {displayedVictoryPoints}
+                    </strong>
+                    <small className="text-[0.62rem] text-muted-foreground">/{victoryTarget}</small>
                   </span>
                 </span>
               </div>
-              <div aria-label="Cards and awards" className="player-table-supply" role="group">
+              <div
+                aria-label="Cards and awards"
+                className="grid grid-cols-4 items-center gap-1 min-w-0"
+                role="group"
+              >
                 <span
                   aria-label={`${player.resourceCount} resource cards`}
-                  className="player-table-fact player-card-fact player-resource-card-fact"
+                  className="inline-flex min-w-0 items-center justify-center gap-1 px-1.5 py-0.5 rounded-full bg-background/50 border border-white/5 text-[0.68rem] font-bold text-foreground tabular-nums"
                   title={`${player.resourceCount} resource cards`}
                 >
                   <Image
                     alt=""
                     aria-hidden="true"
+                    className="w-3 h-4 object-contain"
                     draggable={false}
                     height={768}
                     sizes="2.25rem"
@@ -735,16 +784,22 @@ function PlayerStrip({
                     width={512}
                   />
                   <strong>{player.resourceCount}</strong>
-                  <small aria-hidden="true">Cards</small>
+                  <small
+                    className="text-[0.55rem] text-muted-foreground hidden sm:inline"
+                    aria-hidden="true"
+                  >
+                    Cards
+                  </small>
                 </span>
                 <span
                   aria-label={`${developmentCardCount} development cards`}
-                  className="player-table-fact player-card-fact"
+                  className="inline-flex min-w-0 items-center justify-center gap-1 px-1.5 py-0.5 rounded-full bg-background/50 border border-white/5 text-[0.68rem] font-bold text-foreground tabular-nums"
                   title={`${developmentCardCount} development cards`}
                 >
                   <Image
                     alt=""
                     aria-hidden="true"
+                    className="w-3 h-4 object-contain"
                     draggable={false}
                     height={768}
                     sizes="2.25rem"
@@ -752,7 +807,12 @@ function PlayerStrip({
                     width={512}
                   />
                   <strong>{developmentCardCount}</strong>
-                  <small aria-hidden="true">Dev</small>
+                  <small
+                    className="text-[0.55rem] text-muted-foreground hidden sm:inline"
+                    aria-hidden="true"
+                  >
+                    Dev
+                  </small>
                 </span>
                 <span
                   aria-label={
@@ -760,13 +820,16 @@ function PlayerStrip({
                       ? `Longest Road held, length ${longestRoad}`
                       : `Longest road length ${longestRoad}`
                   }
-                  className={`player-table-fact player-award-fact${holdsLongestRoad ? " is-held" : ""}`}
+                  className={`inline-flex min-w-0 items-center justify-center gap-1 px-1.5 py-0.5 rounded-full border border-white/5 text-[0.68rem] font-bold text-foreground tabular-nums ${
+                    holdsLongestRoad ? "bg-primary/20 ring-1 ring-primary/40" : "bg-background/50"
+                  }`}
                   data-empty={longestRoad === 0 ? "true" : undefined}
                   title={holdsLongestRoad ? "Longest Road" : `Road length ${longestRoad}`}
                 >
                   <Image
                     alt=""
                     aria-hidden="true"
+                    className="size-3.5 object-contain"
                     draggable={false}
                     height={512}
                     sizes="2.5rem"
@@ -774,7 +837,12 @@ function PlayerStrip({
                     width={512}
                   />
                   <strong>{longestRoad}</strong>
-                  <small aria-hidden="true">Road</small>
+                  <small
+                    className="text-[0.55rem] text-muted-foreground hidden sm:inline"
+                    aria-hidden="true"
+                  >
+                    Road
+                  </small>
                 </span>
                 <span
                   aria-label={
@@ -782,13 +850,16 @@ function PlayerStrip({
                       ? `Largest Army held, ${knightCount} knights played`
                       : `${knightCount} knights played toward Largest Army`
                   }
-                  className={`player-table-fact player-award-fact${holdsLargestArmy ? " is-held" : ""}`}
+                  className={`inline-flex min-w-0 items-center justify-center gap-1 px-1.5 py-0.5 rounded-full border border-white/5 text-[0.68rem] font-bold text-foreground tabular-nums ${
+                    holdsLargestArmy ? "bg-primary/20 ring-1 ring-primary/40" : "bg-background/50"
+                  }`}
                   data-empty={knightCount === 0 ? "true" : undefined}
                   title={holdsLargestArmy ? "Largest Army" : `${knightCount} knights`}
                 >
                   <Image
                     alt=""
                     aria-hidden="true"
+                    className="size-3.5 object-contain"
                     draggable={false}
                     height={512}
                     sizes="2.5rem"
@@ -796,26 +867,34 @@ function PlayerStrip({
                     width={512}
                   />
                   <strong>{knightCount}</strong>
-                  <small aria-hidden="true">Army</small>
+                  <small
+                    className="text-[0.55rem] text-muted-foreground hidden sm:inline"
+                    aria-hidden="true"
+                  >
+                    Army
+                  </small>
                 </span>
               </div>
               <span
                 aria-hidden="true"
-                className="player-victory-bar"
-                style={{ "--player-vp": `${victoryPercent}%` } as CSSProperties}
+                className="block h-1 overflow-hidden rounded-full bg-foreground/15"
               >
-                <i />
+                <i
+                  className="block h-full rounded-inherit bg-[var(--player-color,var(--primary))] transition-all duration-300"
+                  style={{ width: `${victoryPercent}%` }}
+                />
               </span>
             </div>
             {isHost && !player.isViewer && !player.isBot ? (
               <Button
                 aria-label={`Replace ${player.displayName} with a bot`}
-                className="player-replace"
+                className="col-start-2 justify-self-start h-6 px-2 text-[0.65rem] rounded-full gap-1"
                 disabled={pendingReplacementId !== null}
                 onClick={() => onReplacePlayer(player.id)}
+                size="sm"
                 variant="secondary"
               >
-                <Icon aria-hidden="true" icon={botIcon} />
+                <Icon aria-hidden="true" className="size-3" icon={botIcon} />
                 <span>{pendingReplacementId === player.id ? "Replacing…" : "Use Bot"}</span>
               </Button>
             ) : null}
@@ -841,12 +920,15 @@ function CompactDiceResult({
       aria-label={`${roll.first} and ${roll.second}, total ${roll.sum}`}
       role="group"
     >
-      <span aria-hidden="true" className="die-pair">
+      <span aria-hidden="true" className="inline-flex items-center gap-1">
         <DieFace tone="ivory" value={roll.first} />
         <DieFace tone="ember" value={roll.second} />
       </span>
       {showTotal ? (
-        <strong aria-hidden="true" className="compact-dice-total">
+        <strong
+          aria-hidden="true"
+          className="min-w-5 text-sm font-black tabular-nums text-center text-foreground"
+        >
           {roll.sum}
         </strong>
       ) : null}
@@ -862,18 +944,21 @@ function BankPanel({
   developmentCardSupply: number;
 }) {
   return (
-    <section aria-label="Resource market" className="side-card bank-card">
-      <ul className="bank-grid">
+    <section
+      aria-label="Resource market"
+      className="grid min-h-0 p-2.5 rounded-2xl bg-card/80 backdrop-blur-md shadow-md border border-white/10"
+    >
+      <ul className="flex flex-nowrap gap-1.5 p-0 m-0 list-none">
         {RESOURCE_ORDER.map((resource) => (
           <li
             aria-label={`${RESOURCE_LABELS[resource]}: ${bank ? bank[resource] : "unknown"}`}
-            className="resource-card-face"
+            className="relative grid flex-1 min-w-0 aspect-[2/3] rounded-lg overflow-hidden border border-white/5"
             key={resource}
           >
-            <span aria-hidden="true" className="resource-card-art">
+            <span aria-hidden="true" className="block size-full">
               <Image
                 alt=""
-                className="resource-card-image"
+                className="size-full object-contain"
                 draggable={false}
                 height={768}
                 sizes="3.5rem"
@@ -881,19 +966,22 @@ function BankPanel({
                 width={512}
               />
             </span>
-            <strong aria-hidden="true" className="resource-card-count">
+            <strong
+              aria-hidden="true"
+              className="absolute -top-1 -right-1 z-10 grid min-w-4 h-4 place-items-center px-1 rounded-full bg-primary text-primary-foreground text-[0.58rem] font-black tabular-nums shadow-sm"
+            >
               {bank ? bank[resource] : "?"}
             </strong>
           </li>
         ))}
         <li
           aria-label={`Development cards: ${developmentCardSupply}`}
-          className="resource-card-face"
+          className="relative grid flex-1 min-w-0 aspect-[2/3] rounded-lg overflow-hidden border border-white/5"
         >
-          <span aria-hidden="true" className="resource-card-art">
+          <span aria-hidden="true" className="block size-full">
             <Image
               alt=""
-              className="resource-card-image"
+              className="size-full object-contain"
               draggable={false}
               height={768}
               sizes="3.5rem"
@@ -901,7 +989,10 @@ function BankPanel({
               width={512}
             />
           </span>
-          <strong aria-hidden="true" className="resource-card-count">
+          <strong
+            aria-hidden="true"
+            className="absolute -top-1 -right-1 z-10 grid min-w-4 h-4 place-items-center px-1 rounded-full bg-primary text-primary-foreground text-[0.58rem] font-black tabular-nums shadow-sm"
+          >
             {developmentCardSupply}
           </strong>
         </li>
@@ -952,13 +1043,21 @@ function EventLog({
   const timeFormatter = showLocalTime ? LOCAL_EVENT_TIME_FORMATTER : UTC_EVENT_TIME_FORMATTER;
 
   return (
-    <section className="side-card event-card" aria-labelledby="events-title">
-      <div className="side-card-title">
-        <h2 id="events-title">Game Log</h2>
-        <Icon aria-hidden="true" icon={chatIcon} />
+    <section
+      className="relative grid min-h-0 grid-rows-[auto_minmax(0,1fr)] p-3 rounded-2xl bg-card/80 backdrop-blur-md shadow-md border border-white/10"
+      aria-labelledby="events-title"
+    >
+      <div className="flex items-center justify-between gap-2 mb-1.5 text-muted-foreground">
+        <h2
+          className="m-0 text-xs font-black tracking-wider uppercase text-foreground/70"
+          id="events-title"
+        >
+          Game Log
+        </h2>
+        <Icon aria-hidden="true" className="size-4 text-primary" icon={chatIcon} />
       </div>
       <ol
-        className="event-list"
+        className="flex flex-col gap-2 p-0.5 m-0 overflow-y-auto list-none [scrollbar-width:thin] text-xs"
         onScroll={(event) => {
           const list = event.currentTarget;
           const atBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 40;
@@ -978,23 +1077,35 @@ function EventLog({
             const isLatestGroup = groupIndex === groups.length - 1;
             return (
               <li
-                className={`event-group${theme ? ` player-${theme}` : ""}${actor?.isViewer ? " is-viewer" : ""}${isLatestGroup ? " is-latest" : ""}`}
+                className={`grid grid-cols-[0.5rem_minmax(0,1fr)] items-start gap-x-2 gap-y-0.5${theme ? ` player-${theme}` : ""}`}
                 key={group.key}
               >
-                <span aria-hidden="true" className="event-group-dot" />
-                <div className="event-group-body">
-                  <div className="event-group-head">
-                    <strong>{actorName}</strong>
+                <span
+                  aria-hidden="true"
+                  className="size-1.5 mt-1.5 rounded-full bg-[var(--player-color,var(--primary))] ring-4 ring-[var(--player-color,var(--primary))]/20"
+                />
+                <div className="grid min-w-0 gap-0.5">
+                  <div className="flex min-w-0 items-baseline justify-between gap-2">
+                    <strong className="truncate text-xs font-bold text-[var(--player-color,var(--foreground))]">
+                      {actorName}
+                    </strong>
                     {latest ? (
-                      <time dateTime={new Date(latest.createdAt).toISOString()}>
+                      <time
+                        className="shrink-0 text-[0.6rem] font-mono tabular-nums text-muted-foreground/70"
+                        dateTime={new Date(latest.createdAt).toISOString()}
+                      >
                         {timeFormatter.format(latest.createdAt)}
                       </time>
                     ) : null}
                   </div>
-                  <ol className="event-actions">
+                  <ol className="grid gap-0.5 p-0 m-0 list-none">
                     {group.events.map((item) => (
                       <li data-tone={getEventTone(item.kind)} key={item.sequence}>
-                        <p>{eventActionLabel(item.text, actor?.displayName)}</p>
+                        <p
+                          className={`m-0 text-[0.72rem] leading-snug ${isLatestGroup ? "text-foreground" : "text-muted-foreground"}`}
+                        >
+                          {eventActionLabel(item.text, actor?.displayName)}
+                        </p>
                       </li>
                     ))}
                   </ol>
@@ -1003,14 +1114,14 @@ function EventLog({
             );
           })
         ) : (
-          <li className="event-empty">
+          <li className="py-2 text-center text-xs text-muted-foreground/70 italic">
             <p>No moves yet.</p>
           </li>
         )}
       </ol>
       {hasUnseen ? (
         <Button
-          className="event-jump"
+          className="absolute bottom-2 left-1/2 -translate-x-1/2 min-w-20 shadow-lg text-xs"
           onClick={() => setPinnedToLatest(true)}
           size="sm"
           variant="secondary"
@@ -1078,17 +1189,24 @@ function ActionDock({
 
   if (game.phase.kind === "steal") {
     return (
-      <section className="action-dock" aria-label="Choose a player to steal from">
-        <div className="action-heading">
-          <strong>Choose a Neighbor</strong>
-          <span>The stolen resource is selected at random.</span>
+      <section
+        className="flex flex-nowrap items-center gap-2 p-2 rounded-2xl bg-card/85 backdrop-blur-md shadow-lg border border-white/10"
+        aria-label="Choose a player to steal from"
+      >
+        <div className="grid gap-0.5">
+          <strong className="text-xs font-black uppercase text-foreground">
+            Choose a Neighbor
+          </strong>
+          <span className="text-[0.65rem] text-muted-foreground">
+            The stolen resource is selected at random.
+          </span>
         </div>
-        <div className="action-group">
+        <div className="flex flex-nowrap items-stretch gap-1">
           {legal.victimPlayerIds.map((playerId) => {
             const player = game.players.find((candidate) => candidate.id === playerId);
             return (
               <Button
-                className="action-button"
+                className="h-8 px-2.5 rounded-lg text-xs gap-1.5"
                 disabled={pending}
                 key={playerId}
                 onClick={() =>
@@ -1096,7 +1214,8 @@ function ActionDock({
                 }
                 variant="secondary"
               >
-                <Icon aria-hidden="true" icon={playerIcon} /> {player?.displayName ?? "Neighbor"}
+                <Icon aria-hidden="true" className="size-3.5" icon={playerIcon} />{" "}
+                {player?.displayName ?? "Neighbor"}
               </Button>
             );
           })}
@@ -1231,8 +1350,11 @@ function BuildingActionsDock({
       supply: game.developmentCardSupply,
     });
   return (
-    <section aria-labelledby="building-actions-title" className="action-dock">
-      <div className="action-heading sr-only">
+    <section
+      aria-labelledby="building-actions-title"
+      className="flex flex-nowrap items-center gap-1.5 p-1.5 rounded-2xl bg-card/85 backdrop-blur-md shadow-lg border border-white/10"
+    >
+      <div className="sr-only">
         <strong id="building-actions-title">Build & Trade</strong>
         <span>
           {disabledReasonOverride ??
@@ -1247,7 +1369,7 @@ function BuildingActionsDock({
         onCommand={onCommand}
         onPausedAction={onPausedAction}
       />
-      <div className="action-group build-actions">
+      <div className="flex flex-nowrap items-stretch gap-1">
         <DevelopmentCardAction
           disabledReason={developmentCardDisabledReason}
           onClick={() => onCommand({ kind: "buy_development_card" }, "Development card purchased.")}
@@ -1300,17 +1422,27 @@ function TurnControl({
     isRequiredActor: legal.isRequiredActor,
     phaseKind: game.phase.kind,
   });
-  const turnControlClassName = "turn-control";
 
   if (controlKind === "roll") {
     return (
-      <section className={turnControlClassName} aria-label="Turn control">
-        <div aria-label="Dice ready to roll" className="roll-preview-card" role="img">
+      <section
+        className="grid min-w-[5.5rem] content-center justify-items-center gap-1.5 p-2 rounded-2xl bg-card/85 backdrop-blur-md shadow-lg border border-white/10"
+        aria-label="Turn control"
+      >
+        <div
+          aria-label="Dice ready to roll"
+          className="flex items-center justify-center gap-1.5"
+          role="img"
+        >
           <DieFace tone="ivory" value={1} />
           <DieFace tone="ember" value={5} />
         </div>
-        <Button disabled={pending} onClick={() => onCommand({ kind: "roll" }, "Dice rolled.")}>
-          <span className="inline-flex items-center gap-2">
+        <Button
+          className="w-full h-8 text-xs font-bold"
+          disabled={pending}
+          onClick={() => onCommand({ kind: "roll" }, "Dice rolled.")}
+        >
+          <span className="inline-flex items-center gap-1.5">
             {pending ? (
               <>
                 <Spinner data-icon="inline-start" /> Rolling…
@@ -1326,13 +1458,17 @@ function TurnControl({
 
   if (controlKind === "end_turn") {
     return (
-      <section className={`${turnControlClassName} is-end-turn`} aria-label="Turn control">
+      <section
+        className="grid min-w-[5.5rem] content-center justify-items-center gap-1.5 p-2 rounded-2xl bg-card/85 backdrop-blur-md shadow-lg border border-white/10"
+        aria-label="Turn control"
+      >
         <Button
           aria-label="End Turn"
+          className="w-full h-full min-h-12 text-xs font-bold"
           disabled={pending || !legal.canEndTurn}
           onClick={() => onCommand({ kind: "end_turn" }, "Turn ended.")}
         >
-          <span className="inline-flex items-center gap-2">
+          <span className="inline-flex items-center gap-1.5">
             {pending ? (
               <>
                 <Spinner data-icon="inline-start" /> Ending…
@@ -1347,21 +1483,24 @@ function TurnControl({
   }
 
   return (
-    <section aria-label="Turn control" className={`${turnControlClassName} is-unavailable`}>
+    <section
+      aria-label="Turn control"
+      className="grid min-w-[5.5rem] content-center justify-items-center gap-1 p-2 rounded-2xl bg-card/85 backdrop-blur-md shadow-lg border border-white/10 text-muted-foreground/70 text-xs font-bold text-center"
+    >
       {controlKind === "waiting" ? (
         <>
           <Image
             alt=""
-            className="turn-control-state-icon"
+            className="size-9 object-contain opacity-70"
             draggable={false}
             height={256}
             src={WAIT_ICON_ASSET_PATH}
             width={256}
           />
-          <span>Waiting</span>
+          <span className="text-[0.68rem]">Waiting</span>
         </>
       ) : (
-        <span className="turn-control-required-copy">
+        <span className="grid gap-0.5 text-[0.72rem] font-extrabold text-foreground leading-tight">
           <span>Finish</span>
           <span>action</span>
         </span>
@@ -1395,9 +1534,11 @@ function UnavailablePlayerView({ onLeave }: { onLeave(): Promise<void> }) {
         className="flex min-h-dvh items-center justify-center bg-background p-6"
         id="main-content"
       >
-        <section className="notice-card">
-          <h1>Player View Unavailable</h1>
-          <p>Your private seat could not be matched to this game. Refresh to reconnect.</p>
+        <section className="grid max-w-md gap-3 p-6 rounded-2xl bg-card border border-border shadow-xl text-card-foreground">
+          <h1 className="m-0 text-xl font-extrabold text-foreground">Player View Unavailable</h1>
+          <p className="m-0 text-sm text-muted-foreground">
+            Your private seat could not be matched to this game. Refresh to reconnect.
+          </p>
           <Button onClick={() => setShowConfirmation(true)} variant="secondary">
             Leave Game
           </Button>
@@ -1440,7 +1581,7 @@ function DevelopmentCardAction({
         art={
           <Image
             alt=""
-            className="action-art"
+            className="size-full rounded object-contain"
             draggable={false}
             height={512}
             loading="eager"
@@ -1503,7 +1644,7 @@ function BuildAction({
         art={
           <Image
             alt=""
-            className="action-art action-card-art"
+            className="size-full rounded object-contain"
             draggable={false}
             height={768}
             loading="eager"
@@ -1653,10 +1794,18 @@ function TurnClock({
               : `${status}, ${seconds} seconds remaining`
       }
       aria-live="off"
-      className={`turn-clock${botThinking ? " is-bot" : ""}${isPaused ? " is-paused" : ""}${isExpired ? " is-expired" : ""}`}
+      className={`flex min-w-[4.5rem] items-center justify-center gap-1 px-3 py-1.5 rounded-2xl bg-card/85 backdrop-blur-md shadow-lg border border-white/10 text-xs font-mono tabular-nums ${
+        isExpired || isPaused
+          ? "text-destructive"
+          : botThinking
+            ? "text-primary"
+            : "text-foreground"
+      }`}
       role="timer"
     >
-      <strong>{isExpired ? "…" : seconds === null ? "—" : `${seconds}s`}</strong>
+      <strong className="font-extrabold">
+        {isExpired ? "…" : seconds === null ? "—" : `${seconds}s`}
+      </strong>
     </div>
   );
 }

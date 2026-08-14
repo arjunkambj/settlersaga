@@ -532,19 +532,26 @@ function BoardInspector({ inspection }: { inspection: BoardInspection | null }) 
   }
 
   return (
-    <aside aria-label="Board inspector" className="board-inspector">
-      <span className="board-inspector-kicker">{inspection.kicker}</span>
-      <span className="board-inspector-title-row">
+    <aside
+      aria-label="Board inspector"
+      className="grid gap-1.5 p-3 rounded-2xl bg-card/85 backdrop-blur-md shadow-lg border border-white/10 text-card-foreground pointer-events-auto"
+    >
+      <span className="text-[0.65rem] font-black tracking-wider uppercase text-foreground/60">
+        {inspection.kicker}
+      </span>
+      <span className="flex items-center gap-2">
         {inspection.resource ? (
           <ResourceIcon decorative resource={inspection.resource} size={34} />
         ) : null}
-        <strong className="board-inspector-title">{inspection.title}</strong>
+        <strong className="text-sm font-extrabold text-foreground">{inspection.title}</strong>
       </span>
-      <dl className="board-inspector-details">
+      <dl className="grid grid-cols-2 gap-2 m-0 pt-1.5 border-t border-white/10">
         {inspection.details.map((detail) => (
-          <div className="board-inspector-detail" key={detail.label}>
-            <dt className="board-inspector-label">{detail.label}</dt>
-            <dd className="board-inspector-value">{detail.value}</dd>
+          <div className="grid gap-0.5" key={detail.label}>
+            <dt className="text-[0.6rem] font-bold text-muted-foreground uppercase">
+              {detail.label}
+            </dt>
+            <dd className="m-0 text-xs font-black text-foreground">{detail.value}</dd>
           </div>
         ))}
       </dl>
