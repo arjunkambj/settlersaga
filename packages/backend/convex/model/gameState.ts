@@ -19,11 +19,11 @@ import {
   logicalTurnId,
   nextScheduledActionAt,
   nextTurnDeadlineAt,
-} from "../../lib/game_scheduling";
+} from "../../lib/game-scheduling";
 import { internal } from "../_generated/api";
 import type { HexclaveUser } from "../hexclave/auth";
 import { commandEventKind, serializeCommand } from "./commands";
-import { createBotDisplayName } from "../../lib/bot_names";
+import { createBotDisplayName } from "../../lib/bot-names";
 import { DEFAULT_BOT_DIFFICULTY } from "./constants";
 import { fail } from "./errors";
 import {

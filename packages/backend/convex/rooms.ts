@@ -4,7 +4,7 @@ import type { GameState } from "@settersaga/game";
 import { mutation, query } from "./_generated/server";
 import { requireCurrentHexclaveUser } from "./hexclave/auth";
 import { fail } from "./model/errors";
-import { createBotDisplayName } from "../lib/bot_names";
+import { createBotDisplayName } from "../lib/bot-names";
 import {
   convertGameSeatToBot,
   createRoomRecord,

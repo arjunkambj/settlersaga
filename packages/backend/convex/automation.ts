@@ -1,7 +1,7 @@
 import { applyCommand, chooseAutomatedCommand } from "@settersaga/game";
 import { v } from "convex/values";
 
-import { isScheduledActionCurrentAndDue, logicalTurnId } from "../lib/game_scheduling";
+import { isScheduledActionCurrentAndDue, logicalTurnId } from "../lib/game-scheduling";
 import { internalMutation } from "./_generated/server";
 import { commandText } from "./model/commands";
 import { fail } from "./model/errors";

@@ -18,7 +18,7 @@ import {
   logicalTurnId,
   nextScheduledActionAt,
   nextTurnDeadlineAt,
-} from "../lib/game_scheduling";
+} from "../lib/game-scheduling";
 
 const SETTINGS = { ...DEFAULT_BASE_GAME_SETTINGS, maxPlayers: 4 as const };
 const THREE_PLAYER_SETTINGS = { ...DEFAULT_BASE_GAME_SETTINGS, maxPlayers: 3 as const };
