@@ -10,7 +10,6 @@ export interface AppProvidersProps {
   children: ReactNode;
   convexUrl?: string;
   hexclaveProjectId?: string;
-  hexclavePublishableClientKey?: string;
 }
 
 export function AppProviders({ children, convexUrl, hexclaveProjectId }: AppProvidersProps) {
