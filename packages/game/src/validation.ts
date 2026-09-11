@@ -1,5 +1,11 @@
 import { getGameMapDefinition, mapSupportsPlayerCount } from "./maps";
-import { BANK_RESOURCE_COUNT, DEVELOPMENT_CARD_DECK, INITIAL_PIECES } from "./constants";
+import {
+  BANK_RESOURCE_COUNT,
+  BOT_DIFFICULTIES,
+  DEVELOPMENT_CARD_DECK,
+  INITIAL_PIECES,
+  TURN_TIMER_OPTIONS,
+} from "./constants";
 import { LONGEST_ROAD_VICTORY_POINTS, getLongestRoadPlayerId } from "./longest-road";
 import { LARGEST_ARMY_VICTORY_POINTS, getLargestArmyPlayerId } from "./largest-army";
 import { getBoardTopology, getTileId } from "./topology";
@@ -23,7 +29,6 @@ import type {
 
 type UnknownRecord = Record<string, unknown>;
 
-const BOT_DIFFICULTIES = ["easy", "medium", "hard"] as const;
 const BUILDING_KINDS = ["city", "settlement"] as const;
 const GAME_STATUSES = ["active", "completed"] as const;
 const PHASE_KINDS = [
@@ -37,7 +42,6 @@ const PHASE_KINDS = [
   "build_and_trade",
   "finished",
 ] as const satisfies readonly GamePhase["kind"][];
-const TURN_TIMERS = [0, 30, 60, 90, 120] as const;
 
 export class GameDataValidationError extends Error {
   constructor(path: string, message: string) {
@@ -360,7 +364,7 @@ function validateSettings(value: unknown, path: string): ValidatedSettings {
   boolean(settings.hideBankCards, `${path}.hideBankCards`);
   const map = member(settings.map, GAME_MAP_IDS, `${path}.map`);
   const maxPlayers = member(settings.maxPlayers, PLAYER_COUNTS, `${path}.maxPlayers`);
-  member(settings.turnTimerSeconds, TURN_TIMERS, `${path}.turnTimerSeconds`);
+  member(settings.turnTimerSeconds, TURN_TIMER_OPTIONS, `${path}.turnTimerSeconds`);
   positiveInteger(settings.victoryPoints, `${path}.victoryPoints`);
   return { map, maxPlayers };
 }
@@ -642,7 +646,11 @@ function validateSharedGame(
   }
 
   nonNegativeInteger(game.actionNumber, `${path}.actionNumber`);
-  validatePlayerId(game.activePlayerId, players.ids, `${path}.activePlayerId`);
+  const activePlayerId = validatePlayerId(
+    game.activePlayerId,
+    players.ids,
+    `${path}.activePlayerId`,
+  );
   const board = validateBoard(game.board, settings.map, players.ids, `${path}.board`);
   const largestArmyPlayerId =
     game.largestArmyPlayerId === null
@@ -683,7 +691,6 @@ function validateSharedGame(
     game.developmentCardsBoughtThisTurn,
     `${path}.developmentCardsBoughtThisTurn`,
   );
-  const activePlayerId = game.activePlayerId as PlayerId;
   if (boughtThisTurn > (players.developmentCardCounts.get(activePlayerId) ?? 0)) {
     invalid(
       `${path}.developmentCardsBoughtThisTurn`,

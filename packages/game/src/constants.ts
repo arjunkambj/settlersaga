@@ -1,5 +1,6 @@
 import type {
   BaseGameSettings,
+  BotDifficulty,
   BuildingKind,
   DevelopmentCardType,
   PlayerPieces,
@@ -82,3 +83,6 @@ export function getSetupSeatOrder(playerCount: PlayerCount): number[] {
 }
 
 export const RESOURCE_ORDER: readonly ResourceType[] = ["tree", "brick", "sheep", "wheat", "stone"];
+
+export const BOT_DIFFICULTIES: readonly BotDifficulty[] = ["easy", "medium", "hard"];
+export const TURN_TIMER_OPTIONS = [0, 30, 60, 90, 120] as const;

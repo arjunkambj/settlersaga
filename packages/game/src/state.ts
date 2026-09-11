@@ -1,9 +1,11 @@
 import { createBoard } from "./board";
 import {
   BANK_RESOURCE_COUNT,
+  BOT_DIFFICULTIES,
   DEFAULT_BASE_GAME_SETTINGS,
   DEVELOPMENT_CARD_DECK,
   INITIAL_PIECES,
+  TURN_TIMER_OPTIONS,
 } from "./constants";
 import { mapSupportsPlayerCount } from "./maps";
 import { deterministicShuffle } from "./random";
@@ -21,8 +23,6 @@ const MINIMUM_VICTORY_POINTS = 3;
 const MAXIMUM_BUILDING_VICTORY_POINTS = 13;
 const MINIMUM_DISCARD_LIMIT = 5;
 const MAXIMUM_DISCARD_LIMIT = 20;
-const BOT_DIFFICULTIES: readonly BotDifficulty[] = ["easy", "medium", "hard"];
-const TURN_TIMERS = [0, 30, 60, 90, 120] as const;
 
 function createSettings(
   playerCount: PlayerCount,
@@ -62,7 +62,7 @@ function createSettings(
     );
   }
 
-  if (!TURN_TIMERS.includes(settings.turnTimerSeconds)) {
+  if (!(TURN_TIMER_OPTIONS as readonly number[]).includes(settings.turnTimerSeconds)) {
     throw new GameRuleError("INVALID_COMMAND", "Turn timer is not supported");
   }
 

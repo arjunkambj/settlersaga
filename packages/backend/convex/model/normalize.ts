@@ -1,4 +1,4 @@
-import type { BaseGameSettings } from "@settersaga/game";
+import { TURN_TIMER_OPTIONS, type BaseGameSettings } from "@settersaga/game";
 import { getGameMapDefinition, mapSupportsPlayerCount } from "@settersaga/game/maps";
 
 import type { StoredBaseGameSettings } from "../schema";
@@ -74,7 +74,7 @@ export function validateGameSettings(settings: StoredBaseGameSettings): BaseGame
   ) {
     fail("INVALID_SETTINGS", "Discard limit must be an integer from 5 to 20.");
   }
-  if (![0, 30, 60, 90, 120].includes(currentSettings.turnTimerSeconds)) {
+  if (!(TURN_TIMER_OPTIONS as readonly number[]).includes(currentSettings.turnTimerSeconds)) {
     fail("INVALID_SETTINGS", "Turn timer must be 0, 30, 60, 90, or 120 seconds.");
   }
   if (!mapSupportsPlayerCount(currentSettings.map, currentSettings.maxPlayers)) {
