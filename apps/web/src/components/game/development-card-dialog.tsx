@@ -58,7 +58,7 @@ export function DevelopmentCardDialog({
       const bankCount = bank?.[resource];
       if (
         nextAmount < 0 ||
-        (change > 0 && selectedCount >= 2) ||
+        (change > 0 && totalResources(current) >= 2) ||
         (bankCount !== undefined && nextAmount > bankCount)
       ) {
         return current;
