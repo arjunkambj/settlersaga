@@ -420,12 +420,7 @@ export function useBoardCamera(): BoardCamera {
   );
 
   const handleClickCapture = useCallback<MouseEventHandler<HTMLElement>>((event) => {
-    const suppressedBuildTarget = suppressedBuildTargetRef.current;
-    if (!suppressedBuildTarget) {
-      return;
-    }
-
-    if (getBuildTarget(event.target) !== suppressedBuildTarget) {
+    if (!suppressedBuildTargetRef.current) {
       return;
     }
 
