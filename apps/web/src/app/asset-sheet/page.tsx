@@ -451,13 +451,13 @@ const ASSET_CATEGORIES = [
         status: "generated",
       },
       {
-        name: "Felt table palette",
+        name: "Ocean night palette",
         description:
-          "Single dark felt theme. Sage-white text, felt green surfaces, mint only on primary actions.",
-        format: "#145043 · #0F3A31 · #F6F8F7 · #E4ECE8 · #3DCAA0",
+          "Single deep ocean theme. Ice-white text, navy surfaces, sky blue on primary actions, cyan glow lines.",
+        format: "#1A4A94 · #143D7C · #F2F7FF · #C3D6F2 · #46B8FF",
         kind: "brand",
         status: "generated",
-        swatches: ["#145043", "#0F3A31", "#F6F8F7", "#E4ECE8", "#3DCAA0"],
+        swatches: ["#1A4A94", "#143D7C", "#F2F7FF", "#C3D6F2", "#46B8FF"],
       },
       {
         name: "Player seat colors",

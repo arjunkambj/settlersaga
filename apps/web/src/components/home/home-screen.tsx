@@ -173,7 +173,7 @@ export function HomeScreen({
               <h1 className="font-heading text-3xl font-bold drop-shadow-md sm:text-4xl">
                 Choose your voyage
               </h1>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm font-medium text-foreground/90 drop-shadow-md">
                 Play now, host a table, or join a crew.
               </p>
             </div>
@@ -316,7 +316,7 @@ export function HomeScreen({
 
 const voyageCardClassName = cn(
   "group flex w-full overflow-hidden rounded-4xl",
-  "bg-gradient-to-b from-card/55 to-card/70 shadow-sm shadow-background/40",
+  "border border-white/10 bg-gradient-to-b from-card/35 to-card/60",
   "focus-visible:ring-3 focus-visible:ring-ring/30 focus-visible:outline-none",
   "disabled:pointer-events-none disabled:opacity-50",
 );

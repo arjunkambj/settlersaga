@@ -5,7 +5,7 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* Single dark felt table. Text is near-white or sage; parchment cream on buttons. */
+/* Deep ocean night. Text is near-white or ice blue; bright sky blue on buttons, cyan glow lines, gold accents. */
 :root {
   color-scheme: dark;
   --font-ui:
@@ -13,39 +13,39 @@
     sans-serif;
   font-family: var(--font-ui);
 
-  --background: #145043;
-  --foreground: #f6f8f7;
-  --card: #0f3a31;
+  --background: #1a4a94;
+  --foreground: #f2f7ff;
+  --card: #143d7c;
   --card-foreground: var(--foreground);
-  --popover: color-mix(in oklch, #0c322b 88%, transparent);
+  --popover: color-mix(in oklch, #10356e 88%, transparent);
   --popover-foreground: var(--foreground);
-  --primary: #f3e3b0;
-  --primary-foreground: #1f1608;
-  --secondary: #1a6858;
+  --primary: #2f8fe8;
+  --primary-foreground: #f4f9ff;
+  --secondary: #2a63bd;
   --secondary-foreground: var(--foreground);
-  --muted: #1c5f52;
-  --muted-foreground: #e4ece8;
-  --accent: #3dcaa0;
-  --accent-foreground: #062019;
-  --destructive: #e11d48;
+  --muted: #225aa8;
+  --muted-foreground: #c3d6f2;
+  --accent: #46b8ff;
+  --accent-foreground: #051b3d;
+  --destructive: #f04f5f;
   --destructive-foreground: #fff1f2;
   --border: color-mix(in oklch, var(--foreground) 16%, transparent);
   --input: color-mix(in oklch, var(--foreground) 16%, transparent);
-  --ring: #f3e3b0;
-  --chart-1: #d7e3de;
-  --chart-2: #f3e3b0;
-  --chart-3: #8aa39a;
-  --chart-4: #1a6858;
-  --chart-5: #c94f2d;
+  --ring: #46b8ff;
+  --chart-1: #dbe8f8;
+  --chart-2: #ffc73d;
+  --chart-3: #7ea6d8;
+  --chart-4: #1c4f9c;
+  --chart-5: #e8632e;
   --radius: 0.625rem;
-  --sidebar: #1c5f52;
+  --sidebar: #225aa8;
   --sidebar-foreground: var(--foreground);
-  --sidebar-primary: #f3e3b0;
-  --sidebar-primary-foreground: #1f1608;
-  --sidebar-accent: #1a6858;
+  --sidebar-primary: #2f8fe8;
+  --sidebar-primary-foreground: #f4f9ff;
+  --sidebar-accent: #1d4f9c;
   --sidebar-accent-foreground: var(--foreground);
   --sidebar-border: color-mix(in oklch, var(--foreground) 14%, transparent);
-  --sidebar-ring: #f3e3b0;
+  --sidebar-ring: #46b8ff;
 }
 
 .scene-backdrop {
@@ -189,7 +189,7 @@ body {
   --hud-rail: clamp(350px, 27.5vw, 430px);
   --hud-radius: var(--radius-lg);
 
-  /* Dice — ivory + ember pairing from the menu art, mixed from theme tokens */
+  /* Dice — sky + ember pairing from the menu art, mixed from theme tokens */
   --die-ivory-body: var(--primary);
   --die-ivory-base: color-mix(in oklch, var(--primary) 62%, var(--primary-foreground));
   --die-ivory-well: color-mix(in oklch, var(--primary) 88%, var(--primary-foreground));

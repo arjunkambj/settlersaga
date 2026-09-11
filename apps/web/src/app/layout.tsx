@@ -23,7 +23,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   colorScheme: "dark",
-  themeColor: "#145043",
+  themeColor: "#1a4a94",
 };
 
 const dmSans = DM_Sans({
