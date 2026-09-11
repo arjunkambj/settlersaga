@@ -3,7 +3,7 @@
 import { api } from "@settersaga/backend/convex/_generated/api";
 import type { GameCommand } from "@settersaga/game";
 import { useMutation, useQuery } from "convex/react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { useAppSession } from "@/components/app/app-session-context";
 import { BackgroundMusic } from "@/components/audio/background-music";
@@ -60,12 +60,39 @@ export function RoomScreenContainer({ roomCode }: { roomCode: string }) {
   // visitor has not joined yet (or the room does not exist). Attempt the join; the
   // server rejects with a specific error when the room is missing, full, or started.
   const [joinError, setJoinError] = useState<string | null>(null);
+  const [roomClosed, setRoomClosed] = useState(false);
+  const hadRoomRef = useRef(false);
+  const joinAttemptedRef = useRef<string | null>(null);
+
   useEffect(() => {
-    if (!isRoomCode(normalizedCode) || room === undefined) return;
-    if (room !== null) {
-      setJoinError(null);
+    hadRoomRef.current = false;
+    joinAttemptedRef.current = null;
+    setJoinError(null);
+    setRoomClosed(false);
+  }, [normalizedCode]);
+
+  // Once the room view has loaded, a later null means the room was deleted (the
+  // host left) or this seat is no longer human. Rejoining would fail or silently
+  // re-seat the player, so surface a notice and drop the stored room code.
+  useEffect(() => {
+    if (room) {
+      hadRoomRef.current = true;
       return;
     }
+    if (room === null && hadRoomRef.current) {
+      setRoomClosed(true);
+      updateSession((current) => {
+        if (current.activeCode !== normalizedCode) return current;
+        const { activeCode: _activeCode, ...nextSession } = current;
+        return nextSession;
+      });
+    }
+  }, [normalizedCode, room, updateSession]);
+
+  useEffect(() => {
+    if (!isRoomCode(normalizedCode) || room !== null) return;
+    if (hadRoomRef.current || joinAttemptedRef.current === normalizedCode) return;
+    joinAttemptedRef.current = normalizedCode;
     let cancelled = false;
     joinRoomMutation({ code: normalizedCode, displayName }).catch((cause: unknown) => {
       if (!cancelled) setJoinError(toActionableError(cause));
@@ -91,6 +118,16 @@ export function RoomScreenContainer({ roomCode }: { roomCode: string }) {
   }
 
   if (room === null) {
+    if (roomClosed) {
+      return (
+        <NoticeScreen
+          actionLabel="Return Home"
+          message="This room is no longer available. The host may have closed it, or your seat was released."
+          onAction={exitRoomLocally}
+          title="Room Unavailable"
+        />
+      );
+    }
     if (joinError === null) {
       return <FullPageStatus label="Joining the Island…" />;
     }

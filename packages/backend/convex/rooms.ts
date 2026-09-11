@@ -120,9 +120,12 @@ export const leaveRoom = mutation({
   returns: v.null(),
   handler: async (ctx, args) => {
     const user = await requireCurrentHexclaveUser(ctx);
-    const room = await requireRoom(ctx, args.code);
+    const code = normalizeRoomCode(args.code);
+    const room = await findRoom(ctx, code);
+    if (!room) return null;
     const seats = await listSeats(ctx, room._id);
-    const seat = requireHumanSeatFromList(seats, user.id);
+    const seat = seats.find((candidate) => candidate.authUserId === user.id);
+    if (!seat || seat.kind !== "human") return null;
 
     if (room.status === "waiting") {
       if (seat._id === room.hostSeatId) {
