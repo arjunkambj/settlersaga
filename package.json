@@ -19,11 +19,6 @@
     "test": "bun test packages/game/tests packages/backend/tests apps/web/tests",
     "check": "oxlint && oxfmt --write"
   },
-  "dependencies": {
-    "@settersaga/env": "workspace:*",
-    "dotenv": "catalog:",
-    "zod": "catalog:"
-  },
   "devDependencies": {
     "@hexclave/next": "^1.0.80",
     "@settersaga/config": "workspace:*",
