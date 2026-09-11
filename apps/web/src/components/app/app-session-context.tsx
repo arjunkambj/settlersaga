@@ -18,6 +18,18 @@ import {
 } from "@/lib/audio-settings";
 import { type PlayerSession, readPlayerSession, writePlayerSession } from "@/lib/session";
 
+interface AuthClaims {
+  displayName: string | null;
+  id: string;
+  isAnonymous: boolean;
+  isRestricted: boolean;
+  primaryEmail: string | null;
+}
+
+export interface SessionUser extends AuthClaims {
+  profileImageUrl: string | null;
+}
+
 export interface AppSessionContextValue {
   accountLabel: string;
   audioSettings: AudioSettings;
@@ -34,16 +46,25 @@ export interface AppSessionContextValue {
   setPendingAction: (action: PendingAction) => void;
   signOut: () => Promise<void>;
   updateSession: (update: (current: PlayerSession) => PlayerSession) => void;
-  user: CurrentUser;
+  user: SessionUser;
   userId: string;
 }
 
 const AppSessionContext = createContext<AppSessionContextValue | null>(null);
 
+const claimsFromUser = (user: CurrentUser): AuthClaims => ({
+  displayName: user.displayName,
+  id: user.id,
+  isAnonymous: user.isAnonymous,
+  isRestricted: user.isRestricted,
+  primaryEmail: user.primaryEmail,
+});
+
 export function AppSessionProvider({ children }: { children: ReactNode }) {
   const hexclave = useHexclaveApp();
   const router = useRouter();
-  const [user, setUser] = useState<CurrentUser | null>();
+  const [claims, setClaims] = useState<AuthClaims | null>();
+  const [user, setUser] = useState<CurrentUser | null>(null);
   const [userLoadFailed, setUserLoadFailed] = useState(false);
   const [audioSettings, setAudioSettings] = useState(DEFAULT_AUDIO_SETTINGS);
   const [session, setSession] = useState<PlayerSession | null>(null);
@@ -58,10 +79,32 @@ export function AppSessionProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
 
     const loadUser = async () => {
+      // Fast path: `getPartialUser({ from: "token" })` decodes the stored access token
+      // locally, so a signed-in visitor renders without waiting on the auth backend.
+      // When it returns null the session is either absent (getUser resolves null without
+      // a network call) or the access token expired and needs a refresh.
+      try {
+        const partial = await hexclave.getPartialUser({ from: "token" });
+        if (!cancelled && partial) {
+          setClaims({
+            displayName: partial.displayName,
+            id: partial.id,
+            isAnonymous: partial.isAnonymous,
+            isRestricted: partial.isRestricted,
+            primaryEmail: partial.primaryEmail,
+          });
+        }
+      } catch {
+        // Fall back to the network result below.
+      }
+
+      // Authoritative user load: fills in profileImageUrl/signOut and corrects the
+      // optimistic claims (e.g. a changed display name or a revoked session).
       try {
         const currentUser = await hexclave.getUser({ includeRestricted: true });
         if (!cancelled) {
           setUser(currentUser);
+          setClaims(currentUser ? claimsFromUser(currentUser) : null);
         }
       } catch {
         if (!cancelled) {
@@ -77,18 +120,20 @@ export function AppSessionProvider({ children }: { children: ReactNode }) {
     };
   }, [hexclave]);
 
-  const accountLabel = user ? (user.displayName ?? user.primaryEmail ?? "Signed-in player") : "";
-  const defaultDisplayName = user
-    ? cleanDisplayName(user.displayName ?? user.primaryEmail?.split("@")[0] ?? "Explorer")
+  const accountLabel = claims
+    ? (claims.displayName ?? claims.primaryEmail ?? "Signed-in player")
+    : "";
+  const defaultDisplayName = claims
+    ? cleanDisplayName(claims.displayName ?? claims.primaryEmail?.split("@")[0] ?? "Explorer")
     : "Explorer";
 
   useEffect(() => {
-    if (!user || user.isAnonymous || user.isRestricted) {
+    if (!claims || claims.isAnonymous || claims.isRestricted) {
       return;
     }
-    const stored = readPlayerSession(window.localStorage, user.id, defaultDisplayName);
+    const stored = readPlayerSession(window.localStorage, claims.id, defaultDisplayName);
     setSession(stored);
-  }, [defaultDisplayName, user]);
+  }, [defaultDisplayName, claims]);
 
   const updateAudioSettings = (settings: AudioSettings) => {
     const nextSettings = normalizeAudioSettings(settings);
@@ -119,12 +164,10 @@ export function AppSessionProvider({ children }: { children: ReactNode }) {
   };
 
   const handleSignOut = async () => {
-    if (user) {
-      await user.signOut({ redirectUrl: "/" });
-    }
+    await hexclave.signOut({ redirectUrl: "/" });
   };
 
-  if (userLoadFailed) {
+  if (userLoadFailed && claims === undefined) {
     return (
       <NoticeScreen
         actionLabel="Try Again"
@@ -135,11 +178,11 @@ export function AppSessionProvider({ children }: { children: ReactNode }) {
     );
   }
 
-  if (user === undefined) {
+  if (claims === undefined) {
     return <FullPageStatus label="Checking Your Account…" />;
   }
 
-  if (user === null || user.isAnonymous || user.isRestricted) {
+  if (claims === null || claims.isAnonymous || claims.isRestricted) {
     return <AuthScreen />;
   }
 
@@ -155,14 +198,14 @@ export function AppSessionProvider({ children }: { children: ReactNode }) {
     onAudioSettingsChange: updateAudioSettings,
     onDisplayNameChange: updateDisplayName,
     pendingAction,
-    profileImageUrl: user.profileImageUrl,
+    profileImageUrl: user?.profileImageUrl ?? null,
     session,
     setError,
     setPendingAction,
     signOut: handleSignOut,
     updateSession,
-    user,
-    userId: user.id,
+    user: { ...claims, profileImageUrl: user?.profileImageUrl ?? null },
+    userId: claims.id,
   };
 
   return <AppSessionContext.Provider value={value}>{children}</AppSessionContext.Provider>;
