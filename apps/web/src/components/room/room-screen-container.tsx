@@ -3,7 +3,7 @@
 import { api } from "@settersaga/backend/convex/_generated/api";
 import type { GameCommand } from "@settersaga/game";
 import { useMutation, useQuery } from "convex/react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import { useAppSession } from "@/components/app/app-session-context";
 import { BackgroundMusic } from "@/components/audio/background-music";
@@ -56,13 +56,23 @@ export function RoomScreenContainer({ roomCode }: { roomCode: string }) {
     isRoomCode(normalizedCode) ? { code: normalizedCode } : "skip",
   );
 
-  // Auto-join room if valid room code and user not yet in room members
+  // getRoom only returns a view to seated human members, so a null room means the
+  // visitor has not joined yet (or the room does not exist). Attempt the join; the
+  // server rejects with a specific error when the room is missing, full, or started.
+  const [joinError, setJoinError] = useState<string | null>(null);
   useEffect(() => {
-    if (!room || room.status !== "waiting") return;
-    const alreadyMember = room.members.some((m) => m.displayName === displayName);
-    if (!alreadyMember) {
-      void joinRoomMutation({ code: normalizedCode, displayName });
+    if (!isRoomCode(normalizedCode) || room === undefined) return;
+    if (room !== null) {
+      setJoinError(null);
+      return;
     }
+    let cancelled = false;
+    joinRoomMutation({ code: normalizedCode, displayName }).catch((cause: unknown) => {
+      if (!cancelled) setJoinError(toActionableError(cause));
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [displayName, joinRoomMutation, normalizedCode, room]);
 
   if (!isRoomCode(normalizedCode)) {
@@ -81,12 +91,15 @@ export function RoomScreenContainer({ roomCode }: { roomCode: string }) {
   }
 
   if (room === null) {
+    if (joinError === null) {
+      return <FullPageStatus label="Joining the Island…" />;
+    }
     return (
       <NoticeScreen
         actionLabel="Return Home"
-        message="This invite may have expired. Check the code and try again."
+        message={joinError}
         onAction={exitRoomLocally}
-        title="Room Not Found"
+        title="Could Not Join Room"
       />
     );
   }
