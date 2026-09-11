@@ -2,6 +2,7 @@
 
 import { useId, type ReactNode } from "react";
 import type { BaseGameSettings, BotDifficulty, GameMapId } from "@settersaga/game";
+import { TURN_TIMER_OPTIONS } from "@settersaga/game";
 import { AVAILABLE_GAME_MAPS, getGameMapDefinition } from "@settersaga/game/maps";
 
 import { Tooltip as TooltipPrimitive } from "@base-ui/react/tooltip";
@@ -57,9 +58,8 @@ function InfoTooltip({ content }: { readonly content: string }) {
   );
 }
 
-const PLAYER_COUNT_OPTIONS = [4, 5, 6, 7, 8] as const;
+const PLAYER_COUNT_OPTIONS = [3, 4, 5, 6, 7, 8] as const;
 
-const TURN_TIMER_OPTIONS = [0, 30, 60, 90, 120] as const;
 export interface LobbySettingsValue {
   readonly botCount: BotCount;
   readonly botDifficulty: BotDifficulty;
@@ -187,11 +187,11 @@ export function LobbySettings({
                   className="flex items-center gap-1.5 text-sm font-semibold"
                 >
                   Players
-                  <InfoTooltip content="How many seats the table has. 4 uses the standard island, 5–6 the wide island, and 7–8 the grand island." />
+                  <InfoTooltip content="How many seats the table has. 3–4 use the standard island, 5–6 the wide island, and 7–8 the grand island." />
                 </FieldLabel>
                 <Select
                   disabled={disabled}
-                  value={String(Math.max(settings.maxPlayers, 4))}
+                  value={String(settings.maxPlayers)}
                   onValueChange={(value) => {
                     const nextSize = tableSizeForPlayerCount(Number(value));
                     if (!nextSize || nextSize.maxPlayers < humanCount) return;

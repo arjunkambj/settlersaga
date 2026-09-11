@@ -42,10 +42,10 @@ import type { RoomView } from "@/lib/game/types";
 import {
   createLobbySeatPreview,
   getBotCapacity,
+  getCompatiblePlayerCount,
   getMinimumPlayerCount,
   tableSizeForPlayerCount,
   toBotCount,
-  type BotCount,
 } from "@/lib/lobby/lobby-settings-model";
 import { LobbySettings, type LobbySettingsValue } from "./lobby-settings";
 
@@ -76,7 +76,7 @@ export function LobbyScreen({
   const [chatDraft, setChatDraft] = useState("");
   const [chatMessages, setChatMessages] = useState<readonly { id: number; text: string }[]>([]);
   const [confirmation, setConfirmation] = useState<LobbyConfirmation | null>(null);
-  const botCount = room.members.filter((member) => member.controller === "bot").length as BotCount;
+  const botCount = toBotCount(room.members.filter((member) => member.controller === "bot").length);
   const [settingsDraft, setSettingsDraft] = useState<LobbySettingsValue>(() => ({
     botCount,
     botDifficulty: room.botDifficulty,
@@ -84,6 +84,8 @@ export function LobbyScreen({
   }));
   const draftRef = useRef(settingsDraft);
   draftRef.current = settingsDraft;
+  const roomRef = useRef(room);
+  roomRef.current = room;
   const persistTimer = useRef<number | null>(null);
   const dirtyRef = useRef(false);
   const humanCount = room.members.length - botCount;
@@ -165,9 +167,24 @@ export function LobbyScreen({
     persistTimer.current = window.setTimeout(() => {
       persistTimer.current = null;
       const latest = draftRef.current;
-      if (!sameLobbySettings(latest, room)) {
-        void onSaveSettings(latest);
-      }
+      const currentRoom = roomRef.current;
+      if (sameLobbySettings(latest, currentRoom)) return;
+      const currentHumanCount = currentRoom.members.filter(
+        (member) => member.controller !== "bot",
+      ).length;
+      const maxPlayers = getCompatiblePlayerCount(
+        latest.settings.map,
+        currentHumanCount,
+        latest.settings.maxPlayers,
+      );
+      if (!maxPlayers) return;
+      void onSaveSettings({
+        ...latest,
+        botCount: toBotCount(
+          Math.min(latest.botCount, getBotCapacity(maxPlayers, currentHumanCount)),
+        ),
+        settings: { ...latest.settings, maxPlayers },
+      });
     }, 400);
   };
 
