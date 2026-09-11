@@ -487,6 +487,9 @@ export function chooseAutomatedCommand(state: GameState, playerId: PlayerId): Ga
   }
 
   if (!player.isBot) {
+    // Timed-out humans only take required actions; optional dev-card plays are
+    // never spent on their behalf, so the roll phase simply rolls.
+    if (state.phase.kind === "roll") return { kind: "roll" };
     return state.phase.kind === "build_and_trade"
       ? { kind: "end_turn" }
       : chooseFirstLegalCommand(state, playerId);
