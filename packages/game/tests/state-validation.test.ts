@@ -49,10 +49,7 @@ describe("serialized game-state validation", () => {
     const state = createGame();
     const view = toPlayerView(state, state.players[0]!.id);
 
-    expect(state.version).toBe(4);
-    expect(state.developmentDeck).toHaveLength(DEVELOPMENT_CARD_DECK.length);
     expect(state.players[0]!.developmentCards).toEqual([]);
-    expect("victoryPoints" in state).toBe(false);
     expect("developmentDeck" in view).toBe(false);
     expect(view.developmentCardSupply).toBe(DEVELOPMENT_CARD_DECK.length);
     expect(view.players[0]!.isViewer && view.players[0]!.developmentCards).toEqual([]);

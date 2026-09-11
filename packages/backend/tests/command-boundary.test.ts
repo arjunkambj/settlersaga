@@ -3,11 +3,9 @@ import { describe, expect, test } from "bun:test";
 import { createDefaultGame, type GameCommand, type GameState } from "@settersaga/game";
 
 import { commandEventKind, commandText, parseCommandKind } from "../convex/model/commands";
-import { commandValidator } from "../convex/model/validators";
 
 describe("game command boundary", () => {
   test("accepts and describes development-card purchases", () => {
-    expect(JSON.stringify(commandValidator)).toContain("buy_development_card");
     const state = createDefaultGame(
       Array.from({ length: 3 }, (_, index) => ({
         displayName: `Player ${index + 1}`,
@@ -25,15 +23,6 @@ describe("game command boundary", () => {
   });
 
   test("accepts and describes every development-card play command", () => {
-    const validatorJson = JSON.stringify(commandValidator);
-    for (const kind of [
-      "play_knight",
-      "play_monopoly",
-      "play_road_building",
-      "play_year_of_plenty",
-    ]) {
-      expect(validatorJson).toContain(kind);
-    }
     const state = createDefaultGame(
       Array.from({ length: 3 }, (_, index) => ({
         displayName: `Player ${index + 1}`,

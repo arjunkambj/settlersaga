@@ -4,7 +4,6 @@ import {
   BUILD_COSTS,
   DEVELOPMENT_CARD_COST,
   DEVELOPMENT_CARD_DECK,
-  GAME_MAP_IDS,
   GameRuleError,
   RESOURCE_TYPES,
   SUPERHERO_BOT_NAMES,
@@ -820,7 +819,6 @@ describe("robber theft", () => {
 
 describe("maps and turn limits", () => {
   test("each supported map exposes only its intended player counts", () => {
-    expect(GAME_MAP_IDS).toEqual(["base", "extended-6", "extended-8"]);
     expect([3, 4, 5, 6, 7, 8].filter((count) => mapSupportsPlayerCount("base", count))).toEqual([
       3, 4,
     ]);

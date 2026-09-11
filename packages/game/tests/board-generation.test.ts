@@ -81,7 +81,7 @@ describe("base board generation", () => {
         const firstNumber = firstTileId ? numberByTileId.get(firstTileId) : null;
         const secondNumber = secondTileId ? numberByTileId.get(secondTileId) : null;
 
-        if (firstNumber !== null && firstNumber !== undefined) {
+        if (firstNumber != null) {
           expect(firstNumber).not.toBe(secondNumber);
         }
         if (firstNumber === 6 || firstNumber === 8) {
