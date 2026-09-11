@@ -24,12 +24,22 @@ function titleFromSlug(slug: string): string {
     .join(" ");
 }
 
+function isMissingFileError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error.code === "ENOENT" || error.code === "ENOTDIR")
+  );
+}
+
 export async function listDocs(): Promise<DocSummary[]> {
   let entries: string[];
   try {
     entries = await readdir(DOCS_DIR);
-  } catch {
-    return [];
+  } catch (error) {
+    if (isMissingFileError(error)) return [];
+    throw error;
   }
 
   const slugs = entries
@@ -56,7 +66,8 @@ export async function getDoc(slug: string): Promise<Doc | null> {
   try {
     const content = await readFile(path.join(DOCS_DIR, `${slug}.md`), "utf8");
     return { slug, title: titleFromContent(content, titleFromSlug(slug)), content };
-  } catch {
-    return null;
+  } catch (error) {
+    if (isMissingFileError(error)) return null;
+    throw error;
   }
 }

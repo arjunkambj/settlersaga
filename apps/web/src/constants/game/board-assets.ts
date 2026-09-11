@@ -59,5 +59,3 @@ export const PORT_BOAT_RENDER_SIZE = {
   height: 138,
   width: 80,
 } as const;
-
-export const ROAD_ASSET_ROTATION_OFFSET = 0 as const;

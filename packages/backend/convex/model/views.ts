@@ -45,7 +45,7 @@ export async function toRoomView(
     botDifficulty: room.botDifficulty,
     botThinking: false,
     code: room.code,
-    events: [] as GameEventView[],
+    events: [],
     isHost: seat._id === room.hostSeatId,
     isPaused: false,
     members,

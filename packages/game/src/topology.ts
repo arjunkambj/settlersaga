@@ -41,16 +41,6 @@ export function getEdgeKey(firstVertexKey: string, secondVertexKey: string) {
   return `edge:${first}|${second}`;
 }
 
-export function getEdgeVertexKeys(edgeKey: string): readonly [string, string] {
-  const [first, second] = edgeKey.slice("edge:".length).split("|");
-
-  if (!first || !second) {
-    throw new Error(`Invalid edge key: ${edgeKey}`);
-  }
-
-  return [first, second];
-}
-
 export function axialToPixel(coordinate: AxialCoordinate, size: number): PixelCoordinate {
   return {
     x: 1.5 * size * coordinate.q,

@@ -85,11 +85,14 @@ export function getGameMapDefinition(mapId: GameMapId): GameMapDefinition {
   return GAME_MAP_DEFINITIONS[mapId];
 }
 
+export function isGameMapId(value: unknown): value is GameMapId {
+  return typeof value === "string" && value in GAME_MAP_DEFINITIONS;
+}
+
 export function mapSupportsPlayerCount(mapId: unknown, playerCount: number): boolean {
-  if (typeof mapId !== "string") {
+  if (!isGameMapId(mapId)) {
     return false;
   }
 
-  const definition = GAME_MAP_DEFINITIONS[mapId as GameMapId];
-  return definition?.playerCounts.some((count) => count === playerCount) ?? false;
+  return GAME_MAP_DEFINITIONS[mapId].playerCounts.some((count) => count === playerCount);
 }

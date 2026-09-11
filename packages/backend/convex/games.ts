@@ -1,4 +1,8 @@
-import { DEFAULT_BASE_GAME_SETTINGS, applyCommand as applyGameCommand } from "@settersaga/game";
+import {
+  DEFAULT_BASE_GAME_SETTINGS,
+  GameRuleError,
+  applyCommand as applyGameCommand,
+} from "@settersaga/game";
 import type { GameCommand } from "@settersaga/game";
 import { ConvexError, v } from "convex/values";
 
@@ -244,14 +248,7 @@ export const applyCommand = mutation({
     } catch (error) {
       if (error instanceof ConvexError) throw error;
       const message = error instanceof Error ? error.message : "Game command was rejected.";
-      const code =
-        typeof error === "object" &&
-        error !== null &&
-        "code" in error &&
-        typeof error.code === "string"
-          ? error.code
-          : "INVALID_COMMAND";
-      fail(code, message);
+      fail(error instanceof GameRuleError ? error.code : "INVALID_COMMAND", message);
     }
 
     await persistAppliedCommand(

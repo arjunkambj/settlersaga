@@ -228,9 +228,6 @@ export const replacePlayerWithBot = mutation({
     if (targetSeat._id === hostSeat._id) {
       fail("CANNOT_REPLACE_SELF", "The host cannot replace their own seat.");
     }
-    if (targetSeat._id === room.hostSeatId) {
-      fail("CANNOT_REPLACE_HOST", "The host seat cannot be replaced.");
-    }
     if (targetSeat.kind !== "human") {
       fail("TARGET_NOT_HUMAN", "Target seat is not controlled by a human player.");
     }
