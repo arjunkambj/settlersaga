@@ -3,7 +3,7 @@ export const BOARD_TILE = {
   renderSize: 364,
 } as const;
 
-export const TERRAIN_ATLAS_ASSET_PATH = "/game-assets/terrain/terrain-atlas.png";
+export const TERRAIN_ATLAS_ASSET_PATH = "/game-assets/terrain/terrain-atlas.png?art=pleasant-cartoon";
 
 export const TERRAIN_ATLAS = {
   columns: 3,
@@ -16,8 +16,8 @@ export const TERRAIN_ATLAS = {
     mountains: { column: 0, row: 1 },
     pasture: { column: 1, row: 1 },
   },
-  rows: 6,
-  variantCount: 3,
+  rows: 2,
+  variantCount: 1,
   variantRowCount: 2,
 } as const;
 
@@ -56,6 +56,6 @@ export const OCEAN_BOARD_ASSET_PATH = "/game-assets/ui/ocean-board-canvas.webp";
 export const PORT_DOCK_ASSET_PATH = "/game-assets/ui/port-bridge.png";
 export const PORT_BOAT_ASSET_PATH = "/game-assets/ui/port-merchant.png";
 export const PORT_BOAT_RENDER_SIZE = {
-  height: 138,
+  height: 120,
   width: 80,
 } as const;

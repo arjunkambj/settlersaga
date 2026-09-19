@@ -12,13 +12,13 @@ const TERRAIN_PREVIEW_LAYOUT = createBoardLayout(TERRAIN_PREVIEW_BOARD.tiles);
 const SQRT_THREE_OVER_TWO = Math.sqrt(3) / 2;
 
 export function TerrainBoardPreview() {
-  const textureSize = TERRAIN_PREVIEW_LAYOUT.tileRadius * 2;
+  const textureSize = (TERRAIN_PREVIEW_LAYOUT.tileRadius - 6.5) * 2;
   const tiles = TERRAIN_PREVIEW_BOARD.tiles
     .map((tile) => ({ point: getTilePoint(TERRAIN_PREVIEW_LAYOUT, tile), tile }))
     .sort((first, second) => first.point.y - second.point.y);
 
   return (
-    <figure className="mt-6 space-y-4 max-w-4xl">
+    <figure className="mt-6 flex flex-col gap-4 max-w-4xl">
       <div className="flex items-center justify-between gap-4">
         <div>
           <h3 className="font-bold text-base sm:text-lg">Masked board preview</h3>
@@ -26,13 +26,13 @@ export function TerrainBoardPreview() {
             Live 19-tile render using production atlas frames and board coordinates.
           </p>
         </div>
-        <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-500 uppercase tracking-wider whitespace-nowrap">
+        <span className="rounded-full border border-accent bg-accent/10 px-3 py-1 text-xs font-bold text-accent uppercase tracking-wider whitespace-nowrap">
           Actual fit
         </span>
       </div>
 
       <div
-        className="relative aspect-[10/11] w-full max-w-2xl overflow-hidden rounded-2xl border border-border bg-[#0876c9] bg-[url('/game-assets/ui/ocean-board-canvas.webp')] bg-cover bg-center shadow-none"
+        className="terrain-atlas-preview relative aspect-[10/11] w-full max-w-2xl overflow-hidden rounded-2xl border border-border"
         data-testid="terrain-board-preview"
       >
         <svg
@@ -48,7 +48,7 @@ export function TerrainBoardPreview() {
                   points={getFlatTopHexagonPoints(
                     point.x,
                     point.y,
-                    TERRAIN_PREVIEW_LAYOUT.tileRadius - 2.75,
+                    TERRAIN_PREVIEW_LAYOUT.tileRadius - 6.5,
                   )}
                 />
               </clipPath>
@@ -57,12 +57,12 @@ export function TerrainBoardPreview() {
 
           {tiles.map(({ point, tile }) => (
             <polygon
-              className="fill-[#b47a30]"
+              fill="var(--board-sand)"
               key={`frame-${tile.id}`}
               points={getFlatTopHexagonPoints(
                 point.x,
                 point.y,
-                TERRAIN_PREVIEW_LAYOUT.tileRadius + 5,
+                TERRAIN_PREVIEW_LAYOUT.tileRadius + 0.65,
               )}
             />
           ))}
@@ -83,20 +83,6 @@ export function TerrainBoardPreview() {
             );
           })}
 
-          {tiles.map(({ point, tile }) => {
-            const points = getFlatTopHexagonPoints(
-              point.x,
-              point.y,
-              TERRAIN_PREVIEW_LAYOUT.tileRadius - 2.75,
-            );
-            return (
-              <g className="fill-none stroke-round" key={`border-${tile.id}`}>
-                <polygon className="stroke-[#301e0e]/40 stroke-[2px]" points={points} />
-                <polygon className="stroke-[#ffe2a2]/50 stroke-[1.25px]" points={points} />
-              </g>
-            );
-          })}
-
           {tiles.flatMap(({ point, tile }) =>
             tile.numberToken === null
               ? []
@@ -104,7 +90,7 @@ export function TerrainBoardPreview() {
                   <g
                     className="select-none"
                     key={`token-${tile.id}`}
-                    transform={`translate(${point.x} ${point.y + TERRAIN_PREVIEW_LAYOUT.tileSize * 0.11 + 2})`}
+                    transform={`translate(${point.x} ${point.y + TERRAIN_PREVIEW_LAYOUT.tileSize * 0.16})`}
                   >
                     <circle r="42" fill="#fff4d8" stroke="#cb8f33" strokeWidth="7" />
                     <text

@@ -18,14 +18,14 @@ export interface BoardViewportState extends BoardViewportPoint {
 }
 
 export const DEFAULT_BOARD_VIEWPORT: BoardViewportState = {
-  scale: 1.12,
+  scale: 1.04,
   x: 0,
   y: 0,
 };
 
 const DEFAULT_BOARD_VIEWPORT_OFFSET = {
-  x: 0.15,
-  y: -0.085,
+  x: 0,
+  y: 0,
 } as const;
 
 const COMPACT_BOARD_VIEWPORT = {

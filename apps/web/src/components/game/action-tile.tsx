@@ -57,6 +57,7 @@ export function ActionTile({
       aria-label={ariaLabel}
       aria-pressed={pressed}
       className={cn(
+        size === "dock" && "game-action-tile",
         "relative grid justify-items-center h-auto min-h-0 text-center select-none transition-all duration-150",
         size === "dock"
           ? "w-16 min-w-16 p-0 bg-transparent hover:bg-transparent border-0 rounded-lg aspect-[2/3]"
@@ -93,7 +94,11 @@ export function ActionTile({
           {count}
         </span>
       )}
-      {size === "dock" ? null : (
+      {size === "dock" ? (
+        <span aria-hidden="true" className="game-action-label">
+          {title}
+        </span>
+      ) : (
         <span
           aria-hidden="true"
           className="self-center truncate text-center text-[0.52rem] font-extrabold text-muted-foreground leading-none max-w-full"

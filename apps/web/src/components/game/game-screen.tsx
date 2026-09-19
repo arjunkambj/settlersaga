@@ -58,6 +58,7 @@ import { ActiveTradeOffer, TradeCenter } from "./trade-center";
 import { GameHelpDialog } from "./game-help-dialog";
 import { useActionCountdown } from "./use-action-countdown";
 import { WinOverlay } from "./win-overlay";
+import { BrandWordmark } from "@/components/app/brand-logo";
 
 type GameConfirmation =
   | { kind: "leave" }
@@ -319,9 +320,15 @@ export function GameScreen({
         viewerPlayerId={me.id}
         winnerPlayerId={game.winnerPlayerId}
       />
-      <div className="absolute z-30 top-[max(0.4rem,env(safe-area-inset-top))] left-[max(0.45rem,env(safe-area-inset-left))] flex items-center gap-2 pointer-events-none max-[1100px]:relative max-[1100px]:inset-auto max-[1100px]:w-full max-[1100px]:justify-between max-[1100px]:flex-wrap max-[1100px]:pointer-events-auto [&>*]:pointer-events-auto">
-        <p className="sr-only">
-          Turn {game.turnNumber}. First to {game.settings.victoryPoints} victory points.
+      <div className="game-header absolute z-30 top-[max(0.4rem,env(safe-area-inset-top))] left-[max(0.45rem,env(safe-area-inset-left))] flex items-center gap-2 pointer-events-none max-[1100px]:relative max-[1100px]:inset-auto max-[1100px]:w-full max-[1100px]:justify-between max-[1100px]:flex-wrap max-[1100px]:pointer-events-auto [&>*]:pointer-events-auto">
+        <div className="game-brand">
+          <BrandWordmark priority />
+        </div>
+        <p className="game-match-status">
+          <span>CLASSIC ISLAND</span>
+          <strong>
+            Turn {game.turnNumber} · {game.settings.victoryPoints} points to win
+          </strong>
         </p>
         <div className="flex items-center gap-1.5">
           {isHost && game.status !== "completed" ? (
@@ -378,7 +385,7 @@ export function GameScreen({
       <HandDockProvider>
         <aside
           aria-label="Table status"
-          className="absolute z-30 top-[max(0.4rem,env(safe-area-inset-top))] right-[max(0.45rem,env(safe-area-inset-right))] bottom-[max(0.4rem,env(safe-area-inset-bottom))] flex flex-col w-[clamp(350px,27.5vw,430px)] min-h-0 gap-2 pointer-events-none max-[1100px]:relative max-[1100px]:inset-auto max-[1100px]:w-full max-[1100px]:pointer-events-auto [&>*]:pointer-events-auto"
+          className="game-sidebar absolute z-30 top-[max(0.4rem,env(safe-area-inset-top))] right-[max(0.45rem,env(safe-area-inset-right))] bottom-[max(0.4rem,env(safe-area-inset-bottom))] flex flex-col w-[clamp(350px,27.5vw,430px)] min-h-0 gap-2 pointer-events-none max-[1100px]:relative max-[1100px]:inset-auto max-[1100px]:w-full max-[1100px]:pointer-events-auto [&>*]:pointer-events-auto"
         >
           <div className="flex flex-col min-h-0 flex-1 gap-2">
             <EventLog
@@ -419,7 +426,10 @@ export function GameScreen({
           pending={pendingCommand !== null}
         />
 
-        <footer className="absolute z-30 right-[calc(clamp(350px,27.5vw,430px)+max(0.45rem,env(safe-area-inset-right))+0.5rem)] bottom-[max(0.4rem,env(safe-area-inset-bottom))] left-[max(0.45rem,env(safe-area-inset-left))] grid grid-cols-[minmax(0,1fr)_auto] items-end gap-2 pointer-events-none max-[1100px]:relative max-[1100px]:inset-auto max-[1100px]:w-full max-[1100px]:grid-cols-1 max-[1100px]:pointer-events-auto [&>*]:pointer-events-auto">
+        <footer
+          data-game-footer
+          className="game-footer absolute z-30 right-[calc(clamp(350px,27.5vw,430px)+max(0.45rem,env(safe-area-inset-right))+0.5rem)] bottom-[max(0.4rem,env(safe-area-inset-bottom))] left-[max(0.45rem,env(safe-area-inset-left))] grid grid-cols-[minmax(0,1fr)_auto] items-end gap-2 pointer-events-none max-[1100px]:relative max-[1100px]:inset-auto max-[1100px]:w-full max-[1100px]:grid-cols-1 max-[1100px]:pointer-events-auto [&>*]:pointer-events-auto"
+        >
           <ResourceHand
             actionNumber={game.actionNumber}
             me={me}
@@ -445,10 +455,10 @@ export function GameScreen({
             playableDevelopmentCards={game.legalActions.playableDevelopmentCards}
           />
 
-          <div className="grid grid-cols-[max-content_minmax(5.8rem,auto)] max-[1100px]:grid-cols-[minmax(0,1fr)_auto] gap-1.5 pointer-events-none [&>*]:pointer-events-auto">
+          <div className="game-command-dock grid grid-cols-[max-content_minmax(5.8rem,auto)] max-[1100px]:grid-cols-[minmax(0,1fr)_auto] gap-1.5 pointer-events-none [&>*]:pointer-events-auto">
             <section
               aria-labelledby="phase-title"
-              className="flex min-w-[16rem] items-center gap-2.5 px-3 py-2 rounded-2xl bg-card/90 shadow-lg border border-white/10 text-card-foreground"
+              className="game-phase-panel flex min-w-[16rem] items-center gap-2.5 px-3 py-2 rounded-2xl bg-card/90 shadow-lg border border-border text-card-foreground"
             >
               <span
                 aria-hidden="true"
@@ -465,7 +475,7 @@ export function GameScreen({
                 >
                   {phaseCopy.title}
                 </h1>
-                <span className="sr-only">{phaseCopy.detail}</span>
+                <span className="game-phase-detail">{phaseCopy.detail}</span>
               </div>
               {isViewerTurn && game.lastDiceRoll ? (
                 <CompactDiceResult
@@ -645,7 +655,7 @@ function PlayerStrip({
 
   return (
     <ol
-      className="flex flex-col w-full min-w-0 shrink-0 max-h-[50%] gap-1.5 p-0 m-0 overflow-y-auto list-none [scrollbar-width:thin]"
+      className="game-player-list flex flex-col w-full min-w-0 shrink-0 max-h-[50%] gap-1.5 p-0 m-0 overflow-y-auto list-none [scrollbar-width:thin]"
       aria-label="Players"
       ref={stripRef}
     >
@@ -672,8 +682,8 @@ function PlayerStrip({
         return (
           <li
             aria-current={isActive ? "true" : undefined}
-            className={`relative flex items-center justify-between gap-3 p-3 min-h-[90px] rounded-2xl shadow-md border border-white/10 transition-all player-${theme} ${
-              isActive ? "bg-card/90 shadow-xl ring-1 ring-white/20" : "bg-card/90"
+            className={`game-player relative flex items-center justify-between gap-3 p-3 min-h-[90px] rounded-2xl shadow-md border border-border transition-all player-${theme} ${
+              isActive ? "bg-card/90 shadow-xl ring-1 ring-primary/40" : "bg-card/90"
             }`}
             data-player-id={player.id}
             key={player.id}
@@ -743,7 +753,7 @@ function PlayerStrip({
                   />
                   <span
                     aria-hidden="true"
-                    className="absolute -top-1.5 -right-1.5 z-10 grid size-4.5 place-items-center rounded-full bg-white text-zinc-950 text-[0.6rem] font-black shadow-sm tabular-nums pointer-events-none"
+                    className="absolute -top-1.5 -right-1.5 z-10 grid size-4.5 place-items-center rounded-full bg-foreground text-background text-[0.6rem] font-black shadow-sm tabular-nums pointer-events-none"
                   >
                     {player.resourceCount}
                   </span>
@@ -771,7 +781,7 @@ function PlayerStrip({
                   />
                   <span
                     aria-hidden="true"
-                    className="absolute -top-1.5 -right-1.5 z-10 grid size-4.5 place-items-center rounded-full bg-white text-zinc-950 text-[0.6rem] font-black shadow-sm tabular-nums pointer-events-none"
+                    className="absolute -top-1.5 -right-1.5 z-10 grid size-4.5 place-items-center rounded-full bg-foreground text-background text-[0.6rem] font-black shadow-sm tabular-nums pointer-events-none"
                   >
                     {developmentCardCount}
                   </span>
@@ -807,7 +817,7 @@ function PlayerStrip({
                   />
                   <span
                     aria-hidden="true"
-                    className="absolute -top-1.5 -right-1.5 z-10 grid size-4.5 place-items-center rounded-full bg-white text-zinc-950 text-[0.6rem] font-black shadow-sm tabular-nums pointer-events-none"
+                    className="absolute -top-1.5 -right-1.5 z-10 grid size-4.5 place-items-center rounded-full bg-foreground text-background text-[0.6rem] font-black shadow-sm tabular-nums pointer-events-none"
                   >
                     {longestRoad}
                   </span>
@@ -845,7 +855,7 @@ function PlayerStrip({
                   />
                   <span
                     aria-hidden="true"
-                    className="absolute -top-1.5 -right-1.5 z-10 grid size-4.5 place-items-center rounded-full bg-white text-zinc-950 text-[0.6rem] font-black shadow-sm tabular-nums pointer-events-none"
+                    className="absolute -top-1.5 -right-1.5 z-10 grid size-4.5 place-items-center rounded-full bg-foreground text-background text-[0.6rem] font-black shadow-sm tabular-nums pointer-events-none"
                   >
                     {knightCount}
                   </span>
@@ -858,7 +868,7 @@ function PlayerStrip({
 
             {/* Right: Divider + Victory Points */}
             <div className="flex items-center gap-3 shrink-0 pl-1">
-              <div className="w-[1px] h-11 bg-white/15 shrink-0" aria-hidden="true" />
+              <div className="w-[1px] h-11 bg-border shrink-0" aria-hidden="true" />
               <div
                 aria-label={
                   hiddenVictoryPointCount > 0
@@ -945,10 +955,11 @@ function BankPanel({
   developmentCardSupply: number;
 }) {
   return (
-    <section
-      aria-label="Resource market"
-      className="shrink-0 p-2 rounded-2xl bg-card/90 shadow-md border border-white/10"
-    >
+    <section aria-label="Resource market" className="game-bank game-panel shrink-0 p-2">
+      <div className="game-panel-heading">
+        <span>Resource bank</span>
+        <span>Shared supply</span>
+      </div>
       <ul className="flex flex-nowrap gap-1.5 p-0 m-0 list-none">
         {RESOURCE_ORDER.map((resource) => (
           <li
@@ -1077,7 +1088,7 @@ function EventLog({
 
   return (
     <section
-      className="relative flex flex-col min-h-0 flex-1 p-2.5 rounded-2xl bg-card/90 shadow-md border border-white/10"
+      className="game-event-log game-panel relative flex flex-col min-h-0 flex-1 p-2.5"
       aria-labelledby="events-title"
     >
       {/* Header with live activity indicator */}
@@ -1134,7 +1145,7 @@ function EventLog({
                 className={`relative flex flex-col gap-1 p-2 rounded-xl border transition-all ${
                   isViewer
                     ? "bg-primary/[0.08] border-primary/25"
-                    : "bg-background/40 border-white/5"
+                    : "bg-background/40 border-border/50"
                 }${theme ? ` player-${theme}` : ""}`}
                 key={group.key}
               >
@@ -1290,7 +1301,7 @@ function ActionDock({
   if (game.phase.kind === "steal") {
     return (
       <section
-        className="flex flex-nowrap items-center gap-2 p-2 rounded-2xl bg-card/90 shadow-md border border-white/10"
+        className="flex flex-nowrap items-center gap-2 p-2 rounded-2xl bg-card/90 shadow-md border border-border"
         aria-label="Choose a player to steal from"
       >
         <div className="grid gap-0.5">
@@ -1452,11 +1463,11 @@ function BuildingActionsDock({
   return (
     <section
       aria-labelledby="building-actions-title"
-      className="flex flex-nowrap items-center gap-1.5 px-2 py-1.5 pt-2 rounded-2xl bg-card/90 shadow-md border border-white/10"
+      className="game-build-panel game-panel flex flex-col items-stretch gap-1.5 px-2 py-1.5 pt-2"
     >
-      <div className="sr-only">
+      <div className="game-panel-heading">
         <strong id="building-actions-title">Build & Trade</strong>
-        <span>
+        <span className="sr-only">
           {disabledReasonOverride ??
             "Buy a card, trade, or select a piece and choose a glowing target."}
         </span>
@@ -1526,7 +1537,7 @@ function TurnControl({
   if (controlKind === "roll") {
     return (
       <section
-        className="group grid min-w-[5.8rem] content-center justify-items-center gap-2 p-2 rounded-2xl bg-card/90 shadow-md border border-white/10 select-none"
+        className="group grid min-w-[5.8rem] content-center justify-items-center gap-2 p-2 rounded-2xl bg-card/90 shadow-md border border-border select-none"
         aria-label="Turn control"
       >
         <div
@@ -1563,7 +1574,7 @@ function TurnControl({
   if (controlKind === "end_turn") {
     return (
       <section
-        className="group grid min-w-[5.8rem] content-center justify-items-center gap-2 p-2 rounded-2xl bg-card/90 shadow-md border border-white/10 select-none"
+        className="group grid min-w-[5.8rem] content-center justify-items-center gap-2 p-2 rounded-2xl bg-card/90 shadow-md border border-border select-none"
         aria-label="Turn control"
       >
         <Button
@@ -1589,7 +1600,7 @@ function TurnControl({
   return (
     <section
       aria-label="Turn control"
-      className="grid min-w-[5.8rem] content-center justify-items-center gap-1 p-2 rounded-2xl bg-card/90 shadow-md border border-white/10 text-muted-foreground/70 text-xs font-bold text-center select-none"
+      className="grid min-w-[5.8rem] content-center justify-items-center gap-1 p-2 rounded-2xl bg-card/90 shadow-md border border-border text-muted-foreground/70 text-xs font-bold text-center select-none"
     >
       {controlKind === "waiting" ? (
         <>
@@ -1898,7 +1909,7 @@ function TurnClock({
               : `${status}, ${seconds} seconds remaining`
       }
       aria-live="off"
-      className={`flex min-w-[4.8rem] items-center justify-center gap-1 px-3 py-1.5 rounded-2xl bg-card/90 shadow-md border border-white/10 text-xs font-mono tabular-nums ${
+      className={`flex min-w-[4.8rem] items-center justify-center gap-1 px-3 py-1.5 rounded-2xl bg-card/90 shadow-md border border-border text-xs font-mono tabular-nums ${
         isExpired || isPaused
           ? "text-destructive"
           : botThinking

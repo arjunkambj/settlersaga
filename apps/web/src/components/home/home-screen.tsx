@@ -24,7 +24,7 @@ import logoutIcon from "@iconify-icons/solar/logout-2-bold";
 import playIcon from "@iconify-icons/solar/play-bold";
 import settingsIcon from "@iconify-icons/solar/settings-minimalistic-bold";
 
-import { BrandMark } from "@/components/app/brand-logo";
+import { BrandWordmark } from "@/components/app/brand-logo";
 import { PlayerSettingsDialog } from "@/components/app/player-settings-dialog";
 import { SceneBackdrop } from "@/components/app/scene-backdrop";
 import type { LobbySettingsValue } from "@/components/lobby/lobby-settings";
@@ -89,7 +89,7 @@ export function HomeScreen({
       <SceneBackdrop />
 
       <div className="relative z-20 flex items-center justify-between gap-3 p-4">
-        <BrandMark priority />
+        <BrandWordmark className="w-44 sm:w-52" priority />
         <div className="flex items-center gap-2">
           <TooltipPrimitive.Root>
             <TooltipPrimitive.Trigger

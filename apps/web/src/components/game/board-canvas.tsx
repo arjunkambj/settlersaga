@@ -83,13 +83,12 @@ type SceneRenderer<Scene> = (
 
 const MAX_CANVAS_PIXEL_RATIO = 3;
 const ROBBER_ASSET_PATH = "/game-assets/pieces/robber-piece.png";
-const CITY_PIECE_SIZE = 102;
-const ROAD_PIECE_SIZE = 138;
+const CITY_PIECE_SIZE = 94;
+const ROAD_PIECE_SIZE = 124;
 const ROAD_PIECE_SCALE_Y = 0.82;
-const SETTLEMENT_PIECE_SIZE = 94;
-const PORT_DOCK_WIDTH = 11;
-const TILE_FRAME_OUTSET = 5;
-const TILE_TERRAIN_INSET = 2.75;
+const SETTLEMENT_PIECE_SIZE = 82;
+const PORT_DOCK_WIDTH = 14;
+const TILE_TERRAIN_INSET = 6.5;
 const PORT_TRADE_BADGE_HEIGHT = 42;
 const PORT_TRADE_BADGE_WIDTH = 78;
 const PORT_RESOURCE_MARK_SIZE = 31;
@@ -375,15 +374,41 @@ function drawTerrain(
     }))
     .sort((first, second) => first.point.y - second.point.y);
 
+  const palette = getTerrainPalette(context.canvas);
+  drawCoastline(context, scene.boardLayout, palette);
+
   for (const { point } of tiles) {
-    drawTileFrame(context, point, scene.boardLayout.tileRadius);
+    createRoundedHexagonPath(
+      context,
+      { x: point.x, y: point.y + 8 },
+      scene.boardLayout.tileRadius + 0.65,
+      0,
+      0,
+    );
+    context.fillStyle = palette.earthDeep;
+    context.fill();
+  }
+
+  for (const { point } of tiles) {
+    createRoundedHexagonPath(context, point, scene.boardLayout.tileRadius + 0.65, 8, 0);
+    const bevel = context.createLinearGradient(
+      point.x,
+      point.y - scene.boardLayout.tileRadius,
+      point.x,
+      point.y + scene.boardLayout.tileRadius,
+    );
+    bevel.addColorStop(0, palette.sandLight);
+    bevel.addColorStop(0.5, palette.sand);
+    bevel.addColorStop(1, palette.earth);
+    context.fillStyle = bevel;
+    context.fill();
   }
 
   const terrainRadius = scene.boardLayout.tileRadius - TILE_TERRAIN_INSET;
 
   for (const { point, tile } of tiles) {
     if (terrainAtlas) {
-      const textureSize = scene.boardLayout.tileRadius * 2;
+      const textureSize = terrainRadius * 2;
       const frame = getTerrainAtlasFrame(tile.terrain, tile.id);
       const sourceX = frame.column * TERRAIN_ATLAS.frameSize;
       const sourceY = frame.row * TERRAIN_ATLAS.frameSize;
@@ -407,52 +432,70 @@ function drawTerrain(
   }
 
   for (const { point } of tiles) {
-    drawTerrainRim(context, point, terrainRadius);
+    createRoundedHexagonPath(context, point, terrainRadius, 5, 0);
+    context.lineWidth = 1.2;
+    context.strokeStyle = palette.sandLight;
+    context.stroke();
   }
 
   for (const { point, tile } of tiles) {
     if (tile.numberToken !== null) {
-      drawNumberToken(context, tile, point, scene.boardLayout.tileSize);
+      drawNumberToken(context, tile, point, scene.boardLayout.tileSize, palette);
     }
   }
 }
 
-function drawTileFrame(context: CanvasRenderingContext2D, point: PixelCoordinate, radius: number) {
-  context.save();
-  context.lineJoin = "round";
-
-  createRoundedHexagonPath(context, point, radius + TILE_FRAME_OUTSET + 2, 9, 0);
-  context.fillStyle = "rgba(28, 18, 10, 0.38)";
-  context.fill();
-
-  createRoundedHexagonPath(context, point, radius + TILE_FRAME_OUTSET, 8, 0);
-  const wood = context.createLinearGradient(
-    point.x - radius,
-    point.y - radius,
-    point.x + radius,
-    point.y + radius,
-  );
-  wood.addColorStop(0, "#d8a85c");
-  wood.addColorStop(0.48, "#b47a30");
-  wood.addColorStop(1, "#7a4a18");
-  context.fillStyle = wood;
-  context.fill();
-  context.restore();
+function getTerrainPalette(canvas: HTMLCanvasElement) {
+  const styles = getComputedStyle(canvas);
+  const color = (name: string) => styles.getPropertyValue(`--board-${name}`).trim();
+  return {
+    earth: color("earth"),
+    earthDeep: color("earth-deep"),
+    sand: color("sand"),
+    sandLight: color("sand-light"),
+    shadow: color("shadow"),
+    tokenFace: color("token-face"),
+    tokenEdge: color("token-edge"),
+    tokenInk: color("token-ink"),
+    tokenHot: color("token-hot"),
+  };
 }
 
-function drawTerrainRim(context: CanvasRenderingContext2D, point: PixelCoordinate, radius: number) {
+type TerrainPalette = ReturnType<typeof getTerrainPalette>;
+
+function drawCoastline(
+  context: CanvasRenderingContext2D,
+  layout: BoardLayout,
+  palette: TerrainPalette,
+) {
   context.save();
+  context.lineCap = "round";
   context.lineJoin = "round";
-
-  createRoundedHexagonPath(context, point, radius, 5, 0);
-  context.lineWidth = 2;
-  context.strokeStyle = "rgba(48, 30, 14, 0.42)";
-  context.stroke();
-
-  createRoundedHexagonPath(context, point, radius - 0.9, 5, 0);
-  context.lineWidth = 1.25;
-  context.strokeStyle = "rgba(255, 226, 162, 0.5)";
-  context.stroke();
+  for (const [edgeKey, tileIds] of Object.entries(layout.topology.edgeTileIds)) {
+    if (tileIds.length !== 1) continue;
+    const vertices = layout.topology.edgeVertices[edgeKey];
+    const start = vertices?.[0] ? getVertexPoint(layout, vertices[0]) : null;
+    const end = vertices?.[1] ? getVertexPoint(layout, vertices[1]) : null;
+    if (!start || !end) continue;
+    const tile = layout.topology.tileById[tileIds[0]!];
+    if (!tile) continue;
+    const point = getTilePoint(layout, tile);
+    const bevel = context.createLinearGradient(
+      0,
+      point.y - layout.tileRadius,
+      0,
+      point.y + layout.tileRadius,
+    );
+    bevel.addColorStop(0, palette.sandLight);
+    bevel.addColorStop(0.5, palette.sand);
+    bevel.addColorStop(1, palette.earth);
+    context.beginPath();
+    context.moveTo(start.x, start.y);
+    context.lineTo(end.x, end.y);
+    context.strokeStyle = bevel;
+    context.lineWidth = 12;
+    context.stroke();
+  }
   context.restore();
 }
 
@@ -461,29 +504,28 @@ function drawNumberToken(
   tile: BoardTile,
   tilePoint: PixelCoordinate,
   tileSize: number,
+  palette: TerrainPalette,
 ) {
   const number = tile.numberToken;
   if (number === null) {
     return;
   }
 
-  const point = { x: tilePoint.x, y: tilePoint.y + tileSize * 0.11 };
+  const point = { x: tilePoint.x, y: tilePoint.y + tileSize * 0.16 };
   const radius = Math.min(44, tileSize * 0.125);
   const isHot = number === 6 || number === 8;
-  const ink = isHot ? "#c4332a" : "#2d2a28";
+  const ink = isHot ? palette.tokenHot : palette.tokenInk;
 
   context.save();
   context.shadowBlur = 8;
-  context.shadowColor = "rgba(28, 36, 48, 0.28)";
+  context.shadowColor = palette.shadow;
   context.shadowOffsetY = 3;
-  context.beginPath();
-  context.arc(point.x, point.y, radius, 0, Math.PI * 2);
-  context.fillStyle = "#f4f1ea";
+  createRoundedHexagonPath(context, point, radius, 5, Math.PI / 6);
+  context.fillStyle = palette.tokenEdge;
   context.fill();
   context.restore();
 
-  context.beginPath();
-  context.arc(point.x, point.y, radius - 1.2, 0, Math.PI * 2);
+  createRoundedHexagonPath(context, point, radius - 1.2, 4, Math.PI / 6);
   const face = context.createRadialGradient(
     point.x - radius * 0.28,
     point.y - radius * 0.34,
@@ -492,26 +534,14 @@ function drawNumberToken(
     point.y,
     radius,
   );
-  face.addColorStop(0, "#fffdf8");
-  face.addColorStop(0.72, "#f3efe6");
-  face.addColorStop(1, "#e4ddd0");
+  face.addColorStop(0, palette.tokenFace);
+  face.addColorStop(0.8, palette.tokenFace);
+  face.addColorStop(1, palette.tokenEdge);
   context.fillStyle = face;
   context.fill();
-  context.lineWidth = 2;
-  context.strokeStyle = isHot ? "rgba(196, 51, 42, 0.22)" : "rgba(72, 62, 52, 0.22)";
+  context.lineWidth = isHot ? 3 : 2;
+  context.strokeStyle = isHot ? palette.tokenHot : palette.tokenEdge;
   context.stroke();
-
-  if (isHot) {
-    context.save();
-    context.translate(point.x, point.y + 1);
-    createRoundedHexagonPath(context, { x: 0, y: 0 }, radius - 9, 4, Math.PI / 6);
-    context.fillStyle = "rgba(255, 236, 232, 0.96)";
-    context.fill();
-    context.lineWidth = 2.4;
-    context.strokeStyle = "#d6453b";
-    context.stroke();
-    context.restore();
-  }
 
   context.fillStyle = ink;
   context.font = `800 ${Math.round(radius * 0.92)}px ui-rounded, system-ui, sans-serif`;
@@ -541,6 +571,7 @@ function drawPorts(
   scene: StaticScene,
   images: ReadonlyMap<string, HTMLImageElement | null>,
 ) {
+  const palette = getTerrainPalette(context.canvas);
   const ports = scene.ports.flatMap((port) => {
     const placement = getPortPlacement(scene.boardLayout, port.edgeKey);
     return placement ? [{ placement, port }] : [];
@@ -548,7 +579,7 @@ function drawPorts(
 
   for (const { placement } of ports) {
     for (const dock of placement.docks) {
-      drawDock(context, dock.start, dock.end);
+      drawDock(context, dock.start, dock.end, palette);
     }
   }
 
@@ -563,7 +594,12 @@ function drawPorts(
   }
 }
 
-function drawDock(context: CanvasRenderingContext2D, start: PixelCoordinate, end: PixelCoordinate) {
+function drawDock(
+  context: CanvasRenderingContext2D,
+  start: PixelCoordinate,
+  end: PixelCoordinate,
+  palette: TerrainPalette,
+) {
   const dx = end.x - start.x;
   const dy = end.y - start.y;
   const length = Math.hypot(dx, dy);
@@ -571,7 +607,7 @@ function drawDock(context: CanvasRenderingContext2D, start: PixelCoordinate, end
     return;
   }
 
-  const inset = 7;
+  const inset = 0;
   const trimmedStart = {
     x: start.x + (dx / length) * inset,
     y: start.y + (dy / length) * inset,
@@ -587,7 +623,7 @@ function drawDock(context: CanvasRenderingContext2D, start: PixelCoordinate, end
   context.rotate(angle);
   context.lineJoin = "round";
 
-  context.fillStyle = "rgba(28, 18, 10, 0.32)";
+  context.fillStyle = palette.earthDeep;
   createRoundedRectPath(
     context,
     -plankLength / 2 + 1,
@@ -599,27 +635,28 @@ function drawDock(context: CanvasRenderingContext2D, start: PixelCoordinate, end
   context.fill();
 
   const wood = context.createLinearGradient(0, -half, 0, half);
-  wood.addColorStop(0, "#e2b56a");
-  wood.addColorStop(0.45, "#c48a3a");
-  wood.addColorStop(1, "#8a5420");
+  wood.addColorStop(0, palette.sandLight);
+  wood.addColorStop(0.5, palette.sand);
+  wood.addColorStop(1, palette.earth);
   createRoundedRectPath(context, -plankLength / 2, -half, plankLength, PORT_DOCK_WIDTH, 3);
   context.fillStyle = wood;
   context.fill();
 
-  context.fillStyle = "rgba(72, 42, 16, 0.78)";
+  context.fillStyle = palette.earth;
   createRoundedRectPath(context, -plankLength / 2, -half, plankLength, 2.1, 1);
   context.fill();
   createRoundedRectPath(context, -plankLength / 2, half - 2.1, plankLength, 2.1, 1);
   context.fill();
 
-  context.strokeStyle = "rgba(255, 226, 162, 0.28)";
+  context.strokeStyle = palette.sandLight;
   context.lineWidth = 1;
   context.beginPath();
   context.moveTo(-plankLength / 2 + 4, -half + 3.2);
   context.lineTo(plankLength / 2 - 4, -half + 3.2);
   context.stroke();
 
-  context.strokeStyle = "rgba(62, 36, 14, 0.22)";
+  context.strokeStyle = palette.earth;
+  context.globalAlpha = 0.45;
   context.lineWidth = 1;
   const seamCount = Math.max(2, Math.round(plankLength / 22));
   for (let index = 1; index < seamCount; index += 1) {
@@ -645,19 +682,6 @@ function drawPort(
   if (boatImage) {
     context.save();
     context.translate(placement.x, placement.y);
-    context.rotate(placement.outwardAngle - Math.PI / 2);
-    context.filter = "brightness(0.26) saturate(0.72)";
-    context.globalAlpha = 0.84;
-    for (const [offsetX, offsetY] of [
-      [-2, 0],
-      [2, 0],
-      [0, -2],
-      [0, 2],
-    ]) {
-      context.drawImage(boatImage, -width / 2 + offsetX, -height / 2 + offsetY, width, height);
-    }
-    context.filter = "saturate(0.92) brightness(0.96) contrast(1.12)";
-    context.globalAlpha = 1;
     context.shadowBlur = 5;
     context.shadowColor = "rgba(39, 96, 122, 0.24)";
     context.shadowOffsetY = 3;
@@ -665,7 +689,12 @@ function drawPort(
     context.restore();
   }
 
-  drawPortTradeBadge(context, placement, trade, resourceImage);
+  drawPortTradeBadge(
+    context,
+    { x: placement.x, y: placement.y + height * 0.48 },
+    trade,
+    resourceImage,
+  );
 }
 
 function drawRoads(

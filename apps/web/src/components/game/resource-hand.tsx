@@ -183,8 +183,12 @@ export function ResourceHand({
   return (
     <section
       aria-label="Your cards"
-      className="relative grid w-full min-w-0 self-end h-fit content-start gap-1 px-2 py-1.5 pt-2 rounded-2xl bg-card/90 shadow-md border border-white/10"
+      className="game-hand game-panel relative grid w-full min-w-0 self-end h-fit content-start gap-1 px-2 py-1.5 pt-2"
     >
+      <div className="game-panel-heading">
+        <span>Your hand</span>
+        <span>{me.resourceCount} resources</span>
+      </div>
       {notice}
       <div
         className="absolute z-60 bottom-[calc(100%+0.5rem)] left-0 w-[min(34rem,92vw)]"
@@ -238,6 +242,9 @@ export function ResourceHand({
                     path={RESOURCE_CARD_ASSET_PATHS[resource]}
                     sizes="4.5rem"
                   />
+                </span>
+                <span aria-hidden="true" className="game-card-label">
+                  {RESOURCE_LABELS[resource]}
                 </span>
                 <span
                   aria-hidden="true"
