@@ -1,38 +1,42 @@
 import { v } from "convex/values";
-import type { GameState } from "@settersaga/game";
 
+import { internal } from "./_generated/api";
 import { mutation, query } from "./_generated/server";
 import { requireCurrentHexclaveUser } from "./hexclave/auth";
 import { fail } from "./model/errors";
-import { createBotDisplayName } from "../lib/bot-names";
+import { closeRoom, createRoomRecord, reconcileWaitingSeats, startRoomGame } from "./model/lobby";
 import {
-  convertGameSeatToBot,
-  createRoomRecord,
-  fitWaitingSeatsToSettings,
-  gameStatus,
-  parseGameState,
-  serializeGameState,
-  setWaitingBotCount,
-  transferPlayerToBot,
-} from "./model/gameState";
-import {
+  normalizeChatMessage,
   normalizeDisplayName,
-  normalizeSeatId,
-  normalizeRoomCode,
+  uniqueDisplayName,
   validateGameSettings,
 } from "./model/normalize";
+import { clearPresence, findPresence, recordHeartbeat, requireActingHost } from "./model/presence";
 import {
-  findRoom,
-  findSeatByAuthUser,
+  findHumanMembership,
   listSeats,
   nextOpenSeatIndex,
+  otherHumans,
+  requireHost,
+  requireHumanSeat,
   requireHumanSeatFromList,
   requireRoom,
   requireWaitingHost,
 } from "./model/roomQueries";
-import { botDifficultyValidator, baseGameSettingsValidator } from "./schema";
-import { roomViewValidator } from "./model/validators";
-import { toRoomView } from "./model/views";
+import { convertGameSeatToBot, releaseSeatToBot } from "./model/takeover";
+import {
+  baseGameSettingsValidator,
+  botDifficultyValidator,
+  chatMessageViewValidator,
+  presenceViewValidator,
+  roomViewValidator,
+} from "./model/validators";
+import { seatColor, toRoomView } from "./model/views";
+
+const CHAT_HISTORY_LIMIT = 100;
+const CHAT_COOLDOWN_MS = 700;
+/** Bounds how many lobbies a rename touches; the newest seats come first. */
+const RENAMED_SEAT_LIMIT = 50;
 
 export const createRoom = mutation({
   args: {
@@ -41,7 +45,7 @@ export const createRoom = mutation({
   returns: v.object({ code: v.string() }),
   handler: async (ctx, args) => {
     const user = await requireCurrentHexclaveUser(ctx);
-    const { code } = await createRoomRecord(ctx, user, args.displayName);
+    const { code } = await createRoomRecord(ctx, user.id, args.displayName);
     return { code };
   },
 });
@@ -56,17 +60,56 @@ export const updateLobbyConfiguration = mutation({
   returns: v.null(),
   handler: async (ctx, args) => {
     const user = await requireCurrentHexclaveUser(ctx);
-    const { room, seats } = await requireWaitingHost(ctx, args.code, user.id);
-    const settings = validateGameSettings(args.settings);
-    const fittedSeats = await fitWaitingSeatsToSettings(ctx, room, settings, seats);
+    const { room, seats } = await requireWaitingHost(
+      ctx,
+      args.code,
+      user.id,
+      "Only the room host can change lobby settings.",
+    );
+    validateGameSettings(args.settings);
     await Promise.all([
-      setWaitingBotCount(ctx, { ...room, settings }, args.botCount, fittedSeats),
+      reconcileWaitingSeats(ctx, room, args.settings, args.botCount, seats),
       ctx.db.patch("rooms", room._id, {
         botDifficulty: args.botDifficulty,
-        settings,
+        settings: args.settings,
         updatedAt: Date.now(),
       }),
     ]);
+    return null;
+  },
+});
+
+export const startGame = mutation({
+  args: {
+    code: v.string(),
+    fillEmptySeatsWithBots: v.boolean(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const user = await requireCurrentHexclaveUser(ctx);
+    const room = await requireRoom(ctx, args.code);
+    const seats = await listSeats(ctx, room._id);
+    requireHost(
+      room,
+      requireHumanSeatFromList(seats, user.id),
+      "Only the room host can start the game.",
+    );
+    if (room.status === "active") return null;
+    if (room.status === "finished") {
+      fail("GAME_ALREADY_FINISHED", "Start a rematch to play again.");
+    }
+
+    const humanCount = seats.filter((seat) => seat.kind === "human").length;
+    const startingSeats = args.fillEmptySeatsWithBots
+      ? await reconcileWaitingSeats(
+          ctx,
+          room,
+          room.settings,
+          room.settings.maxPlayers - humanCount,
+          seats,
+        )
+      : seats;
+    await startRoomGame(ctx, room, startingSeats);
     return null;
   },
 });
@@ -80,35 +123,36 @@ export const joinRoom = mutation({
   handler: async (ctx, args) => {
     const user = await requireCurrentHexclaveUser(ctx);
     const room = await requireRoom(ctx, args.code);
-    const existingSeat = await findSeatByAuthUser(ctx, room._id, user.id);
-    if (existingSeat) return { code: room.code };
+    const seats = await listSeats(ctx, room._id);
+    if (seats.some((seat) => seat.authUserId === user.id)) return { code: room.code };
+    if (room.kickedAuthUserIds.includes(user.id)) {
+      fail("KICKED", "The host removed you from this room.");
+    }
     if (room.status !== "waiting") fail("ROOM_STARTED", "Game has already started.");
 
-    const seats = await listSeats(ctx, room._id);
     const displayName = normalizeDisplayName(args.displayName);
-    const now = Date.now();
     if (seats.length < room.settings.maxPlayers) {
-      const seatIndex = nextOpenSeatIndex(seats, room.settings.maxPlayers);
       await ctx.db.insert("seats", {
         authUserId: user.id,
-        displayName,
-        joinedAt: now,
+        displayName: uniqueDisplayName(displayName, seats),
         kind: "human",
         roomId: room._id,
-        seatIndex,
+        seatIndex: nextOpenSeatIndex(seats, room.settings.maxPlayers),
       });
     } else {
-      const replaceableBot = seats
-        .filter((seat) => seat.kind === "bot")
-        .sort((left, right) => right.seatIndex - left.seatIndex)[0];
-      if (!replaceableBot) fail("ROOM_FULL", "Room is full.");
-      await ctx.db.patch("seats", replaceableBot._id, {
+      const bots = seats.filter((seat) => seat.kind === "bot");
+      const replacedBot = bots[bots.length - 1];
+      if (!replacedBot) fail("ROOM_FULL", "Room is full.");
+      await ctx.db.patch("seats", replacedBot._id, {
         authUserId: user.id,
-        displayName,
-        joinedAt: now,
+        displayName: uniqueDisplayName(
+          displayName,
+          seats.filter((seat) => seat._id !== replacedBot._id),
+        ),
         kind: "human",
       });
     }
+    await ctx.db.patch("rooms", room._id, { updatedAt: Date.now() });
     return { code: room.code };
   },
 });
@@ -120,90 +164,48 @@ export const leaveRoom = mutation({
   returns: v.null(),
   handler: async (ctx, args) => {
     const user = await requireCurrentHexclaveUser(ctx);
-    const code = normalizeRoomCode(args.code);
-    const room = await findRoom(ctx, code);
-    if (!room) return null;
-    const seats = await listSeats(ctx, room._id);
-    const seat = seats.find((candidate) => candidate.authUserId === user.id);
-    if (!seat || seat.kind !== "human") return null;
-
-    if (room.status === "waiting") {
-      if (seat._id === room.hostSeatId) {
-        await Promise.all([
-          ...seats.map((waitingSeat) => ctx.db.delete("seats", waitingSeat._id)),
-          ctx.db.delete("rooms", room._id),
-        ]);
-        return null;
-      }
-
-      await ctx.db.delete("seats", seat._id);
+    const membership = await findHumanMembership(ctx, args.code, user.id);
+    if (!membership) return null;
+    const { room, seat, seats } = membership;
+    const nextHost = otherHumans(seats, seat)[0];
+    if (!nextHost) {
+      await closeRoom(ctx, room);
       return null;
     }
+    const isHost = seat._id === room.hostSeatId;
 
-    const remainingHumans = seats.filter(
-      (candidate) => candidate.kind === "human" && candidate._id !== seat._id,
-    );
-    if (room.status === "active" && remainingHumans.length === 0) {
-      if (!room.gameId) fail("CORRUPT_GAME_STATE", "Active room does not have a game.");
-      const game = await ctx.db.get("games", room.gameId);
-      if (!game) fail("CORRUPT_GAME_STATE", "Room points to a missing game.");
-      validateGameSettings(game.settings);
-      const state = parseGameState(game.stateJson);
-      if (game.revision !== state.actionNumber) {
-        fail("CORRUPT_GAME_STATE", "Stored game revision does not match its state.");
-      }
-      const botDisplayName = createBotDisplayName(room._id, seat.seatIndex, seats);
-      const nextState: GameState = {
-        ...transferPlayerToBot(state, seat, room.botDifficulty, botDisplayName),
-        phase: { kind: "finished" },
-        status: "completed",
-        tradeOffer: null,
-        winnerPlayerId: null,
-      };
-      const now = Date.now();
+    if (room.status === "waiting") {
       await Promise.all([
-        ctx.db.patch("seats", seat._id, {
-          authUserId: undefined,
-          displayName: botDisplayName,
-          kind: "bot",
-        }),
-        ctx.db.patch("games", game._id, {
-          nextActionAt: undefined,
-          pausedNextActionRemainingMs: undefined,
-          pausedTurnDeadlineRemainingMs: undefined,
-          stateJson: serializeGameState(nextState),
-          status: gameStatus(nextState),
-          turnDeadlineAt: undefined,
-          updatedAt: now,
-        }),
+        ctx.db.delete("seats", seat._id),
+        clearPresence(ctx, room._id, user.id),
         ctx.db.patch("rooms", room._id, {
-          status: gameStatus(nextState),
-          updatedAt: now,
-        }),
-        ctx.db.insert("gameActions", {
-          actorSeatId: seat._id,
-          afterRevision: game.revision,
-          beforeRevision: game.revision,
-          clientActionId: `system:game-abandoned:${game.revision}`,
-          commandJson: JSON.stringify({ kind: "game_abandoned" }),
-          createdAt: now,
-          gameId: game._id,
-          text: `${seat.displayName} left. The game closed because no human players remain.`,
+          ...(isHost ? { hostSeatId: nextHost._id } : {}),
+          updatedAt: Date.now(),
         }),
       ]);
       return null;
     }
 
-    let eventText = `${seat.displayName} left the game and is now controlled by a bot.`;
-    if (room.status === "active" && seat._id === room.hostSeatId) {
-      const nextHost = remainingHumans[0];
-      if (nextHost) {
-        await ctx.db.patch("rooms", room._id, { hostSeatId: nextHost._id });
-        eventText = `${eventText} ${nextHost.displayName} is now the room host.`;
-      }
+    const handOverHost = isHost
+      ? [ctx.db.patch("rooms", room._id, { hostSeatId: nextHost._id })]
+      : [];
+    if (room.status === "finished") {
+      // The finished game stays untouched; the seat only goes to a bot for a rematch.
+      await Promise.all([releaseSeatToBot(ctx, room, seat, seats), ...handOverHost]);
+      return null;
     }
 
-    await convertGameSeatToBot(ctx, room, seat, eventText, seats);
+    const hostText = isHost ? ` ${nextHost.displayName} is now the room host.` : "";
+    await Promise.all([
+      convertGameSeatToBot(
+        ctx,
+        room,
+        seat,
+        seats,
+        `${seat.displayName} left the game and is now controlled by a bot.${hostText}`,
+      ),
+      ...handOverHost,
+    ]);
     return null;
   },
 });
@@ -219,12 +221,10 @@ export const replacePlayerWithBot = mutation({
     const room = await requireRoom(ctx, args.code);
     const seats = await listSeats(ctx, room._id);
     const hostSeat = requireHumanSeatFromList(seats, user.id);
-    if (hostSeat._id !== room.hostSeatId) {
-      fail("NOT_HOST", "Only the room host can replace a player with a bot.");
-    }
+    requireHost(room, hostSeat, "Only the room host can replace a player with a bot.");
 
-    const targetSeatId = normalizeSeatId(args.targetSeatId);
-    const targetSeat = seats.find((seat) => String(seat._id) === targetSeatId);
+    const targetSeatId = ctx.db.normalizeId("seats", args.targetSeatId);
+    const targetSeat = seats.find((seat) => seat._id === targetSeatId);
     if (!targetSeat) {
       fail("TARGET_SEAT_NOT_FOUND", "Target seat does not belong to this room.");
     }
@@ -234,29 +234,193 @@ export const replacePlayerWithBot = mutation({
     if (targetSeat.kind !== "human") {
       fail("TARGET_NOT_HUMAN", "Target seat is not controlled by a human player.");
     }
-
-    if (room.status === "waiting") {
-      const botDisplayName = createBotDisplayName(room._id, targetSeat.seatIndex, seats);
-      await ctx.db.patch("seats", targetSeat._id, {
-        authUserId: undefined,
-        displayName: botDisplayName,
-        joinedAt: Date.now(),
-        kind: "bot",
-      });
-      return null;
-    }
     if (room.status === "finished") {
       fail("GAME_ALREADY_FINISHED", "A completed game cannot replace player control.");
+    }
+
+    if (room.status === "waiting") {
+      await Promise.all([
+        releaseSeatToBot(ctx, room, targetSeat, seats),
+        ctx.db.patch("rooms", room._id, {
+          kickedAuthUserIds: targetSeat.authUserId
+            ? [...room.kickedAuthUserIds, targetSeat.authUserId]
+            : room.kickedAuthUserIds,
+          updatedAt: Date.now(),
+        }),
+      ]);
+      return null;
     }
 
     await convertGameSeatToBot(
       ctx,
       room,
       targetSeat,
-      `${hostSeat.displayName} replaced ${targetSeat.displayName} with a bot.`,
       seats,
+      `${hostSeat.displayName} replaced ${targetSeat.displayName} with a bot.`,
     );
     return null;
+  },
+});
+
+export const rematch = mutation({
+  args: {
+    code: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const user = await requireCurrentHexclaveUser(ctx);
+    const room = await requireRoom(ctx, args.code);
+    const seats = await listSeats(ctx, room._id);
+    const seat = requireHumanSeatFromList(seats, user.id);
+    if (room.status === "waiting") return null;
+    if (room.status !== "finished") {
+      fail("GAME_NOT_FINISHED", "A rematch can start once the game has finished.");
+    }
+    await requireActingHost(ctx, room, seats, seat, "Only the room host can start a rematch.");
+
+    await Promise.all([
+      ctx.db.patch("rooms", room._id, {
+        gameId: undefined,
+        status: "waiting",
+        updatedAt: Date.now(),
+      }),
+      ...(room.gameId
+        ? [ctx.scheduler.runAfter(0, internal.cleanup.purgeGame, { gameId: room.gameId })]
+        : []),
+    ]);
+    return null;
+  },
+});
+
+export const updateDisplayName = mutation({
+  args: {
+    displayName: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const user = await requireCurrentHexclaveUser(ctx);
+    const displayName = normalizeDisplayName(args.displayName);
+    const seats = await ctx.db
+      .query("seats")
+      .withIndex("by_auth_user_id", (index) => index.eq("authUserId", user.id))
+      .order("desc")
+      .take(RENAMED_SEAT_LIMIT);
+    await Promise.all(
+      seats.map(async (seat) => {
+        const room = await ctx.db.get("rooms", seat.roomId);
+        if (room?.status !== "waiting") return;
+        const roomSeats = await listSeats(ctx, room._id);
+        await ctx.db.patch("seats", seat._id, {
+          displayName: uniqueDisplayName(
+            displayName,
+            roomSeats.filter((other) => other._id !== seat._id),
+          ),
+        });
+      }),
+    );
+    return null;
+  },
+});
+
+export const sendChatMessage = mutation({
+  args: {
+    body: v.string(),
+    code: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const user = await requireCurrentHexclaveUser(ctx);
+    const room = await requireRoom(ctx, args.code);
+    const seat = await requireHumanSeat(ctx, room._id, user.id);
+    const body = normalizeChatMessage(args.body);
+    const lastMessage = await ctx.db
+      .query("roomMessages")
+      .withIndex("by_room_and_auth_user_id", (index) =>
+        index.eq("roomId", room._id).eq("authUserId", user.id),
+      )
+      .order("desc")
+      .first();
+    if (lastMessage && Date.now() - lastMessage._creationTime < CHAT_COOLDOWN_MS) {
+      fail("RATE_LIMITED", "You are sending messages too quickly.");
+    }
+
+    await ctx.db.insert("roomMessages", {
+      authUserId: user.id,
+      authorSeatId: seat._id,
+      body,
+      displayName: seat.displayName,
+      roomId: room._id,
+      seatIndex: seat.seatIndex,
+    });
+    return null;
+  },
+});
+
+export const listChatMessages = query({
+  args: {
+    code: v.string(),
+  },
+  returns: v.array(chatMessageViewValidator),
+  handler: async (ctx, args) => {
+    const user = await requireCurrentHexclaveUser(ctx);
+    const membership = await findHumanMembership(ctx, args.code, user.id);
+    if (!membership) return [];
+    const messages = await ctx.db
+      .query("roomMessages")
+      .withIndex("by_room_id", (index) => index.eq("roomId", membership.room._id))
+      .order("desc")
+      .take(CHAT_HISTORY_LIMIT);
+    return messages.reverse().map((message) => {
+      // Lobby seats are renumbered when the host changes the table, so color by the current seat.
+      const seatIndex =
+        membership.seats.find(
+          (seat) => seat._id === message.authorSeatId && seat.authUserId === message.authUserId,
+        )?.seatIndex ?? message.seatIndex;
+      return {
+        body: message.body,
+        displayName: message.displayName,
+        id: message._id,
+        isMine: message.authUserId === user.id,
+        playerColor: seatColor(seatIndex),
+        seatIndex,
+        sentAt: message._creationTime,
+      };
+    });
+  },
+});
+
+export const heartbeat = mutation({
+  args: {
+    code: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const user = await requireCurrentHexclaveUser(ctx);
+    const membership = await findHumanMembership(ctx, args.code, user.id);
+    if (membership) await recordHeartbeat(ctx, membership.room._id, user.id, Date.now());
+    return null;
+  },
+});
+
+export const listPresence = query({
+  args: {
+    code: v.string(),
+  },
+  returns: v.array(presenceViewValidator),
+  handler: async (ctx, args) => {
+    const user = await requireCurrentHexclaveUser(ctx);
+    const membership = await findHumanMembership(ctx, args.code, user.id);
+    if (!membership) return [];
+    const presence = await Promise.all(
+      membership.seats.map(async (seat) => {
+        const seen =
+          seat.authUserId === undefined
+            ? null
+            : await findPresence(ctx, membership.room._id, seat.authUserId);
+        return seen ? [{ lastSeenAt: seen.lastSeenAt, seatIndex: seat.seatIndex }] : [];
+      }),
+    );
+    return presence.flat();
   },
 });
 
@@ -267,12 +431,8 @@ export const getRoom = query({
   returns: v.union(v.null(), roomViewValidator),
   handler: async (ctx, args) => {
     const user = await requireCurrentHexclaveUser(ctx);
-    const code = normalizeRoomCode(args.code);
-    const room = await findRoom(ctx, code);
-    if (!room) return null;
-    const seats = await listSeats(ctx, room._id);
-    const seat = seats.find((candidate) => candidate.authUserId === user.id);
-    if (!seat || seat.kind !== "human") return null;
-    return await toRoomView(ctx, room, seat, seats);
+    const membership = await findHumanMembership(ctx, args.code, user.id);
+    if (!membership) return null;
+    return await toRoomView(ctx, membership.room, membership.seat, membership.seats);
   },
 });

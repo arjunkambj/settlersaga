@@ -3,42 +3,22 @@ import { fail } from "./errors";
 import { normalizeRoomCode } from "./normalize";
 import type { ReadCtx, RoomDoc, RoomId, SeatDoc, SeatRecord } from "./types";
 
-function hashText(value: string): number {
-  let hash = 2_166_136_261;
-  for (let index = 0; index < value.length; index += 1) {
-    hash ^= value.charCodeAt(index);
-    hash = Math.imul(hash, 16_777_619);
-  }
-  return hash >>> 0;
+function roomCodeCandidate(): string {
+  return Array.from(
+    { length: ROOM_CODE_LENGTH },
+    () => ROOM_CODE_ALPHABET[Math.floor(Math.random() * ROOM_CODE_ALPHABET.length)],
+  ).join("");
 }
 
-function roomCodeCandidate(authUserId: string, now: number, attempt: number): string {
-  let random = hashText(`${authUserId}:${now}:${attempt}`);
-  return Array.from({ length: ROOM_CODE_LENGTH }, () => {
-    random ^= random << 13;
-    random ^= random >>> 17;
-    random ^= random << 5;
-    return ROOM_CODE_ALPHABET[(random >>> 0) % ROOM_CODE_ALPHABET.length];
-  }).join("");
-}
-
-export async function allocateRoomCode(
-  ctx: ReadCtx,
-  authUserId: string,
-  now: number,
-): Promise<string> {
+export async function allocateRoomCode(ctx: ReadCtx): Promise<string> {
   for (let attempt = 0; attempt < 32; attempt += 1) {
-    const code = roomCodeCandidate(authUserId, now, attempt);
-    const existing = await ctx.db
-      .query("rooms")
-      .withIndex("by_code", (index) => index.eq("code", code))
-      .unique();
-    if (!existing) return code;
+    const code = roomCodeCandidate();
+    if (!(await findRoom(ctx, code))) return code;
   }
   fail("ROOM_CODE_EXHAUSTED", "Could not allocate a unique room code.");
 }
 
-export async function findRoom(ctx: ReadCtx, code: string): Promise<RoomDoc | null> {
+async function findRoom(ctx: ReadCtx, code: string): Promise<RoomDoc | null> {
   return await ctx.db
     .query("rooms")
     .withIndex("by_code", (index) => index.eq("code", code))
@@ -46,10 +26,25 @@ export async function findRoom(ctx: ReadCtx, code: string): Promise<RoomDoc | nu
 }
 
 export async function requireRoom(ctx: ReadCtx, rawCode: string): Promise<RoomDoc> {
-  const code = normalizeRoomCode(rawCode);
-  const room = await findRoom(ctx, code);
+  const room = await findRoom(ctx, normalizeRoomCode(rawCode));
   if (!room) fail("ROOM_NOT_FOUND", "Room not found.");
+  if (room.status === "closed") fail("ROOM_CLOSED", "This room has closed.");
   return room;
+}
+
+/** The caller's human seat in an open room, or null when they cannot see the room. */
+export async function findHumanMembership(
+  ctx: ReadCtx,
+  rawCode: string,
+  authUserId: string,
+): Promise<{ room: RoomDoc; seat: SeatDoc; seats: SeatDoc[] } | null> {
+  const room = await findRoom(ctx, normalizeRoomCode(rawCode));
+  if (!room || room.status === "closed") return null;
+  const seats = await listSeats(ctx, room._id);
+  const seat = seats.find(
+    (candidate) => candidate.authUserId === authUserId && candidate.kind === "human",
+  );
+  return seat ? { room, seat, seats } : null;
 }
 
 export async function listSeats(ctx: ReadCtx, roomId: RoomId): Promise<SeatDoc[]> {
@@ -63,7 +58,7 @@ export async function listSeats(ctx: ReadCtx, roomId: RoomId): Promise<SeatDoc[]
   return seats;
 }
 
-export async function findSeatByAuthUser(
+async function findSeatByAuthUser(
   ctx: ReadCtx,
   roomId: RoomId,
   authUserId: string,
@@ -99,25 +94,38 @@ export function requireHumanSeatFromList<Seat extends SeatRecord>(
   return seat;
 }
 
+export function requireHost(room: RoomDoc, seat: SeatRecord, message: string): void {
+  if (seat._id !== room.hostSeatId) fail("NOT_HOST", message);
+}
+
 export async function requireWaitingHost(
   ctx: ReadCtx,
   rawCode: string,
   authUserId: string,
+  message: string,
 ): Promise<{ room: RoomDoc; seats: SeatDoc[] }> {
   const room = await requireRoom(ctx, rawCode);
   const seats = await listSeats(ctx, room._id);
-  const hostSeat = requireHumanSeatFromList(seats, authUserId);
-  if (hostSeat._id !== room.hostSeatId) {
-    fail("NOT_HOST", "Only the room host can change lobby settings.");
-  }
-  if (room.status !== "waiting" || room.gameId) {
-    fail("ROOM_STARTED", "Lobby settings can only be changed before the game starts.");
+  requireHost(room, requireHumanSeatFromList(seats, authUserId), message);
+  if (room.status !== "waiting") {
+    fail("ROOM_STARTED", "The lobby can only be changed before the game starts.");
   }
   return { room, seats };
 }
 
+/**
+ * The other humans in the order of `seats`; with listSeats' seat order, the first one inherits
+ * the host role.
+ */
+export function otherHumans<Seat extends SeatRecord>(
+  seats: readonly Seat[],
+  leavingSeat: SeatRecord,
+): Seat[] {
+  return seats.filter((seat) => seat.kind === "human" && seat._id !== leavingSeat._id);
+}
+
 export function nextOpenSeatIndex(
-  seats: readonly Pick<SeatDoc, "seatIndex">[],
+  seats: readonly Pick<SeatRecord, "seatIndex">[],
   maxPlayers: number,
 ): number {
   const occupied = new Set(seats.map((seat) => seat.seatIndex));

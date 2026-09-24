@@ -1,85 +1,89 @@
-import {
-  DEFAULT_BASE_GAME_SETTINGS,
-  GameRuleError,
-  applyCommand as applyGameCommand,
-} from "@settersaga/game";
-import type { GameCommand } from "@settersaga/game";
-import { ConvexError, v } from "convex/values";
+import { GameRuleError, applyCommand as applyGameCommand } from "@settersaga/game";
+import type { GameCommand, GameState } from "@settersaga/game";
+import { v } from "convex/values";
 
 import { mutation } from "./_generated/server";
 import { requireCurrentHexclaveUser } from "./hexclave/auth";
-import { commandText, serializeCommand, validateCommandBounds } from "./model/commands";
+import { commandText, serializeCommand } from "./model/commands";
+import { MAX_SEATS } from "./model/constants";
 import { fail } from "./model/errors";
 import {
-  createRoomRecord,
-  parseGameState,
+  insertSystemEvent,
+  pauseGameRecord,
   persistAppliedCommand,
-  resumeAutomatedActionSchedule,
-  setWaitingBotCount,
-  startRoomGame,
-} from "./model/gameState";
-import {
-  validateActionNumber,
-  validateBotCount,
-  validateClientActionId,
-  validateGameSettings,
-} from "./model/normalize";
+  requireRoomGame,
+} from "./model/gameRecords";
+import { createRoomRecord, reconcileWaitingSeats, startRoomGame } from "./model/lobby";
+import { validateClientActionId, validateGameSettings } from "./model/normalize";
+import { requireActingHost } from "./model/presence";
 import {
   listSeats,
   requireHumanSeat,
   requireHumanSeatFromList,
   requireRoom,
 } from "./model/roomQueries";
-import { commandValidator } from "./model/validators";
-import { baseGameSettingsValidator, botDifficultyValidator } from "./schema";
-import { DEFAULT_BOT_DIFFICULTY } from "./model/constants";
+import { resumeAutomatedActionSchedule } from "./model/scheduling";
+import { parseGameState } from "./model/storage";
+import type { GameDoc, ReadCtx } from "./model/types";
+import {
+  baseGameSettingsValidator,
+  botDifficultyValidator,
+  commandValidator,
+} from "./model/validators";
 
-export const startGame = mutation({
-  args: {
-    code: v.string(),
-  },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    const user = await requireCurrentHexclaveUser(ctx);
-    const room = await requireRoom(ctx, args.code);
-    const seats = await listSeats(ctx, room._id);
-    const seat = requireHumanSeatFromList(seats, user.id);
-    if (seat._id !== room.hostSeatId) fail("NOT_HOST", "Only the room host can start the game.");
-    await startRoomGame(ctx, room, seats);
-    return null;
-  },
-});
+/** Answers several players give at once, which do not depend on each other. */
+const CONCURRENT_ANSWER_COMMANDS: ReadonlySet<GameCommand["kind"]> = new Set([
+  "discard",
+  "respond_trade",
+]);
+
+/**
+ * Whether a concurrent answer made at an older revision only missed other answers of the same
+ * kind, which leaves it valid; the engine still checks it against the current state. Anything else
+ * in between makes it stale, such as a discard replayed from an offline queue into a later
+ * discard phase.
+ */
+async function missedOnlyConcurrentAnswers(
+  ctx: ReadCtx,
+  game: GameDoc,
+  kind: GameCommand["kind"],
+  expectedActionNumber: number,
+): Promise<boolean> {
+  if (!CONCURRENT_ANSWER_COMMANDS.has(kind) || expectedActionNumber > game.revision) return false;
+  // Every other seat answering first is the most that can land in between.
+  const missed = await ctx.db
+    .query("gameActions")
+    .withIndex("by_game_and_after_revision", (index) =>
+      index.eq("gameId", game._id).gt("afterRevision", expectedActionNumber),
+    )
+    .take(MAX_SEATS);
+  return missed.length < MAX_SEATS && missed.every((action) => action.eventKind === kind);
+}
 
 export const createQuickGame = mutation({
   args: {
-    botCount: v.optional(v.number()),
-    botDifficulty: v.optional(botDifficultyValidator),
+    botDifficulty: botDifficultyValidator,
     displayName: v.string(),
-    settings: v.optional(baseGameSettingsValidator),
+    settings: baseGameSettingsValidator,
   },
   returns: v.object({ code: v.string() }),
   handler: async (ctx, args) => {
     const user = await requireCurrentHexclaveUser(ctx);
-    const settings = validateGameSettings(args.settings ?? DEFAULT_BASE_GAME_SETTINGS);
-    const botCount = validateBotCount(
-      args.botCount ?? settings.maxPlayers - 1,
-      settings.maxPlayers,
-    );
-    if (botCount + 1 !== settings.maxPlayers) {
-      fail(
-        "INVALID_BOT_COUNT",
-        `A solo ${settings.maxPlayers}-player game requires ${settings.maxPlayers - 1} bots.`,
-      );
-    }
-    const botDifficulty = args.botDifficulty ?? DEFAULT_BOT_DIFFICULTY;
+    validateGameSettings(args.settings);
     const { code, room, seat } = await createRoomRecord(
       ctx,
-      user,
+      user.id,
       args.displayName,
-      settings,
-      botDifficulty,
+      args.settings,
+      args.botDifficulty,
     );
-    const seats = await setWaitingBotCount(ctx, room, botCount, [seat]);
+    const seats = await reconcileWaitingSeats(
+      ctx,
+      room,
+      args.settings,
+      args.settings.maxPlayers - 1,
+      [seat],
+    );
     await startRoomGame(ctx, room, seats);
     return { code };
   },
@@ -93,44 +97,17 @@ export const pauseGame = mutation({
   handler: async (ctx, args) => {
     const user = await requireCurrentHexclaveUser(ctx);
     const room = await requireRoom(ctx, args.code);
-    const seat = await requireHumanSeat(ctx, room._id, user.id);
-    if (seat._id !== room.hostSeatId) fail("NOT_HOST", "Only the room host can pause the game.");
-    if (!room.gameId) fail("GAME_NOT_STARTED", "Game has not started.");
-
-    const game = await ctx.db.get("games", room.gameId);
-    if (!game) fail("GAME_NOT_STARTED", "Game has not started.");
+    const seats = await listSeats(ctx, room._id);
+    const seat = requireHumanSeatFromList(seats, user.id);
+    const game = await requireRoomGame(ctx, room);
     if (game.status === "paused") return null;
     if (game.status === "finished") fail("GAME_ALREADY_FINISHED", "Game has already finished.");
+    await requireActingHost(ctx, room, seats, seat, "Only the room host can pause the game.");
 
-    const state = parseGameState(game.stateJson);
-    if (game.revision !== state.actionNumber) {
-      fail("CORRUPT_GAME_STATE", "Stored game revision does not match its state.");
-    }
-
-    const now = Date.now();
-    await Promise.all([
-      ctx.db.patch("games", game._id, {
-        nextActionAt: undefined,
-        pausedNextActionRemainingMs:
-          game.nextActionAt === undefined ? undefined : Math.max(0, game.nextActionAt - now),
-        pausedTurnDeadlineRemainingMs:
-          game.turnDeadlineAt === undefined ? undefined : Math.max(0, game.turnDeadlineAt - now),
-        status: "paused",
-        turnDeadlineAt: undefined,
-        updatedAt: now,
-      }),
-      ctx.db.insert("gameActions", {
-        actorSeatId: seat._id,
-        afterRevision: game.revision,
-        beforeRevision: game.revision,
-        clientActionId: `system:game-paused:${game.revision}:${now}`,
-        commandJson: JSON.stringify({ kind: "pause_game" }),
-        createdAt: now,
-        eventKind: "game_paused",
-        gameId: game._id,
-        text: `${seat.displayName} paused the game.`,
-      }),
-    ]);
+    await pauseGameRecord(ctx, game, {
+      actorSeatId: seat._id,
+      text: `${seat.displayName} paused the game.`,
+    });
     return null;
   },
 });
@@ -143,46 +120,25 @@ export const resumeGame = mutation({
   handler: async (ctx, args) => {
     const user = await requireCurrentHexclaveUser(ctx);
     const room = await requireRoom(ctx, args.code);
-    const seat = await requireHumanSeat(ctx, room._id, user.id);
-    if (seat._id !== room.hostSeatId) fail("NOT_HOST", "Only the room host can resume the game.");
-    if (!room.gameId) fail("GAME_NOT_STARTED", "Game has not started.");
-
-    const game = await ctx.db.get("games", room.gameId);
-    if (!game) fail("GAME_NOT_STARTED", "Game has not started.");
+    const seats = await listSeats(ctx, room._id);
+    const seat = requireHumanSeatFromList(seats, user.id);
+    const game = await requireRoomGame(ctx, room);
     if (game.status === "active") return null;
     if (game.status === "finished") fail("GAME_ALREADY_FINISHED", "Game has already finished.");
+    await requireActingHost(ctx, room, seats, seat, "Only the room host can resume the game.");
 
     const state = parseGameState(game.stateJson);
-    if (game.revision !== state.actionNumber) {
-      fail("CORRUPT_GAME_STATE", "Stored game revision does not match its state.");
-    }
-
-    const now = Date.now();
-    const schedule = await resumeAutomatedActionSchedule(
-      ctx,
-      game._id,
-      state,
-      now,
-      game.pausedNextActionRemainingMs,
-      game.pausedTurnDeadlineRemainingMs,
-    );
+    const schedule = await resumeAutomatedActionSchedule(ctx, game, state, Date.now());
     await Promise.all([
       ctx.db.patch("games", game._id, {
         ...schedule,
         pausedNextActionRemainingMs: undefined,
         pausedTurnDeadlineRemainingMs: undefined,
         status: "active",
-        updatedAt: now,
       }),
-      ctx.db.insert("gameActions", {
+      insertSystemEvent(ctx, game, {
         actorSeatId: seat._id,
-        afterRevision: game.revision,
-        beforeRevision: game.revision,
-        clientActionId: `system:game-resumed:${game.revision}:${now}`,
-        commandJson: JSON.stringify({ kind: "resume_game" }),
-        createdAt: now,
-        eventKind: "game_resumed",
-        gameId: game._id,
+        kind: "game_resumed",
         text: `${seat.displayName} resumed the game.`,
       }),
     ]);
@@ -202,65 +158,59 @@ export const applyCommand = mutation({
     const user = await requireCurrentHexclaveUser(ctx);
     const room = await requireRoom(ctx, args.code);
     const seat = await requireHumanSeat(ctx, room._id, user.id);
-    if (!room.gameId) fail("GAME_NOT_STARTED", "Game has not started.");
-
-    const game = await ctx.db.get("games", room.gameId);
-    if (!game) fail("GAME_NOT_STARTED", "Game has not started.");
-    if (game.status === "paused") fail("GAME_PAUSED", "The game is paused.");
-    validateGameSettings(game.settings);
-    const clientActionId = validateClientActionId(args.clientActionId);
-    const command = args.command as GameCommand;
-    validateCommandBounds(command);
-    const commandJson = serializeCommand(command);
+    const game = await requireRoomGame(ctx, room);
+    validateClientActionId(args.clientActionId);
+    const command: GameCommand = args.command;
 
     const existingAction = await ctx.db
       .query("gameActions")
       .withIndex("by_game_and_client_action_id", (index) =>
-        index.eq("gameId", game._id).eq("clientActionId", clientActionId),
+        index.eq("gameId", game._id).eq("clientActionId", args.clientActionId),
       )
       .unique();
     if (existingAction) {
-      if (existingAction.actorSeatId !== seat._id || existingAction.commandJson !== commandJson) {
+      if (
+        existingAction.actorSeatId !== seat._id ||
+        existingAction.commandJson !== serializeCommand(command)
+      ) {
         fail("CLIENT_ACTION_CONFLICT", "Client action ID was already used for another command.");
       }
       return null;
     }
 
-    const expectedActionNumber = validateActionNumber(args.expectedActionNumber);
-    const state = parseGameState(game.stateJson);
-    if (game.revision !== state.actionNumber) {
-      fail("CORRUPT_GAME_STATE", "Stored game revision does not match its state.");
-    }
-    if (expectedActionNumber !== game.revision) {
+    if (game.status === "paused") fail("GAME_PAUSED", "The game is paused.");
+    if (game.status === "finished") fail("GAME_ALREADY_FINISHED", "Game has already finished.");
+    // No wall-clock deadline check: a timeout job and a player's command race on the revision,
+    // and the first to commit wins.
+    if (
+      args.expectedActionNumber !== game.revision &&
+      !(await missedOnlyConcurrentAnswers(ctx, game, command.kind, args.expectedActionNumber))
+    ) {
       fail(
         "STALE_ACTION_NUMBER",
-        `Expected action ${expectedActionNumber}, but the game is at action ${game.revision}.`,
+        `Expected action ${args.expectedActionNumber}, but the game is at action ${game.revision}.`,
       );
     }
-    if (state.status === "completed") fail("GAME_ALREADY_FINISHED", "Game has already finished.");
 
-    // The timeout mutation competes through this same revision. Rejecting on wall-clock time
-    // creates a dead zone when scheduler delivery is delayed; the first mutation to commit wins.
-
-    let nextState;
+    const state = parseGameState(game.stateJson);
+    let nextState: GameState;
     try {
-      nextState = applyGameCommand(state, String(seat._id), command);
+      nextState = applyGameCommand(state, seat._id, command);
     } catch (error) {
-      if (error instanceof ConvexError) throw error;
-      const message = error instanceof Error ? error.message : "Game command was rejected.";
-      fail(error instanceof GameRuleError ? error.code : "INVALID_COMMAND", message);
+      if (error instanceof GameRuleError) fail(error.code, error.message);
+      throw error;
     }
 
-    await persistAppliedCommand(
-      ctx,
-      game,
-      state,
-      nextState,
-      seat,
+    await persistAppliedCommand(ctx, {
+      actorSeatId: seat._id,
+      clientActionId: args.clientActionId,
       command,
-      clientActionId,
-      commandText(command, seat.displayName, state, nextState),
-    );
+      game,
+      jobConsumed: false,
+      nextState,
+      state,
+      text: commandText(command, seat._id, state, nextState),
+    });
     return null;
   },
 });

@@ -13,12 +13,5 @@ export type SeatRecord = Omit<SeatDoc, "_creationTime">;
 export type GameDoc = Doc<"games">;
 export type RoomId = Id<"rooms">;
 export type GameId = Id<"games">;
-export type SeatId = Id<"seats">;
 export type RoomView = Infer<typeof roomViewValidator>;
-export type GameEventView = {
-  actorPlayerId: string;
-  createdAt: number;
-  kind: string;
-  sequence: number;
-  text: string;
-};
+export type GameEventView = RoomView["events"][number];
