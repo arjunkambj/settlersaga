@@ -1,69 +1,58 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import { Suspense, type ReactNode } from "react";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { isUiPreviewMode, UiPreview } from "@/components/app/ui-preview";
+import { AppSessionProvider } from "@/components/app/app-session-context";
+import { MenuScreen, MenuScreenText } from "@/components/app/menu-screen";
+import { isUiPreviewMode } from "@/components/app/ui-preview-modes";
+import { FullPageStatus } from "@/components/ui/full-page-status";
 
-export interface AppProvidersProps {
-  children: ReactNode;
-  convexUrl?: string;
-  hexclaveProjectId?: string;
-}
+// Loaded on demand so the fixture screens stay out of the playable routes' bundle.
+const UiPreview = dynamic(() =>
+  import("@/components/app/ui-preview").then((module) => module.UiPreview),
+);
 
-export function AppProviders({ children, convexUrl, hexclaveProjectId }: AppProvidersProps) {
+const isConfigured = Boolean(
+  process.env.NEXT_PUBLIC_CONVEX_URL && process.env.NEXT_PUBLIC_HEXCLAVE_PROJECT_ID,
+);
+
+/**
+ * Shared by every playable route, so the signed-in session (and the music it hosts) survives
+ * navigation between home and a room.
+ */
+export function AppProviders({ children }: { children: ReactNode }) {
+  if (!isConfigured) return <SetupRequired />;
+
+  const app = <AppSessionProvider>{children}</AppSessionProvider>;
+  if (process.env.NODE_ENV !== "development") return app;
+
   return (
-    <Suspense fallback={null}>
-      <AppProvidersInner convexUrl={convexUrl} hexclaveProjectId={hexclaveProjectId}>
-        {children}
-      </AppProvidersInner>
+    <Suspense fallback={<FullPageStatus label="Setting sail…" />}>
+      <DevPreviewSwitch>{app}</DevPreviewSwitch>
     </Suspense>
   );
 }
 
-function AppProvidersInner({ children, convexUrl, hexclaveProjectId }: AppProvidersProps) {
+// Development only: `?preview=<mode>&seed=<seed>` renders a screen from fixture data, signed out.
+function DevPreviewSwitch({ children }: { children: ReactNode }) {
   const searchParams = useSearchParams();
-  const previewMode = searchParams.get("preview");
-  const previewSeed = searchParams.get("seed")?.trim() || undefined;
-
-  if (process.env.NODE_ENV === "development" && isUiPreviewMode(previewMode)) {
-    return <UiPreview mode={previewMode} seed={previewSeed} />;
-  }
-
-  // Hexclave + Convex are now provided once in `apps/web/src/app/layout.tsx`
-  // via `HexclaveProvider` (hexclaveServerApp) and `Providers` (Convex).
-  // This wrapper only keeps the preview bypass and the missing-env guard
-  // so we don't duplicate provider instantiation.
-  const isConfigured = Boolean(
-    (convexUrl ?? process.env.NEXT_PUBLIC_CONVEX_URL) &&
-    (hexclaveProjectId ?? process.env.NEXT_PUBLIC_HEXCLAVE_PROJECT_ID),
-  );
-
-  if (!isConfigured) return <SetupRequired />;
-
-  return <>{children}</>;
+  const mode = searchParams.get("preview");
+  if (!isUiPreviewMode(mode)) return children;
+  return <UiPreview mode={mode} seed={searchParams.get("seed")?.trim() || undefined} />;
 }
 
 function SetupRequired() {
   return (
-    <main
-      className="flex min-h-dvh items-center justify-center bg-background p-6"
-      id="main-content"
-    >
-      <Card className="w-full max-w-lg">
-        <CardHeader>
-          <CardTitle>Connect SetterSaga</CardTitle>
-          <CardDescription>
-            Add the Convex deployment URL and Hexclave project ID to{" "}
-            <code>apps/web/.env.local</code>, then restart the web server.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <pre className="overflow-auto rounded-md bg-muted p-3 text-xs">{`NEXT_PUBLIC_CONVEX_URL=https://your-deployment.convex.cloud
+    <MenuScreen title="Connect SetterSaga">
+      <MenuScreenText>
+        This copy of the game isn&apos;t linked to a server yet. Add these two lines to{" "}
+        <code className="font-mono text-foreground">apps/web/.env.local</code>, then restart the web
+        server.
+      </MenuScreenText>
+      <pre className="w-full overflow-auto rounded-2xl border-2 border-well-edge bg-well p-4 text-left font-mono text-xs inset-shadow-well">{`NEXT_PUBLIC_CONVEX_URL=https://your-deployment.convex.cloud
 NEXT_PUBLIC_HEXCLAVE_PROJECT_ID=your-project-id`}</pre>
-        </CardContent>
-      </Card>
-    </main>
+    </MenuScreen>
   );
 }

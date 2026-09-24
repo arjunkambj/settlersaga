@@ -1,82 +1,76 @@
-export const SESSION_STORAGE_KEY = "settersaga.session.v2";
-export const SESSION_VERSION = 2;
+import { ROOM_CODE_LENGTH } from "@settersaga/backend/convex/model/constants";
+
+import { cleanDisplayName } from "@/lib/app/display-name";
+
+const SESSION_STORAGE_KEY = "settersaga:session";
+const ROOM_CODE_PATTERN = new RegExp(`^[A-Z0-9]{${ROOM_CODE_LENGTH}}$`);
 
 export interface PlayerSession {
   activeCode?: string;
   displayName: string;
   userId: string;
-  version: typeof SESSION_VERSION;
 }
-
-interface StorageReader {
-  getItem(key: string): string | null;
-}
-
-interface StorageWriter extends StorageReader {
-  setItem(key: string, value: string): void;
-}
-
-const ROOM_CODE_PATTERN = /^[A-Z0-9]{6}$/;
 
 export function normalizeRoomCode(value: string): string {
   return value
-    .trim()
     .toUpperCase()
     .replace(/[^A-Z0-9]/g, "")
-    .slice(0, 6);
+    .slice(0, ROOM_CODE_LENGTH);
 }
 
 export function isRoomCode(value: string): boolean {
   return ROOM_CODE_PATTERN.test(value);
 }
 
-export function createPlayerSession(userId: string, displayName: string): PlayerSession {
-  return {
-    displayName,
-    userId,
-    version: SESSION_VERSION,
-  };
-}
-
 export function readPlayerSession(
-  storage: StorageReader,
+  storage: Pick<Storage, "getItem">,
   userId: string,
   displayName: string,
 ): PlayerSession {
-  const stored = storage.getItem(SESSION_STORAGE_KEY);
-  if (!stored) {
-    return createPlayerSession(userId, displayName);
+  const stored = parseStoredSession(storage.getItem(SESSION_STORAGE_KEY));
+  if (!stored || stored.userId !== userId) {
+    return { displayName, userId };
   }
-
-  try {
-    const value: unknown = JSON.parse(stored);
-    if (!isPlayerSession(value) || value.userId !== userId) {
-      return createPlayerSession(userId, displayName);
-    }
-    return value;
-  } catch {
-    return createPlayerSession(userId, displayName);
-  }
+  return { ...stored, displayName: cleanDisplayName(stored.displayName) };
 }
 
-export function writePlayerSession(storage: StorageWriter, session: PlayerSession): void {
+export function writePlayerSession(
+  storage: Pick<Storage, "setItem">,
+  session: PlayerSession,
+): void {
   storage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
 }
 
-function isPlayerSession(value: unknown): value is PlayerSession {
-  if (!value || typeof value !== "object") {
-    return false;
+function parseStoredSession(stored: string | null): PlayerSession | null {
+  if (!stored) {
+    return null;
   }
 
-  const session = value as Partial<PlayerSession>;
-  const hasValidCode = session.activeCode === undefined || isRoomCode(session.activeCode);
+  let value: unknown;
+  try {
+    value = JSON.parse(stored);
+  } catch {
+    return null;
+  }
 
-  return (
-    session.version === SESSION_VERSION &&
-    typeof session.userId === "string" &&
-    session.userId.length > 0 &&
-    typeof session.displayName === "string" &&
-    session.displayName.length > 0 &&
-    hasValidCode
-  );
+  if (
+    typeof value !== "object" ||
+    value === null ||
+    !("userId" in value) ||
+    typeof value.userId !== "string" ||
+    !("displayName" in value) ||
+    typeof value.displayName !== "string"
+  ) {
+    return null;
+  }
+
+  const session: PlayerSession = { displayName: value.displayName, userId: value.userId };
+  if (
+    "activeCode" in value &&
+    typeof value.activeCode === "string" &&
+    isRoomCode(value.activeCode)
+  ) {
+    session.activeCode = value.activeCode;
+  }
+  return session;
 }
