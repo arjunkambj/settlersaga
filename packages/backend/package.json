@@ -1,9 +1,7 @@
 {
   "name": "@settersaga/backend",
-  "version": "1.0.0",
-  "description": "",
-  "license": "ISC",
-  "author": "",
+  "version": "0.0.0",
+  "private": true,
   "type": "module",
   "scripts": {
     "check-types": "tsc --noEmit -p convex/tsconfig.json",
@@ -12,9 +10,9 @@
   },
   "dependencies": {
     "@hexclave/js": "^1.0.79",
+    "@hexclave/next": "^1.0.80",
     "@settersaga/game": "workspace:*",
     "convex": "catalog:",
-    "dotenv": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {

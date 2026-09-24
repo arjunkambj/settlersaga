@@ -1,7 +1,6 @@
 {
   "compilerOptions": {
     "allowJs": false,
-    "allowImportingTsExtensions": true,
     "esModuleInterop": true,
     "incremental": true,
     "isolatedModules": true,
