@@ -13,10 +13,8 @@ import {
 import {
   DEFAULT_BOARD_VIEWPORT,
   clampBoardViewport,
-  getDefaultBoardViewport,
   getBoardViewportFocus,
   getBoardViewportTransform,
-  isCompactBoardViewport,
   normalizeBoardWheelDelta,
   panBoardViewport,
   pinchBoardViewport,
@@ -36,8 +34,6 @@ const FALLBACK_STAGE_BOUNDS: BoardViewportRect = {
   top: 0,
   width: 1,
 };
-
-type ActivePointer = BoardViewportPoint;
 
 interface PanGestureBaseline {
   kind: "pan";
@@ -68,13 +64,12 @@ export interface BoardCamera {
   boardShellRef: RefObject<HTMLElement | null>;
   boardStageRef: RefObject<HTMLDivElement | null>;
   boardViewport: BoardViewportState;
+  /** Also handles lost pointer capture: either way the gesture ends without a click. */
   cancelPointerGesture: PointerEventHandler<HTMLElement>;
   changeZoomBy(amount: number): void;
   handleClickCapture: MouseEventHandler<HTMLElement>;
-  handleLostPointerCapture: PointerEventHandler<HTMLElement>;
   isInteracting(): boolean;
   movePointerGesture: PointerEventHandler<HTMLElement>;
-  panBoardBy(x: number, y: number): void;
   resetBoardViewport(): void;
   startPointerGesture: PointerEventHandler<HTMLElement>;
   stopPointerGesture: PointerEventHandler<HTMLElement>;
@@ -87,18 +82,15 @@ export function useBoardCamera(): BoardCamera {
   const [boardViewport, setBoardViewport] = useState(DEFAULT_BOARD_VIEWPORT);
   const viewportRef = useRef(DEFAULT_BOARD_VIEWPORT);
   const stageBoundsRef = useRef<BoardViewportRect>({ ...FALLBACK_STAGE_BOUNDS });
-  const activePointersRef = useRef(new Map<number, ActivePointer>());
+  const activePointersRef = useRef(new Map<number, BoardViewportPoint>());
   const pointerCaptureTargetsRef = useRef(new Map<number, Element>());
   const pointerGestureRef = useRef<PointerGesture | null>(null);
-  const interactionRef = useRef(false);
   const draggingRef = useRef(false);
   const wheelInteractingRef = useRef(false);
   const animationFrameRef = useRef<number | null>(null);
   const wheelIdleTimerRef = useRef<number | null>(null);
   const suppressedBuildTargetRef = useRef<Element | null>(null);
   const suppressedClickTimerRef = useRef<number | null>(null);
-  const shellRef = useRef<Element | null>(null);
-  const defaultViewportModeRef = useRef<"compact" | "regular" | null>(null);
   const refreshStageBoundsRef = useRef<() => void>(() => undefined);
 
   const scheduleSceneWrite = useCallback(() => {
@@ -136,18 +128,13 @@ export function useBoardCamera(): BoardCamera {
     );
   }, []);
 
+  const isInteracting = useCallback(() => draggingRef.current || wheelInteractingRef.current, []);
+
   const updateInteractionClasses = useCallback(() => {
     const shell = boardShellRef.current;
-    const isInteracting = draggingRef.current || wheelInteractingRef.current;
-    interactionRef.current = isInteracting;
-
-    shell?.classList.toggle("is-interacting", isInteracting);
+    shell?.classList.toggle("is-interacting", isInteracting());
     shell?.classList.toggle("is-dragging", draggingRef.current);
-
-    const gamePage = shellRef.current ?? shell?.closest("[data-game-shell]") ?? null;
-    shellRef.current = gamePage;
-    gamePage?.classList.toggle("is-board-interacting", isInteracting);
-  }, []);
+  }, [isInteracting]);
 
   const rebasePointerGesture = useCallback(() => {
     const baseline = createGestureBaseline(
@@ -210,17 +197,8 @@ export function useBoardCamera(): BoardCamera {
     [commitControlViewport],
   );
 
-  const panBoardBy = useCallback(
-    (x: number, y: number) => {
-      commitControlViewport(
-        panBoardViewport(viewportRef.current, { x, y }, stageBoundsRef.current),
-      );
-    },
-    [commitControlViewport],
-  );
-
   const resetBoardViewport = useCallback(() => {
-    commitControlViewport(getDefaultBoardViewport(stageBoundsRef.current));
+    commitControlViewport(DEFAULT_BOARD_VIEWPORT);
   }, [commitControlViewport]);
 
   const handleNativeWheel = useCallback(
@@ -412,13 +390,6 @@ export function useBoardCamera(): BoardCamera {
     [finishPointer],
   );
 
-  const handleLostPointerCapture = useCallback<PointerEventHandler<HTMLElement>>(
-    (event) => {
-      finishPointer(event.pointerId, false);
-    },
-    [finishPointer],
-  );
-
   const handleClickCapture = useCallback<MouseEventHandler<HTMLElement>>((event) => {
     if (!suppressedBuildTargetRef.current) {
       return;
@@ -434,8 +405,6 @@ export function useBoardCamera(): BoardCamera {
     event.stopPropagation();
   }, []);
 
-  const isInteracting = useCallback(() => interactionRef.current, []);
-
   useLayoutEffect(() => {
     const shell = boardShellRef.current;
     const stage = boardStageRef.current;
@@ -443,7 +412,6 @@ export function useBoardCamera(): BoardCamera {
       return;
     }
 
-    shellRef.current = shell.closest("[data-game-shell]");
     const updateStageBounds = () => {
       const rect = stage.getBoundingClientRect();
       stageBoundsRef.current = {
@@ -453,14 +421,7 @@ export function useBoardCamera(): BoardCamera {
         width: Math.max(1, rect.width),
       };
 
-      const viewportMode = isCompactBoardViewport(stageBoundsRef.current) ? "compact" : "regular";
-      const crossedViewportMode = defaultViewportModeRef.current !== viewportMode;
-      const clampedViewport = clampBoardViewport(
-        crossedViewportMode ? getDefaultBoardViewport(stageBoundsRef.current) : viewportRef.current,
-        stageBoundsRef.current,
-      );
-      defaultViewportModeRef.current = viewportMode;
-      setTransientViewport(clampedViewport);
+      setTransientViewport(clampBoardViewport(viewportRef.current, stageBoundsRef.current));
       commitViewport();
       rebasePointerGesture();
     };
@@ -469,17 +430,17 @@ export function useBoardCamera(): BoardCamera {
     updateStageBounds();
     scheduleSceneWrite();
 
-    const resizeObserver =
-      typeof ResizeObserver === "undefined" ? null : new ResizeObserver(updateStageBounds);
-    resizeObserver?.observe(shell);
-    resizeObserver?.observe(stage);
+    const resizeObserver = new ResizeObserver(updateStageBounds);
+    resizeObserver.observe(shell);
+    resizeObserver.observe(stage);
+    // The stage can move without resizing, and its left/top anchor wheel and pinch zoom.
     window.addEventListener("resize", updateStageBounds, { passive: true });
     shell.addEventListener("wheel", handleNativeWheel, { passive: false });
 
     return () => {
       shell.removeEventListener("wheel", handleNativeWheel);
       window.removeEventListener("resize", updateStageBounds);
-      resizeObserver?.disconnect();
+      resizeObserver.disconnect();
       refreshStageBoundsRef.current = () => undefined;
 
       if (animationFrameRef.current !== null) {
@@ -499,12 +460,9 @@ export function useBoardCamera(): BoardCamera {
       pointerCaptureTargetsRef.current.clear();
       pointerGestureRef.current = null;
       wheelInteractingRef.current = false;
-      interactionRef.current = false;
       draggingRef.current = false;
       suppressedBuildTargetRef.current = null;
       shell.classList.remove("is-interacting", "is-dragging");
-      shellRef.current?.classList.remove("is-board-interacting");
-      shellRef.current = null;
     };
   }, [
     commitViewport,
@@ -522,10 +480,8 @@ export function useBoardCamera(): BoardCamera {
     cancelPointerGesture,
     changeZoomBy,
     handleClickCapture,
-    handleLostPointerCapture,
     isInteracting,
     movePointerGesture,
-    panBoardBy,
     resetBoardViewport,
     startPointerGesture,
     stopPointerGesture,
@@ -533,7 +489,7 @@ export function useBoardCamera(): BoardCamera {
 }
 
 function createGestureBaseline(
-  activePointers: ReadonlyMap<number, ActivePointer>,
+  activePointers: ReadonlyMap<number, BoardViewportPoint>,
   origin: BoardViewportState,
   stageBounds: BoardViewportRect,
 ): GestureBaseline | null {
@@ -566,7 +522,7 @@ function createGestureBaseline(
 
 function getGestureMovement(
   baseline: GestureBaseline,
-  activePointers: ReadonlyMap<number, ActivePointer>,
+  activePointers: ReadonlyMap<number, BoardViewportPoint>,
 ): number {
   if (baseline.kind === "pan") {
     const pointer = activePointers.get(baseline.pointerId);
@@ -589,7 +545,7 @@ function getGestureMovement(
 
 function getGestureViewport(
   baseline: GestureBaseline,
-  activePointers: ReadonlyMap<number, ActivePointer>,
+  activePointers: ReadonlyMap<number, BoardViewportPoint>,
   stageBounds: BoardViewportRect,
 ): BoardViewportState | null {
   if (baseline.kind === "pan") {

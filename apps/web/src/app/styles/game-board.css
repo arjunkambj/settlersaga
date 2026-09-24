@@ -1,0 +1,258 @@
+/* ============================================================================
+   Game tokens, board canvas, and dice. Where the board sits on the screen is
+   in game-layout.css.
+   ========================================================================= */
+
+/* The board canvas reads these at draw time (board-canvas.tsx) and mixes some
+   of them with an alpha suffix, so they must stay plain 6-digit hex. */
+:root {
+  --player-red: #f36159;
+  --player-blue: #4fb0ff;
+  --player-orange: #f79a3c;
+  --player-green: #3fc97c;
+  --player-purple: #9b74ea;
+  --player-teal: #2bb8b8;
+  --player-yellow: #e0b23a;
+  --player-pink: #ec6aa0;
+
+  --board-port-any: #8b6a35;
+  --board-port-brick: #c94f2d;
+  --board-port-sheep: #789b25;
+  --board-port-stone: #657686;
+  --board-port-tree: #287444;
+  --board-port-wheat: #b77a0b;
+  --board-plaque-face: #fff8e6;
+  --board-plaque-mid: #f9e9ca;
+  --board-plaque-edge: #efd5aa;
+  --board-plaque-ink: #233b55;
+  --board-plaque-shadow: #362615;
+  --board-highlight: #fff8e3;
+  --board-piece-shadow: #0c283a;
+  --board-robber-glow: #ffc22d;
+  /* Flat terrain colors, sampled from the terrain art, drawn until the texture loads. */
+  --board-terrain-desert: #f7d28f;
+  --board-terrain-fields: #fed052;
+  --board-terrain-forest: #479842;
+  --board-terrain-hills: #f88651;
+  --board-terrain-mountains: #94b1d5;
+  --board-terrain-pasture: #b1d552;
+}
+
+/* One class per seat color sets the --player-color the HUD and board read. */
+.player-red {
+  --player-color: var(--player-red);
+}
+.player-blue {
+  --player-color: var(--player-blue);
+}
+.player-orange {
+  --player-color: var(--player-orange);
+}
+.player-green {
+  --player-color: var(--player-green);
+}
+.player-purple {
+  --player-color: var(--player-purple);
+}
+.player-teal {
+  --player-color: var(--player-teal);
+}
+.player-yellow {
+  --player-color: var(--player-yellow);
+}
+.player-pink {
+  --player-color: var(--player-pink);
+}
+
+/* --------------------------------------------------------------------------
+   Board scene
+   ----------------------------------------------------------------------- */
+
+/* The drag-to-pan surface. The ocean behind it belongs to the whole screen. */
+.board-shell {
+  cursor: default;
+  touch-action: none;
+  user-select: none;
+}
+
+/* The asset sheet's terrain preview sits on the same ocean as the game. */
+.terrain-atlas-preview {
+  background: url("/game-assets/ui/ocean-board-canvas.webp") center / cover no-repeat;
+}
+
+.board-shell.is-dragging {
+  cursor: grabbing;
+}
+
+/* The stage is the island's frame (--board-aspect, from getBoardFrame) fitted
+   into the shell with container query units, so it tracks the shell rather
+   than the viewport. The camera zooms and pans around its center. */
+.board-stage {
+  position: relative;
+  width: min(100cqw, calc(100cqh * var(--board-aspect)));
+  aspect-ratio: var(--board-aspect);
+  isolation: isolate;
+}
+
+.game-board {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  inset: 0;
+  isolation: isolate;
+  /* Overwritten inline by the board camera; this is the at-rest value. */
+  transform: translate3d(0, 0, 0) scale(1);
+  transform-origin: center;
+  backface-visibility: hidden;
+  will-change: transform;
+}
+
+/* The whole canvas, placed (inline, getBoardPlaneStyle) so the frame fills the stage. */
+.board-plane {
+  position: absolute;
+}
+
+.board-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  isolation: isolate;
+  pointer-events: none;
+}
+
+.board-canvas-layer {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.board-canvas-dynamic {
+  z-index: 1;
+}
+
+/* Invisible hover/focus targets layered over the canvas artwork. */
+.board-hit-target {
+  position: absolute;
+  z-index: 10;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: inherit;
+  outline: none;
+  transform: translate(-50%, -50%) rotate(var(--hit-rotation, 0deg));
+}
+
+.port-hit-target {
+  width: clamp(42px, 7%, 64px);
+  height: max(64px, 14%);
+}
+
+.piece-hit-target-road {
+  width: 10.6%;
+  aspect-ratio: 2 / 1;
+}
+
+.board-hit-target:focus-visible {
+  z-index: 30;
+  outline: 3px solid var(--primary);
+  outline-offset: 3px;
+  filter: drop-shadow(0 0 8px var(--primary));
+}
+
+/* Legal placement targets. */
+.build-target {
+  position: absolute;
+  z-index: 20;
+  display: grid;
+  width: max(46px, 5.8%);
+  height: max(46px, 5.8%);
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  box-shadow: none;
+  cursor: pointer;
+  transform: translate(-50%, -50%) rotate(var(--target-rotation, 0deg));
+}
+
+.build-target:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.board-shell.is-interacting .board-hit-target,
+.board-shell.is-interacting .build-target {
+  pointer-events: none;
+}
+
+/* Hover and focus details for harbors and roads. */
+.board-inspector {
+  display: grid;
+  gap: 0.375rem;
+  padding: 0.75rem;
+  border: 2px solid var(--game-panel-rim);
+  border-radius: 1rem;
+  background: linear-gradient(var(--game-panel-top), var(--game-panel-bottom));
+  box-shadow: 0 4px 0 var(--game-panel-lip);
+  color: var(--foreground);
+}
+
+/* --------------------------------------------------------------------------
+   Dice
+   ----------------------------------------------------------------------- */
+
+.die-face {
+  display: block;
+  flex: none;
+  width: 1.75rem;
+  height: 1.75rem;
+  overflow: visible;
+  transform-origin: center;
+}
+
+/* Sky and ember pairing from the menu art, mixed from theme tokens. */
+.die-face--ivory {
+  --die-body: var(--foreground);
+  --die-base: var(--chart-3);
+  --die-well: var(--chart-1);
+  --die-shine: var(--foreground);
+  --die-pip: var(--game-panel-base);
+}
+
+.die-face--ember {
+  --die-body: var(--chart-5);
+  --die-base: color-mix(in oklch, var(--chart-5) 68%, black);
+  --die-well: color-mix(in oklch, var(--chart-5) 82%, black);
+  --die-shine: color-mix(in oklch, var(--chart-5) 48%, var(--primary));
+  --die-pip: var(--foreground);
+}
+
+.die-face__shadow {
+  fill: color-mix(in oklch, var(--background) 40%, black);
+  opacity: 0.42;
+}
+
+.die-face__base {
+  fill: var(--die-base);
+}
+
+.die-face__body {
+  fill: var(--die-body);
+}
+
+.die-face__well {
+  fill: var(--die-well);
+}
+
+.die-face__shine {
+  fill: var(--die-shine);
+  opacity: 0.55;
+}
+
+.die-face__pip {
+  fill: var(--die-pip);
+}

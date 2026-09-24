@@ -1,3 +1,5 @@
+import type { PlayerGameView } from "@settersaga/game";
+
 const DIE_PIPS: Record<number, readonly (readonly [number, number])[]> = {
   1: [[16, 14.65]],
   2: [
@@ -32,9 +34,7 @@ const DIE_PIPS: Record<number, readonly (readonly [number, number])[]> = {
   ],
 };
 
-export type DieFaceTone = "ivory" | "ember";
-
-export function DieFace({ tone = "ivory", value }: { tone?: DieFaceTone; value: number }) {
+export function DieFace({ tone, value }: { tone: "ember" | "ivory"; value: number }) {
   const pips = DIE_PIPS[value] ?? [];
 
   return (
@@ -48,11 +48,37 @@ export function DieFace({ tone = "ivory", value }: { tone?: DieFaceTone; value: 
         d="M8.1 5.15c4.7-1.45 12.8-1.35 16.4.85-.45 4.55-4.7 7.15-9.35 7.35C10.2 13.5 7.15 9.7 8.1 5.15Z"
       />
       {pips.map(([x, y]) => (
-        <g className="die-face__pip" key={`${x}-${y}`}>
-          <circle cx={x} cy={y} r="2.42" />
-          <circle className="die-face__pip-core" cx={x - 0.38} cy={y - 0.46} r="1.18" />
-        </g>
+        <circle className="die-face__pip" cx={x} cy={y} key={`${x}-${y}`} r="2.42" />
       ))}
     </svg>
+  );
+}
+
+/** The last roll as a pair of dice, optionally followed by its total. */
+export function DiceRoll({
+  className,
+  roll,
+  showTotal = false,
+}: {
+  className: string;
+  roll: NonNullable<PlayerGameView["lastDiceRoll"]>;
+  showTotal?: boolean;
+}) {
+  return (
+    <div
+      aria-label={`${roll.first} and ${roll.second}, total ${roll.sum}`}
+      className={className}
+      role="group"
+    >
+      <span aria-hidden="true" className="inline-flex items-center gap-1">
+        <DieFace tone="ivory" value={roll.first} />
+        <DieFace tone="ember" value={roll.second} />
+      </span>
+      {showTotal ? (
+        <strong aria-hidden="true" className="game-dice-total">
+          {roll.sum}
+        </strong>
+      ) : null}
+    </div>
   );
 }

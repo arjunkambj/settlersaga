@@ -1,4 +1,4 @@
-export interface BoardViewportBounds {
+interface BoardViewportBounds {
   height: number;
   width: number;
 }
@@ -17,54 +17,23 @@ export interface BoardViewportState extends BoardViewportPoint {
   scale: number;
 }
 
+/** At scale 1 the framed island exactly fits the stage. */
 export const DEFAULT_BOARD_VIEWPORT: BoardViewportState = {
-  scale: 1.04,
+  scale: 1,
   x: 0,
   y: 0,
 };
 
-const DEFAULT_BOARD_VIEWPORT_OFFSET = {
-  x: 0,
-  y: 0,
-} as const;
-
-const COMPACT_BOARD_VIEWPORT = {
-  maxWidth: 500,
-  scale: 1.14,
-  xOffset: 0,
-  yOffset: -0.02,
-} as const;
-
 export const BOARD_VIEWPORT_SCALE = {
-  max: 2,
+  max: 2.4,
   min: 0.82,
-  step: 0.16,
+  step: 0.2,
 } as const;
 
-export const BOARD_VIEWPORT_PAN = {
+const BOARD_VIEWPORT_PAN = {
   fittedX: 0.28,
   fittedY: 0.22,
 } as const;
-
-export function getDefaultBoardViewport(bounds: BoardViewportBounds): BoardViewportState {
-  const isCompact = isCompactBoardViewport(bounds);
-  return clampBoardViewport(
-    {
-      scale: isCompact ? COMPACT_BOARD_VIEWPORT.scale : DEFAULT_BOARD_VIEWPORT.scale,
-      x:
-        bounds.width *
-        (isCompact ? COMPACT_BOARD_VIEWPORT.xOffset : DEFAULT_BOARD_VIEWPORT_OFFSET.x),
-      y:
-        bounds.height *
-        (isCompact ? COMPACT_BOARD_VIEWPORT.yOffset : DEFAULT_BOARD_VIEWPORT_OFFSET.y),
-    },
-    bounds,
-  );
-}
-
-export function isCompactBoardViewport(bounds: BoardViewportBounds): boolean {
-  return bounds.width <= COMPACT_BOARD_VIEWPORT.maxWidth;
-}
 
 export function clampBoardViewport(
   viewport: BoardViewportState,
@@ -155,7 +124,7 @@ export function normalizeBoardWheelDelta(
   delta: number,
   deltaMode: number,
   pageHeight: number,
-  maxMagnitude = Number.POSITIVE_INFINITY,
+  maxMagnitude: number,
 ): number {
   const normalizedDelta =
     deltaMode === 1 ? delta * 16 : deltaMode === 2 ? delta * Math.max(1, pageHeight) : delta;

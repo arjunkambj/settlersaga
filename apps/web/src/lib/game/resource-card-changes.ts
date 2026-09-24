@@ -7,13 +7,9 @@ export interface ResourceCardChange {
 }
 
 export function getResourceCardChanges(
-  previous: Readonly<ResourceInventory> | null,
+  previous: Readonly<ResourceInventory>,
   current: Readonly<ResourceInventory>,
 ): ResourceCardChange[] {
-  if (!previous) {
-    return [];
-  }
-
   return RESOURCE_ORDER.flatMap((resource) => {
     const difference = current[resource] - previous[resource];
     if (difference === 0) {

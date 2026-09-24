@@ -2,43 +2,39 @@
 
 import {
   NUMBER_TOKEN_PIPS,
+  RESOURCE_ORDER,
   type PixelCoordinate,
   type PlayerColor,
   type PlayerGameView,
   type ResourceType,
+  type TerrainType,
 } from "@settersaga/game";
-import {
-  memo,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  type CSSProperties,
-  type RefObject,
-} from "react";
+import { memo, useEffect, useLayoutEffect, useRef, type RefObject } from "react";
+import { preload } from "react-dom";
 
 import {
+  PIECE_ASSET_PATHS,
   PORT_BOAT_ASSET_PATH,
   PORT_BOAT_RENDER_SIZE,
+  PORT_TRADE_BADGE_SIZE,
+  ROBBER_ASSET_PATH,
   TERRAIN_ATLAS,
   TERRAIN_ATLAS_ASSET_PATH,
-  getTerrainAtlasFrame,
 } from "@/constants/game/board-assets";
-import { getResourceCardAssetPath } from "@/constants/game/card-assets";
-import { PLAYER_COLOR_HEX } from "@/constants/game/player-colors";
+import { RESOURCE_CARD_ASSET_PATHS } from "@/constants/game/card-assets";
 import {
   BOARD_CANVAS,
   getEdgePlacement,
   getPortPlacement,
+  getPortTradeBadgePoint,
   getTilePoint,
   getVertexPoint,
   type BoardLayout,
   type PortPlacement,
 } from "@/lib/game/board-layout";
 
-import { getPieceAssetPath } from "./piece-icon";
-
 type Board = PlayerGameView["board"];
-type BoardTile = Board["tiles"][number];
+type NumberToken = NonNullable<Board["tiles"][number]["numberToken"]>;
 
 export interface BoardCanvasTarget {
   readonly angle: number;
@@ -82,15 +78,12 @@ type SceneRenderer<Scene> = (
 ) => Promise<void>;
 
 const MAX_CANVAS_PIXEL_RATIO = 3;
-const ROBBER_ASSET_PATH = "/game-assets/pieces/robber-piece.png";
 const CITY_PIECE_SIZE = 94;
 const ROAD_PIECE_SIZE = 124;
 const ROAD_PIECE_SCALE_Y = 0.82;
 const SETTLEMENT_PIECE_SIZE = 82;
 const PORT_DOCK_WIDTH = 14;
 const TILE_TERRAIN_INSET = 6.5;
-const PORT_TRADE_BADGE_HEIGHT = 42;
-const PORT_TRADE_BADGE_WIDTH = 78;
 const PORT_RESOURCE_MARK_SIZE = 31;
 
 /** Placement-target sizing. Resting markers stay small so a board full of legal
@@ -109,32 +102,8 @@ const ROAD_HOVER_PIECE_SCALE = 1.45;
 const TARGET_RESTING_PIECE_ALPHA = 0.5;
 const TARGET_DISABLED_ALPHA = 0.2;
 
-const PORT_RESOURCE_ACCENTS: Readonly<Record<ResourceType, string>> = {
-  brick: "#c94f2d",
-  sheep: "#789b25",
-  stone: "#657686",
-  tree: "#287444",
-  wheat: "#b77a0b",
-};
-
-const BOARD_CANVAS_STYLE: CSSProperties = {
-  display: "block",
-  height: "100%",
-  inset: 0,
-  pointerEvents: "none",
-  position: "absolute",
-  width: "100%",
-};
-
-const BOARD_CANVAS_CONTAINER_STYLE: CSSProperties = {
-  inset: 0,
-  isolation: "isolate",
-  pointerEvents: "none",
-  position: "absolute",
-  zIndex: 1,
-};
-
 const imagePromises = new Map<string, Promise<HTMLImageElement | null>>();
+const loadedImages = new Map<string, HTMLImageElement>();
 const tintedPieceCanvases = new Map<string, HTMLCanvasElement>();
 
 export const BoardCanvas = memo(function BoardCanvas({
@@ -146,6 +115,14 @@ export const BoardCanvas = memo(function BoardCanvas({
 }: BoardCanvasProps) {
   const staticCanvasRef = useRef<HTMLCanvasElement>(null);
   const dynamicCanvasRef = useRef<HTMLCanvasElement>(null);
+  preload(TERRAIN_ATLAS_ASSET_PATH, { as: "image", fetchPriority: "high" });
+  for (const path of [
+    PORT_BOAT_ASSET_PATH,
+    ROBBER_ASSET_PATH,
+    ...Object.values(PIECE_ASSET_PATHS),
+  ]) {
+    preload(path, { as: "image" });
+  }
   const staticScene: StaticScene = {
     boardLayout,
     ports: board.ports,
@@ -177,23 +154,17 @@ export const BoardCanvas = memo(function BoardCanvas({
   );
 
   return (
-    <div aria-hidden="true" className="board-canvas" style={BOARD_CANVAS_CONTAINER_STYLE}>
+    <div aria-hidden="true" className="board-canvas">
       <canvas
-        aria-hidden="true"
-        className="board-canvas-layer board-canvas-static"
-        data-board-canvas-layer="static"
+        className="board-canvas-layer"
         height={BOARD_CANVAS.height}
         ref={staticCanvasRef}
-        style={BOARD_CANVAS_STYLE}
         width={BOARD_CANVAS.width}
       />
       <canvas
-        aria-hidden="true"
         className="board-canvas-layer board-canvas-dynamic"
-        data-board-canvas-layer="dynamic"
         height={BOARD_CANVAS.height}
         ref={dynamicCanvasRef}
-        style={{ ...BOARD_CANVAS_STYLE, zIndex: 1 }}
         width={BOARD_CANVAS.width}
       />
     </div>
@@ -240,19 +211,16 @@ function useCanvasLayer<Scene>(
       });
     };
 
-    const resizeObserver =
-      typeof ResizeObserver === "undefined" ? null : new ResizeObserver(scheduleDraw);
+    const resizeObserver = new ResizeObserver(scheduleDraw);
     scheduleDrawRef.current = scheduleDraw;
-    resizeObserver?.observe(canvas);
-    window.addEventListener("resize", scheduleDraw, { passive: true });
+    resizeObserver.observe(canvas);
     draw();
 
     return () => {
       cancelled = true;
       drawRevisionRef.current += 1;
       scheduleDrawRef.current = () => undefined;
-      resizeObserver?.disconnect();
-      window.removeEventListener("resize", scheduleDraw);
+      resizeObserver.disconnect();
       if (frameId !== 0) {
         cancelAnimationFrame(frameId);
       }
@@ -271,25 +239,23 @@ async function renderStaticScene(
   isCancelled: () => boolean,
 ) {
   const portResourcePaths = scene.ports.flatMap((port) =>
-    port.trade === "any" ? [] : [getResourceCardAssetPath(port.trade)],
+    port.trade === "any" ? [] : [RESOURCE_CARD_ASSET_PATHS[port.trade]],
   );
-  const images = await loadImages([
-    PORT_BOAT_ASSET_PATH,
-    TERRAIN_ATLAS_ASSET_PATH,
-    ...portResourcePaths,
-  ]);
 
-  if (isCancelled()) {
-    return;
-  }
+  await drawWhileImagesLoad(
+    [PORT_BOAT_ASSET_PATH, TERRAIN_ATLAS_ASSET_PATH, ...portResourcePaths],
+    isCancelled,
+    (images) => {
+      const context = prepareCanvas(canvas, scene.renderScale);
+      if (!context) {
+        return;
+      }
 
-  const context = prepareCanvas(canvas, scene.renderScale);
-  if (!context) {
-    return;
-  }
-
-  drawTerrain(context, scene, images.get(TERRAIN_ATLAS_ASSET_PATH) ?? null);
-  drawPorts(context, scene, images);
+      const palette = getBoardPalette(canvas);
+      drawTerrain(context, scene, images.get(TERRAIN_ATLAS_ASSET_PATH) ?? null, palette);
+      drawPorts(context, scene, images, palette);
+    },
+  );
 }
 
 async function renderDynamicScene(
@@ -297,27 +263,42 @@ async function renderDynamicScene(
   scene: DynamicScene,
   isCancelled: () => boolean,
 ) {
-  const piecePaths = [
-    getPieceAssetPath("city"),
-    getPieceAssetPath("road"),
-    getPieceAssetPath("settlement"),
-    ROBBER_ASSET_PATH,
-  ];
-  const images = await loadImages(piecePaths);
+  await drawWhileImagesLoad(
+    [...Object.values(PIECE_ASSET_PATHS), ROBBER_ASSET_PATH],
+    isCancelled,
+    (images) => {
+      const context = prepareCanvas(canvas, scene.renderScale);
+      if (!context) {
+        return;
+      }
 
-  if (isCancelled()) {
+      const palette = getBoardPalette(canvas);
+      drawRoads(context, scene, images, palette);
+      drawBuildings(context, scene, images, palette);
+      drawRobber(context, scene, images.get(ROBBER_ASSET_PATH) ?? null, palette);
+      drawTargets(context, scene, images, palette);
+    },
+  );
+}
+
+/**
+ * Draws right away with the images that have already arrived (terrain falls back to flat
+ * color), then once more when the rest have loaded, so the island never waits on its textures.
+ */
+async function drawWhileImagesLoad(
+  paths: readonly string[],
+  isCancelled: () => boolean,
+  draw: (images: ReadonlyMap<string, HTMLImageElement | null>) => void,
+) {
+  draw(new Map(paths.map((path) => [path, loadedImages.get(path) ?? null])));
+  if (paths.every((path) => loadedImages.has(path))) {
     return;
   }
 
-  const context = prepareCanvas(canvas, scene.renderScale);
-  if (!context) {
-    return;
+  const images = await loadImages(paths);
+  if (!isCancelled()) {
+    draw(images);
   }
-
-  drawRoads(context, scene, images);
-  drawBuildings(context, scene, images);
-  drawRobber(context, scene, images.get(ROBBER_ASSET_PATH) ?? null);
-  drawTargets(context, scene, images);
 }
 
 function prepareCanvas(
@@ -362,10 +343,65 @@ function prepareCanvas(
   return context;
 }
 
+/** Board colors come from the CSS tokens in styles/game-board.css. Colors mixed
+    with `withAlpha` must be 6-digit hex. */
+function getBoardPalette(canvas: HTMLCanvasElement) {
+  const styles = getComputedStyle(canvas);
+  const color = (name: string) => styles.getPropertyValue(`--${name}`).trim();
+  return {
+    earth: color("board-earth"),
+    earthDeep: color("board-earth-deep"),
+    highlight: color("board-highlight"),
+    pieceShadow: color("board-piece-shadow"),
+    plaqueEdge: color("board-plaque-edge"),
+    plaqueFace: color("board-plaque-face"),
+    plaqueInk: color("board-plaque-ink"),
+    plaqueMid: color("board-plaque-mid"),
+    plaqueShadow: color("board-plaque-shadow"),
+    players: {
+      blue: color("player-blue"),
+      green: color("player-green"),
+      orange: color("player-orange"),
+      pink: color("player-pink"),
+      purple: color("player-purple"),
+      red: color("player-red"),
+      teal: color("player-teal"),
+      yellow: color("player-yellow"),
+    } satisfies Record<PlayerColor, string>,
+    portAccents: {
+      any: color("board-port-any"),
+      brick: color("board-port-brick"),
+      sheep: color("board-port-sheep"),
+      stone: color("board-port-stone"),
+      tree: color("board-port-tree"),
+      wheat: color("board-port-wheat"),
+    } satisfies Record<"any" | ResourceType, string>,
+    robberGlow: color("board-robber-glow"),
+    terrain: {
+      desert: color("board-terrain-desert"),
+      fields: color("board-terrain-fields"),
+      forest: color("board-terrain-forest"),
+      hills: color("board-terrain-hills"),
+      mountains: color("board-terrain-mountains"),
+      pasture: color("board-terrain-pasture"),
+    } satisfies Record<TerrainType, string>,
+    sand: color("board-sand"),
+    sandLight: color("board-sand-light"),
+    shadow: color("board-shadow"),
+    tokenEdge: color("board-token-edge"),
+    tokenFace: color("board-token-face"),
+    tokenHot: color("board-token-hot"),
+    tokenInk: color("board-token-ink"),
+  };
+}
+
+type BoardPalette = ReturnType<typeof getBoardPalette>;
+
 function drawTerrain(
   context: CanvasRenderingContext2D,
   scene: StaticScene,
   terrainAtlas: HTMLImageElement | null,
+  palette: BoardPalette,
 ) {
   const tiles = scene.tiles
     .map((tile) => ({
@@ -374,7 +410,6 @@ function drawTerrain(
     }))
     .sort((first, second) => first.point.y - second.point.y);
 
-  const palette = getTerrainPalette(context.canvas);
   drawCoastline(context, scene.boardLayout, palette);
 
   for (const { point } of tiles) {
@@ -405,30 +440,29 @@ function drawTerrain(
   }
 
   const terrainRadius = scene.boardLayout.tileRadius - TILE_TERRAIN_INSET;
-
+  const textureSize = terrainRadius * 2;
   for (const { point, tile } of tiles) {
+    context.save();
+    createRoundedHexagonPath(context, point, terrainRadius, 5, 0);
     if (terrainAtlas) {
-      const textureSize = terrainRadius * 2;
-      const frame = getTerrainAtlasFrame(tile.terrain, tile.id);
-      const sourceX = frame.column * TERRAIN_ATLAS.frameSize;
-      const sourceY = frame.row * TERRAIN_ATLAS.frameSize;
-      const renderSize = textureSize * frame.scale;
-      context.save();
-      createRoundedHexagonPath(context, point, terrainRadius, 5, 0);
+      const frame = TERRAIN_ATLAS.frames[tile.terrain];
       context.clip();
       context.drawImage(
         terrainAtlas,
-        sourceX,
-        sourceY,
+        frame.column * TERRAIN_ATLAS.frameSize,
+        frame.row * TERRAIN_ATLAS.frameSize,
         TERRAIN_ATLAS.frameSize,
         TERRAIN_ATLAS.frameSize,
-        point.x - renderSize / 2,
-        point.y - renderSize / 2,
-        renderSize,
-        renderSize,
+        point.x - textureSize / 2,
+        point.y - textureSize / 2,
+        textureSize,
+        textureSize,
       );
-      context.restore();
+    } else {
+      context.fillStyle = palette.terrain[tile.terrain];
+      context.fill();
     }
+    context.restore();
   }
 
   for (const { point } of tiles) {
@@ -440,33 +474,15 @@ function drawTerrain(
 
   for (const { point, tile } of tiles) {
     if (tile.numberToken !== null) {
-      drawNumberToken(context, tile, point, scene.boardLayout.tileSize, palette);
+      drawNumberToken(context, tile.numberToken, point, scene.boardLayout.tileSize, palette);
     }
   }
 }
 
-function getTerrainPalette(canvas: HTMLCanvasElement) {
-  const styles = getComputedStyle(canvas);
-  const color = (name: string) => styles.getPropertyValue(`--board-${name}`).trim();
-  return {
-    earth: color("earth"),
-    earthDeep: color("earth-deep"),
-    sand: color("sand"),
-    sandLight: color("sand-light"),
-    shadow: color("shadow"),
-    tokenFace: color("token-face"),
-    tokenEdge: color("token-edge"),
-    tokenInk: color("token-ink"),
-    tokenHot: color("token-hot"),
-  };
-}
-
-type TerrainPalette = ReturnType<typeof getTerrainPalette>;
-
 function drawCoastline(
   context: CanvasRenderingContext2D,
   layout: BoardLayout,
-  palette: TerrainPalette,
+  palette: BoardPalette,
 ) {
   context.save();
   context.lineCap = "round";
@@ -501,16 +517,11 @@ function drawCoastline(
 
 function drawNumberToken(
   context: CanvasRenderingContext2D,
-  tile: BoardTile,
+  number: NumberToken,
   tilePoint: PixelCoordinate,
   tileSize: number,
-  palette: TerrainPalette,
+  palette: BoardPalette,
 ) {
-  const number = tile.numberToken;
-  if (number === null) {
-    return;
-  }
-
   const point = { x: tilePoint.x, y: tilePoint.y + tileSize * 0.16 };
   const radius = Math.min(44, tileSize * 0.125);
   const isHot = number === 6 || number === 8;
@@ -549,7 +560,7 @@ function drawNumberToken(
   context.textBaseline = "middle";
   context.fillText(String(number), point.x, point.y - radius * 0.08);
 
-  const pips = NUMBER_TOKEN_PIPS[number] ?? 0;
+  const pips = NUMBER_TOKEN_PIPS[number];
   const pipGap = Math.max(6.2, radius * 0.2);
   const firstPipX = point.x - ((pips - 1) * pipGap) / 2;
   context.fillStyle = ink;
@@ -570,8 +581,8 @@ function drawPorts(
   context: CanvasRenderingContext2D,
   scene: StaticScene,
   images: ReadonlyMap<string, HTMLImageElement | null>,
+  palette: BoardPalette,
 ) {
-  const palette = getTerrainPalette(context.canvas);
   const ports = scene.ports.flatMap((port) => {
     const placement = getPortPlacement(scene.boardLayout, port.edgeKey);
     return placement ? [{ placement, port }] : [];
@@ -589,7 +600,8 @@ function drawPorts(
       placement,
       port.trade,
       images.get(PORT_BOAT_ASSET_PATH) ?? null,
-      port.trade === "any" ? null : (images.get(getResourceCardAssetPath(port.trade)) ?? null),
+      port.trade === "any" ? null : (images.get(RESOURCE_CARD_ASSET_PATHS[port.trade]) ?? null),
+      palette,
     );
   }
 }
@@ -598,28 +610,18 @@ function drawDock(
   context: CanvasRenderingContext2D,
   start: PixelCoordinate,
   end: PixelCoordinate,
-  palette: TerrainPalette,
+  palette: BoardPalette,
 ) {
-  const dx = end.x - start.x;
-  const dy = end.y - start.y;
-  const length = Math.hypot(dx, dy);
-  if (length < 4) {
+  const plankLength = Math.hypot(end.x - start.x, end.y - start.y);
+  if (plankLength < 4) {
     return;
   }
 
-  const inset = 0;
-  const trimmedStart = {
-    x: start.x + (dx / length) * inset,
-    y: start.y + (dy / length) * inset,
-  };
-  const plankLength = Math.hypot(end.x - trimmedStart.x, end.y - trimmedStart.y);
-  const angle = Math.atan2(end.y - trimmedStart.y, end.x - trimmedStart.x);
-  const centerX = (trimmedStart.x + end.x) / 2;
-  const centerY = (trimmedStart.y + end.y) / 2;
+  const angle = Math.atan2(end.y - start.y, end.x - start.x);
   const half = PORT_DOCK_WIDTH / 2;
 
   context.save();
-  context.translate(centerX, centerY);
+  context.translate((start.x + end.x) / 2, (start.y + end.y) / 2);
   context.rotate(angle);
   context.lineJoin = "round";
 
@@ -676,6 +678,7 @@ function drawPort(
   trade: "any" | ResourceType,
   boatImage: HTMLImageElement | null,
   resourceImage: HTMLImageElement | null,
+  palette: BoardPalette,
 ) {
   const { height, width } = PORT_BOAT_RENDER_SIZE;
 
@@ -683,26 +686,22 @@ function drawPort(
     context.save();
     context.translate(placement.x, placement.y);
     context.shadowBlur = 5;
-    context.shadowColor = "rgba(39, 96, 122, 0.24)";
+    context.shadowColor = withAlpha(palette.pieceShadow, 0.24);
     context.shadowOffsetY = 3;
     context.drawImage(boatImage, -width / 2, -height / 2, width, height);
     context.restore();
   }
 
-  drawPortTradeBadge(
-    context,
-    { x: placement.x, y: placement.y + height * 0.48 },
-    trade,
-    resourceImage,
-  );
+  drawPortTradeBadge(context, getPortTradeBadgePoint(placement), trade, resourceImage, palette);
 }
 
 function drawRoads(
   context: CanvasRenderingContext2D,
   scene: DynamicScene,
   images: ReadonlyMap<string, HTMLImageElement | null>,
+  palette: BoardPalette,
 ) {
-  const path = getPieceAssetPath("road");
+  const path = PIECE_ASSET_PATHS.road;
   const image = images.get(path) ?? null;
   if (!image) {
     return;
@@ -716,11 +715,10 @@ function drawRoads(
 
     drawPlayerPiece(
       context,
-      image,
-      path,
+      getTintedPieceCanvas(image, path, getPlayerTint(scene, road.playerId, palette)),
       placement,
       ROAD_PIECE_SIZE,
-      scene.playerThemes.get(road.playerId) ?? "red",
+      palette,
       placement.angle,
       ROAD_PIECE_SCALE_Y,
     );
@@ -731,10 +729,11 @@ function drawBuildings(
   context: CanvasRenderingContext2D,
   scene: DynamicScene,
   images: ReadonlyMap<string, HTMLImageElement | null>,
+  palette: BoardPalette,
 ) {
   for (const building of scene.buildings) {
     const point = getVertexPoint(scene.boardLayout, building.vertexKey);
-    const path = getPieceAssetPath(building.kind);
+    const path = PIECE_ASSET_PATHS[building.kind];
     const image = images.get(path) ?? null;
     if (!point || !image) {
       continue;
@@ -742,19 +741,23 @@ function drawBuildings(
 
     drawPlayerPiece(
       context,
-      image,
-      path,
+      getTintedPieceCanvas(image, path, getPlayerTint(scene, building.playerId, palette)),
       point,
       building.kind === "city" ? CITY_PIECE_SIZE : SETTLEMENT_PIECE_SIZE,
-      scene.playerThemes.get(building.playerId) ?? "red",
+      palette,
     );
   }
+}
+
+function getPlayerTint(scene: DynamicScene, playerId: string, palette: BoardPalette): string {
+  return palette.players[scene.playerThemes.get(playerId) ?? "red"];
 }
 
 function drawRobber(
   context: CanvasRenderingContext2D,
   scene: DynamicScene,
   image: HTMLImageElement | null,
+  palette: BoardPalette,
 ) {
   if (!image) {
     return;
@@ -769,7 +772,7 @@ function drawRobber(
   const size = 102;
   context.save();
   context.shadowBlur = 5;
-  context.shadowColor = "rgba(34, 46, 56, 0.42)";
+  context.shadowColor = withAlpha(palette.pieceShadow, 0.42);
   context.shadowOffsetY = 4;
   context.drawImage(image, point.x - size / 2, point.y - size * 0.5, size, size);
   context.restore();
@@ -779,6 +782,7 @@ function drawTargets(
   context: CanvasRenderingContext2D,
   scene: DynamicScene,
   images: ReadonlyMap<string, HTMLImageElement | null>,
+  palette: BoardPalette,
 ) {
   // The hovered target paints last so its glow and full-size preview are never
   // clipped by a neighbouring marker.
@@ -788,20 +792,19 @@ function drawTargets(
 
   for (const target of ordered) {
     if (target.asset === "robber") {
-      drawRobberTarget(context, target, images.get(ROBBER_ASSET_PATH) ?? null);
+      drawRobberTarget(context, target, images.get(ROBBER_ASSET_PATH) ?? null, palette);
       continue;
     }
 
-    const path = getPieceAssetPath(target.asset);
+    const path = PIECE_ASSET_PATHS[target.asset];
     const image = images.get(path) ?? null;
-    const preview = image
-      ? getTintedPieceCanvas(image, path, target.theme, PLAYER_COLOR_HEX[target.theme])
-      : null;
+    const accent = palette.players[target.theme];
+    const preview = image ? getTintedPieceCanvas(image, path, accent) : null;
 
     if (target.asset === "road") {
-      drawRoadTarget(context, target, preview);
+      drawRoadTarget(context, target, preview, accent, palette);
     } else {
-      drawVertexTarget(context, target, preview);
+      drawVertexTarget(context, target, preview, accent, palette);
     }
   }
 }
@@ -811,8 +814,9 @@ function drawVertexTarget(
   context: CanvasRenderingContext2D,
   target: BoardCanvasTarget,
   preview: HTMLCanvasElement | null,
+  accent: string,
+  palette: BoardPalette,
 ) {
-  const accent = PLAYER_COLOR_HEX[target.theme];
   const pieceSize = target.asset === "city" ? VERTEX_CITY_SIZE : VERTEX_SETTLEMENT_SIZE;
 
   context.save();
@@ -825,7 +829,7 @@ function drawVertexTarget(
       context.arc(0, 0, VERTEX_GLOW_RADIUS, 0, Math.PI * 2);
     });
   } else {
-    drawMarkerRing(context, () => {
+    drawMarkerRing(context, palette, () => {
       context.beginPath();
       context.arc(0, 0, VERTEX_MARKER_RADIUS, 0, Math.PI * 2);
     });
@@ -838,6 +842,7 @@ function drawVertexTarget(
       pieceSize * (target.highlighted ? VERTEX_HOVER_PIECE_SCALE : 1),
       target.highlighted ?? false,
       accent,
+      palette,
     );
   }
 
@@ -849,6 +854,8 @@ function drawRoadTarget(
   context: CanvasRenderingContext2D,
   target: BoardCanvasTarget,
   preview: HTMLCanvasElement | null,
+  accent: string,
+  palette: BoardPalette,
 ) {
   if (!preview) {
     return;
@@ -864,7 +871,8 @@ function drawRoadTarget(
     preview,
     ROAD_TARGET_SIZE * (target.highlighted ? ROAD_HOVER_PIECE_SCALE : 1),
     target.highlighted ?? false,
-    PLAYER_COLOR_HEX[target.theme],
+    accent,
+    palette,
   );
   context.restore();
 }
@@ -881,6 +889,7 @@ function drawGhostPiece(
   size: number,
   highlighted: boolean,
   accent: string,
+  palette: BoardPalette,
 ) {
   const rimOffset = Math.max(1.2, size * 0.017);
   const alpha = context.globalAlpha * (highlighted ? 1 : TARGET_RESTING_PIECE_ALPHA);
@@ -902,7 +911,7 @@ function drawGhostPiece(
   context.globalAlpha = alpha;
   context.filter = "none";
   context.shadowBlur = highlighted ? 14 : 6;
-  context.shadowColor = highlighted ? withAlpha(accent, 0.9) : "rgba(12, 40, 58, 0.5)";
+  context.shadowColor = highlighted ? withAlpha(accent, 0.9) : withAlpha(palette.pieceShadow, 0.5);
   context.shadowOffsetY = highlighted ? 0 : 2;
   context.drawImage(preview, -size / 2, -size / 2, size, size);
   context.restore();
@@ -912,13 +921,14 @@ function drawRobberTarget(
   context: CanvasRenderingContext2D,
   target: BoardCanvasTarget,
   image: HTMLImageElement | null,
+  palette: BoardPalette,
 ) {
   context.save();
   context.translate(target.point.x, target.point.y);
   context.globalAlpha = target.disabled ? TARGET_DISABLED_ALPHA : 1;
 
   if (target.highlighted) {
-    drawTargetGlow(context, "#ffc22d", () => {
+    drawTargetGlow(context, palette.robberGlow, () => {
       context.beginPath();
       context.arc(0, 0, 58, 0, Math.PI * 2);
     });
@@ -926,11 +936,11 @@ function drawRobberTarget(
     if (image) {
       context.globalAlpha *= 0.94;
       context.shadowBlur = 12;
-      context.shadowColor = "rgba(255, 199, 69, 0.72)";
+      context.shadowColor = withAlpha(palette.robberGlow, 0.72);
       context.drawImage(image, -46, -46, 92, 92);
     }
   } else {
-    drawMarkerRing(context, () => {
+    drawMarkerRing(context, palette, () => {
       context.beginPath();
       context.arc(0, 0, 9, 0, Math.PI * 2);
     });
@@ -944,16 +954,20 @@ function drawRobberTarget(
  * legible over both the pale desert and the dark forest tiles, plus a warm
  * inner stroke that ties it to the board's gold trim.
  */
-function drawMarkerRing(context: CanvasRenderingContext2D, createPath: () => void) {
+function drawMarkerRing(
+  context: CanvasRenderingContext2D,
+  palette: BoardPalette,
+  createPath: () => void,
+) {
   context.save();
   createPath();
-  context.fillStyle = "rgba(255, 248, 227, 0.16)";
+  context.fillStyle = withAlpha(palette.highlight, 0.16);
   context.fill();
   context.lineWidth = 4.5;
-  context.strokeStyle = "rgba(9, 38, 56, 0.5)";
+  context.strokeStyle = withAlpha(palette.pieceShadow, 0.5);
   context.stroke();
   context.lineWidth = 2;
-  context.strokeStyle = "rgba(255, 244, 214, 0.72)";
+  context.strokeStyle = withAlpha(palette.highlight, 0.72);
   context.stroke();
   context.restore();
 }
@@ -977,16 +991,13 @@ function withAlpha(color: string, alpha: number): string {
 
 function drawPlayerPiece(
   context: CanvasRenderingContext2D,
-  image: HTMLImageElement,
-  path: string,
+  tintedPiece: HTMLCanvasElement,
   point: PixelCoordinate,
   size: number,
-  theme: PlayerColor,
+  palette: BoardPalette,
   angle = 0,
   scaleY = 1,
 ) {
-  const tintedPiece = getTintedPieceCanvas(image, path, theme, PLAYER_COLOR_HEX[theme]);
-
   context.save();
   context.translate(point.x, point.y);
   context.rotate((angle * Math.PI) / 180);
@@ -1009,7 +1020,7 @@ function drawPlayerPiece(
   context.filter = "none";
   context.globalAlpha = 1;
   context.shadowBlur = 4;
-  context.shadowColor = "rgba(15, 38, 58, 0.34)";
+  context.shadowColor = withAlpha(palette.pieceShadow, 0.34);
   context.shadowOffsetY = 2;
   context.drawImage(tintedPiece, -size / 2, -size / 2, size, size);
   context.restore();
@@ -1018,10 +1029,9 @@ function drawPlayerPiece(
 function getTintedPieceCanvas(
   image: HTMLImageElement,
   path: string,
-  theme: PlayerColor,
   color: string,
 ): HTMLCanvasElement {
-  const key = `${path}:${theme}`;
+  const key = `${path}:${color}`;
   const cached = tintedPieceCanvases.get(key);
   if (cached) {
     return cached;
@@ -1057,26 +1067,23 @@ function drawPortTradeBadge(
   point: PixelCoordinate,
   trade: "any" | ResourceType,
   resourceImage: HTMLImageElement | null,
+  palette: BoardPalette,
 ) {
-  const left = point.x - PORT_TRADE_BADGE_WIDTH / 2;
-  const top = point.y - PORT_TRADE_BADGE_HEIGHT / 2;
-  const accent = trade === "any" ? "#8b6a35" : PORT_RESOURCE_ACCENTS[trade];
+  const { height, width } = PORT_TRADE_BADGE_SIZE;
+  const left = point.x - width / 2;
+  const top = point.y - height / 2;
+  const accent = palette.portAccents[trade];
   const mark = { x: point.x - 19.5, y: point.y };
-  const plaque = context.createLinearGradient(
-    left,
-    top,
-    left + PORT_TRADE_BADGE_WIDTH,
-    top + PORT_TRADE_BADGE_HEIGHT,
-  );
-  plaque.addColorStop(0, "#fff8e6");
-  plaque.addColorStop(0.56, "#f9e9ca");
-  plaque.addColorStop(1, "#efd5aa");
+  const plaque = context.createLinearGradient(left, top, left + width, top + height);
+  plaque.addColorStop(0, palette.plaqueFace);
+  plaque.addColorStop(0.56, palette.plaqueMid);
+  plaque.addColorStop(1, palette.plaqueEdge);
 
   context.save();
-  createRoundedRectPath(context, left, top, PORT_TRADE_BADGE_WIDTH, PORT_TRADE_BADGE_HEIGHT, 12);
+  createRoundedRectPath(context, left, top, width, height, 12);
   context.fillStyle = plaque;
   context.shadowBlur = 3;
-  context.shadowColor = "rgba(54, 38, 21, 0.34)";
+  context.shadowColor = withAlpha(palette.plaqueShadow, 0.34);
   context.shadowOffsetY = 2;
   context.fill();
   context.shadowColor = "transparent";
@@ -1084,32 +1091,25 @@ function drawPortTradeBadge(
   context.strokeStyle = accent;
   context.stroke();
 
-  createRoundedRectPath(
-    context,
-    left + 3,
-    top + 3,
-    PORT_TRADE_BADGE_WIDTH - 6,
-    PORT_TRADE_BADGE_HEIGHT - 6,
-    9,
-  );
+  createRoundedRectPath(context, left + 3, top + 3, width - 6, height - 6, 9);
   context.lineWidth = 1.2;
-  context.strokeStyle = "rgba(255, 255, 255, 0.52)";
+  context.strokeStyle = withAlpha(palette.highlight, 0.52);
   context.stroke();
 
   context.beginPath();
   context.moveTo(point.x, top + 7);
-  context.lineTo(point.x, top + PORT_TRADE_BADGE_HEIGHT - 7);
+  context.lineTo(point.x, top + height - 7);
   context.lineWidth = 1.4;
-  context.strokeStyle = `${accent}66`;
+  context.strokeStyle = withAlpha(accent, 0.4);
   context.stroke();
 
   if (trade === "any") {
-    drawAnyResourceMark(context, mark);
+    drawAnyResourceMark(context, mark, palette);
   } else if (resourceImage) {
     drawCroppedResourceMark(context, mark, resourceImage, accent);
   }
 
-  context.fillStyle = "#233b55";
+  context.fillStyle = palette.plaqueInk;
   context.font = "900 15px ui-sans-serif, system-ui, sans-serif";
   context.textAlign = "center";
   context.textBaseline = "middle";
@@ -1150,14 +1150,17 @@ function drawCroppedResourceMark(
   context.stroke();
 }
 
-function drawAnyResourceMark(context: CanvasRenderingContext2D, point: PixelCoordinate) {
-  const colors = ["#3c9b55", "#d9643a", "#f3e2a1", "#e7ad2c", "#75889a"];
-
+/** A ring of every resource's accent: the harbor takes any one of them. */
+function drawAnyResourceMark(
+  context: CanvasRenderingContext2D,
+  point: PixelCoordinate,
+  palette: BoardPalette,
+) {
   context.save();
   context.shadowBlur = 2;
-  context.shadowColor = "rgba(47, 55, 62, 0.25)";
-  colors.forEach((color, index) => {
-    const angle = -Math.PI / 2 + (index * Math.PI * 2) / colors.length;
+  context.shadowColor = withAlpha(palette.pieceShadow, 0.25);
+  RESOURCE_ORDER.forEach((resource, index) => {
+    const angle = -Math.PI / 2 + (index * Math.PI * 2) / RESOURCE_ORDER.length;
     context.beginPath();
     context.arc(
       point.x + Math.cos(angle) * 7.2,
@@ -1166,9 +1169,9 @@ function drawAnyResourceMark(context: CanvasRenderingContext2D, point: PixelCoor
       0,
       Math.PI * 2,
     );
-    context.fillStyle = color;
+    context.fillStyle = palette.portAccents[resource];
     context.fill();
-    context.strokeStyle = "rgba(255, 251, 235, 0.95)";
+    context.strokeStyle = withAlpha(palette.highlight, 0.95);
     context.lineWidth = 1.2;
     context.stroke();
   });
@@ -1180,7 +1183,7 @@ function createRoundedHexagonPath(
   center: PixelCoordinate,
   radius: number,
   cornerRadius: number,
-  rotation = -Math.PI / 2,
+  rotation: number,
 ) {
   const vertices = Array.from({ length: 6 }, (_, index) => {
     const angle = rotation + (index * Math.PI) / 3;
@@ -1254,7 +1257,10 @@ function loadImage(path: string): Promise<HTMLImageElement | null> {
   const promise = new Promise<HTMLImageElement | null>((resolve) => {
     const image = new Image();
     image.decoding = "async";
-    image.onload = () => resolve(image);
+    image.onload = () => {
+      loadedImages.set(path, image);
+      resolve(image);
+    };
     image.onerror = () => {
       imagePromises.delete(path);
       resolve(null);

@@ -1,11 +1,9 @@
-import {
-  PLAYER_COLORS,
-  getLongestRoadLength,
-  type GameCommand,
-  type PlayerGameView,
-  type PlayerViewState,
-  type ResourceType,
-} from "@settersaga/game";
+import type { GameCommand, PlayerGameView, ResourceType } from "@settersaga/game";
+import recenterIcon from "@iconify-icons/solar/gps-bold";
+import zoomInIcon from "@iconify-icons/solar/magnifer-zoom-in-bold";
+import zoomOutIcon from "@iconify-icons/solar/magnifer-zoom-out-bold";
+import { Icon, type IconifyIcon } from "@iconify/react/offline";
+import Image from "next/image";
 import {
   useEffect,
   useMemo,
@@ -16,14 +14,21 @@ import {
   type MouseEvent as ReactMouseEvent,
 } from "react";
 
+import { Button } from "@/components/ui/button";
+import { Tooltip } from "@/components/ui/tooltip";
+import { RESOURCE_CARD_ASSET_PATHS } from "@/constants/game/card-assets";
+import { RESOURCE_LABELS } from "@/constants/game/labels";
 import {
   BOARD_CANVAS,
   createBoardLayout,
+  getBoardFrame,
+  getBoardPlaneStyle,
   getEdgePlacement,
   getPointStyle,
   getPortPlacement,
+  type BoardLayout,
 } from "@/lib/game/board-layout";
-import { BOARD_VIEWPORT_SCALE } from "@/lib/game/board-viewport";
+import { BOARD_VIEWPORT_SCALE, DEFAULT_BOARD_VIEWPORT } from "@/lib/game/board-viewport";
 import {
   createBoardCanvasTargetModels,
   findNearestBoardTarget,
@@ -31,15 +36,12 @@ import {
   resolveBoardTargetMode,
   type BoardBuildMode,
   type BoardCanvasTargetModel,
+  type BoardTargetMode,
 } from "@/lib/game/board-canvas-model";
+import { getPlayerColor } from "@/lib/game/view";
+
 import { BoardCanvas, type BoardCanvasTarget } from "./board-canvas";
-import { BoardInspectorDockPortal } from "./hand-dock";
-import { RESOURCE_LABELS, ResourceIcon } from "./resource-icon";
 import { useBoardCamera } from "./use-board-camera";
-
-export type BuildMode = BoardBuildMode;
-
-const KEYBOARD_PAN_STEP = 48;
 
 interface BoardInspectionDetail {
   label: string;
@@ -66,40 +68,38 @@ interface InspectableBoardItemProps {
 export function GameBoard({
   buildMode,
   game,
+  longestRoadByPlayerId,
   onCancelBuildMode,
   onCommand,
   onPlacementExit,
   pending,
 }: {
-  buildMode: BuildMode;
+  buildMode: BoardBuildMode;
   game: PlayerGameView;
-  onCancelBuildMode?(): void;
+  longestRoadByPlayerId: ReadonlyMap<string, number>;
+  onCancelBuildMode(): void;
   onCommand(command: GameCommand, successMessage: string): void;
-  onPlacementExit?(mode: Exclude<ReturnType<typeof resolveBoardTargetMode>, null>): void;
+  onPlacementExit(mode: BoardTargetMode): void;
   pending: boolean;
 }) {
-  const playerDetailsById = useMemo(
-    () =>
-      new Map(
-        game.players.map((player) => [
-          player.id,
-          { displayName: player.displayName, theme: getPlayerTheme(player) },
-        ]),
-      ),
+  const playersById = useMemo(
+    () => new Map(game.players.map((player) => [player.id, player])),
     [game.players],
   );
   const playerThemes = useMemo(
-    () => new Map(game.players.map((player) => [player.id, getPlayerTheme(player)])),
+    () => new Map(game.players.map((player) => [player.id, getPlayerColor(player)])),
     [game.players],
   );
-  const longestRoadLengthByPlayerId = useMemo(() => {
-    const roadOwnerIds = new Set(game.board.roads.map((road) => road.playerId));
-    return new Map(
-      [...roadOwnerIds].map((playerId) => [playerId, getLongestRoadLength(game.board, playerId)]),
-    );
-  }, [game.board]);
   const boardLayout = useMemo(() => createBoardLayout(game.board.tiles), [game.board.tiles]);
-  const viewerTheme = playerDetailsById.get(game.viewerPlayerId)?.theme ?? "red";
+  const boardFrame = useMemo(
+    () =>
+      getBoardFrame(
+        boardLayout,
+        game.board.ports.map((port) => port.edgeKey),
+      ),
+    [boardLayout, game.board.ports],
+  );
+  const viewerTheme = playerThemes.get(game.viewerPlayerId) ?? "red";
   const ports = useMemo(
     () =>
       game.board.ports.flatMap((port) => {
@@ -117,15 +117,14 @@ export function GameBoard({
   );
   const roadInspections = useMemo(
     () =>
-      game.board.roads.map((road) => {
-        const owner = playerDetailsById.get(road.playerId);
-        return createRoadInspection(
+      game.board.roads.map((road) =>
+        createRoadInspection(
           `road:${road.edgeKey}`,
-          owner?.displayName ?? "Unknown player",
-          longestRoadLengthByPlayerId.get(road.playerId) ?? 0,
-        );
-      }),
-    [game.board.roads, longestRoadLengthByPlayerId, playerDetailsById],
+          playersById.get(road.playerId)?.displayName ?? "Unknown player",
+          longestRoadByPlayerId.get(road.playerId) ?? 0,
+        ),
+      ),
+    [game.board.roads, longestRoadByPlayerId, playersById],
   );
   const inspectionById = useMemo(
     () =>
@@ -135,17 +134,16 @@ export function GameBoard({
     [portInspections, roadInspections],
   );
   const inspectionOrder = useMemo(() => [...inspectionById.keys()], [inspectionById]);
-  const firstInspectionId = inspectionOrder[0] ?? null;
   const targetMode = resolveBoardTargetMode(game, buildMode);
   const boardTargets = useMemo(
     () =>
       createBoardCanvasTargetModels({
-        buildMode,
         game,
         layout: boardLayout,
+        mode: targetMode,
         viewerTheme,
       }),
-    [boardLayout, buildMode, game, viewerTheme],
+    [boardLayout, game, targetMode, viewerTheme],
   );
   const firstBoardTargetId = boardTargets[0]?.id ?? null;
   const [focusedTargetId, setFocusedTargetId] = useState<string | null>(null);
@@ -164,6 +162,7 @@ export function GameBoard({
       })),
     [activeTargetId, boardTargets, pending],
   );
+  const boardPlaneRef = useRef<HTMLDivElement>(null);
   const {
     boardSceneRef,
     boardShellRef,
@@ -172,16 +171,14 @@ export function GameBoard({
     cancelPointerGesture,
     changeZoomBy,
     handleClickCapture,
-    handleLostPointerCapture,
     isInteracting,
     movePointerGesture,
-    panBoardBy,
     resetBoardViewport,
     startPointerGesture,
     stopPointerGesture,
   } = useBoardCamera();
   const findPointerTarget = (clientX: number, clientY: number) => {
-    const bounds = boardSceneRef.current?.getBoundingClientRect();
+    const bounds = boardPlaneRef.current?.getBoundingClientRect();
     if (!bounds) {
       return null;
     }
@@ -189,28 +186,25 @@ export function GameBoard({
     const boardPoint = mapClientPointToBoard({ x: clientX, y: clientY }, bounds, BOARD_CANVAS);
     return boardPoint ? findNearestBoardTarget(boardTargets, boardPoint) : null;
   };
-  const previousTargetModeRef = useRef<typeof targetMode>(null);
+  const previousTargetModeRef = useRef<BoardTargetMode | null>(null);
   const [inspectedItemId, setInspectedItemId] = useState<string | null>(null);
-  const [keyboardInspectionId, setKeyboardInspectionId] = useState<string | null>(
-    firstInspectionId,
-  );
+  const [keyboardInspectionId, setKeyboardInspectionId] = useState<string | null>(null);
   const inspectedItem = inspectedItemId ? (inspectionById.get(inspectedItemId) ?? null) : null;
-  const keyboardInspectionExists = keyboardInspectionId
-    ? inspectionById.has(keyboardInspectionId)
-    : false;
-
-  useEffect(() => {
-    if (!keyboardInspectionExists) {
-      setKeyboardInspectionId(firstInspectionId);
-    }
-  }, [firstInspectionId, keyboardInspectionExists]);
+  const isDefaultView =
+    boardViewport.scale === DEFAULT_BOARD_VIEWPORT.scale &&
+    boardViewport.x === DEFAULT_BOARD_VIEWPORT.x &&
+    boardViewport.y === DEFAULT_BOARD_VIEWPORT.y;
+  const effectiveKeyboardInspectionId =
+    keyboardInspectionId && inspectionById.has(keyboardInspectionId)
+      ? keyboardInspectionId
+      : (inspectionOrder[0] ?? null);
 
   useEffect(() => {
     const previousTargetMode = previousTargetModeRef.current;
     previousTargetModeRef.current = targetMode;
 
     if (previousTargetMode !== null && targetMode === null) {
-      onPlacementExit?.(previousTargetMode);
+      onPlacementExit(previousTargetMode);
       return;
     }
 
@@ -219,10 +213,7 @@ export function GameBoard({
     }
 
     setKeyboardTargetId(firstBoardTargetId);
-    const firstTarget = [
-      ...(boardShellRef.current?.querySelectorAll<HTMLElement>("[data-board-target-id]") ?? []),
-    ].find((element) => element.dataset.boardTargetId === firstBoardTargetId);
-    firstTarget?.focus();
+    focusBoardElement(boardShellRef.current, "data-board-target-id", firstBoardTargetId);
   }, [boardShellRef, firstBoardTargetId, onPlacementExit, targetMode]);
 
   const inspectBoardItem = (id: string | null) => {
@@ -238,71 +229,31 @@ export function GameBoard({
   };
 
   const navigateBoardItems = (event: ReactKeyboardEvent<HTMLElement>, id: string) => {
-    const direction = getInspectionNavigationDirection(event.key);
-    if (direction === null || inspectionOrder.length === 0) {
-      return;
-    }
-
-    event.preventDefault();
-    event.stopPropagation();
-    const currentIndex = Math.max(0, inspectionOrder.indexOf(id));
-    const nextIndex =
-      direction === "first"
-        ? 0
-        : direction === "last"
-          ? inspectionOrder.length - 1
-          : (currentIndex + direction + inspectionOrder.length) % inspectionOrder.length;
-    const nextId = inspectionOrder[nextIndex];
-    if (!nextId) {
+    const nextId = getRovingTarget(event, inspectionOrder, id);
+    if (nextId === null) {
       return;
     }
 
     focusBoardItem(nextId);
-    const nextItem = [
-      ...(boardShellRef.current?.querySelectorAll<HTMLElement>("[data-board-inspection-id]") ?? []),
-    ].find((element) => element.dataset.boardInspectionId === nextId);
-    nextItem?.focus();
+    focusBoardElement(boardShellRef.current, "data-board-inspection-id", nextId);
   };
 
   const navigateBuildTargets = (event: ReactKeyboardEvent<HTMLButtonElement>, id: string) => {
-    const direction = getInspectionNavigationDirection(event.key);
-    if (direction === null || boardTargets.length === 0) {
-      return;
-    }
-
-    event.preventDefault();
-    event.stopPropagation();
-    const currentIndex = Math.max(
-      0,
-      boardTargets.findIndex((target) => target.id === id),
+    const nextId = getRovingTarget(
+      event,
+      boardTargets.map((target) => target.id),
+      id,
     );
-    const nextIndex =
-      direction === "first"
-        ? 0
-        : direction === "last"
-          ? boardTargets.length - 1
-          : (currentIndex + direction + boardTargets.length) % boardTargets.length;
-    const nextTarget = boardTargets[nextIndex];
-    if (!nextTarget) {
+    if (nextId === null) {
       return;
     }
 
-    setKeyboardTargetId(nextTarget.id);
-    const nextElement = [
-      ...(boardShellRef.current?.querySelectorAll<HTMLElement>("[data-board-target-id]") ?? []),
-    ].find((element) => element.dataset.boardTargetId === nextTarget.id);
-    nextElement?.focus();
+    setKeyboardTargetId(nextId);
+    focusBoardElement(boardShellRef.current, "data-board-target-id", nextId);
   };
 
   const handleKeyDown = (event: ReactKeyboardEvent<HTMLElement>) => {
     if (event.altKey || event.ctrlKey || event.metaKey) {
-      return;
-    }
-
-    const panDelta = getKeyboardPanDelta(event.key);
-    if (panDelta) {
-      event.preventDefault();
-      panBoardBy(panDelta.x, panDelta.y);
       return;
     }
 
@@ -324,7 +275,7 @@ export function GameBoard({
       return;
     }
 
-    if (event.key === "Escape" && buildMode !== null && onCancelBuildMode) {
+    if (event.key === "Escape" && buildMode !== null) {
       event.preventDefault();
       onCancelBuildMode();
     }
@@ -332,11 +283,11 @@ export function GameBoard({
 
   return (
     <section
-      aria-label="Game board. Hover a board item for visual details, or Tab into the board items and use arrow keys to inspect them. Drag to pan, or use arrow keys while a board item is focused. Use the mouse wheel or plus and minus keys to zoom, and press zero to reset."
-      className={`board-shell${targetMode ? " is-placing" : ""}`}
+      aria-label="Game board. Hover a board item for visual details, or Tab into the board items and use arrow keys to inspect them. Drag to pan. Use the mouse wheel or plus and minus keys to zoom, and press zero to reset."
+      className="board-shell"
       onClickCapture={handleClickCapture}
       onKeyDown={handleKeyDown}
-      onLostPointerCapture={handleLostPointerCapture}
+      onLostPointerCapture={cancelPointerGesture}
       onPointerCancel={cancelPointerGesture}
       onPointerDown={startPointerGesture}
       onPointerMove={movePointerGesture}
@@ -347,99 +298,146 @@ export function GameBoard({
         <p aria-live="polite" className="sr-only" role="status">
           {getTargetModeLabel(targetMode)}. {boardTargets.length} legal
           {boardTargets.length === 1 ? " location" : " locations"}.
-          {buildMode !== null && onCancelBuildMode ? " Press Escape to cancel." : null}
+          {buildMode !== null ? " Press Escape to cancel." : null}
         </p>
       ) : null}
       <div
         className="board-stage"
         ref={boardStageRef}
-        style={{ aspectRatio: `${BOARD_CANVAS.width} / ${BOARD_CANVAS.height}` }}
+        style={{ "--board-aspect": `${boardFrame.width} / ${boardFrame.height}` } as CSSProperties}
       >
-        <div
-          className="game-board"
-          ref={boardSceneRef}
-          style={
-            {
-              "--tile-size": `${(boardLayout.tileSize / BOARD_CANVAS.width) * 100}%`,
-            } as CSSProperties
-          }
-        >
-          <BoardCanvas
-            board={game.board}
-            boardLayout={boardLayout}
-            playerThemes={playerThemes}
-            renderScale={boardViewport.scale}
-            targets={canvasTargets}
-          />
-
-          {ports.map((port, index) => {
-            const inspection = portInspections[index];
-            return inspection ? (
-              <BoardHitTarget
-                className="port-hit-target"
-                inspection={inspection}
-                isKeyboardTarget={inspection.id === keyboardInspectionId}
-                key={port.id}
-                kind="port"
-                onInspect={inspectBoardItem}
-                onKeyboardFocus={focusBoardItem}
-                onKeyboardNavigate={navigateBoardItems}
-                point={port.placement}
-              />
-            ) : null;
-          })}
-
-          {game.board.roads.map((road, index) => {
-            const point = getEdgePlacement(boardLayout, road.edgeKey);
-            const inspection = roadInspections[index];
-            return point && inspection ? (
-              <BoardHitTarget
-                angle={point.angle}
-                className="piece-hit-target-road"
-                inspection={inspection}
-                isKeyboardTarget={inspection.id === keyboardInspectionId}
-                key={road.edgeKey}
-                kind="piece"
-                onInspect={inspectBoardItem}
-                onKeyboardFocus={focusBoardItem}
-                onKeyboardNavigate={navigateBoardItems}
-                point={point}
-              />
-            ) : null;
-          })}
-
-          {boardTargets.map((target) => (
-            <BuildTarget
-              disabled={pending}
-              isKeyboardTarget={target.id === effectiveKeyboardTargetId}
-              key={target.id}
-              onClick={(event) => {
-                const selectedTarget =
-                  event.detail === 0
-                    ? target
-                    : (findPointerTarget(event.clientX, event.clientY) ?? target);
-                onCommand(selectedTarget.command, selectedTarget.successMessage);
-              }}
-              onFocus={(id) => {
-                setFocusedTargetId(id);
-                if (id) {
-                  setKeyboardTargetId(id);
-                }
-              }}
-              onHover={setHoveredTargetId}
-              onKeyboardNavigate={navigateBuildTargets}
-              onPointerMove={(clientX, clientY) => {
-                setHoveredTargetId(findPointerTarget(clientX, clientY)?.id ?? null);
-              }}
-              target={target}
+        <div className="game-board" ref={boardSceneRef}>
+          <div className="board-plane" ref={boardPlaneRef} style={getBoardPlaneStyle(boardFrame)}>
+            <BoardCanvas
+              board={game.board}
+              boardLayout={boardLayout}
+              playerThemes={playerThemes}
+              renderScale={boardViewport.scale}
+              targets={canvasTargets}
             />
-          ))}
+
+            {ports.map((port, index) => {
+              const inspection = portInspections[index];
+              return inspection ? (
+                <BoardHitTarget
+                  className="port-hit-target"
+                  inspection={inspection}
+                  isKeyboardTarget={inspection.id === effectiveKeyboardInspectionId}
+                  key={port.id}
+                  onInspect={inspectBoardItem}
+                  onKeyboardFocus={focusBoardItem}
+                  onKeyboardNavigate={navigateBoardItems}
+                  point={port.placement}
+                />
+              ) : null;
+            })}
+
+            {game.board.roads.map((road, index) => {
+              const point = getEdgePlacement(boardLayout, road.edgeKey);
+              const inspection = roadInspections[index];
+              return point && inspection ? (
+                <BoardHitTarget
+                  angle={point.angle}
+                  className="piece-hit-target-road"
+                  inspection={inspection}
+                  isKeyboardTarget={inspection.id === effectiveKeyboardInspectionId}
+                  key={road.edgeKey}
+                  onInspect={inspectBoardItem}
+                  onKeyboardFocus={focusBoardItem}
+                  onKeyboardNavigate={navigateBoardItems}
+                  point={point}
+                />
+              ) : null;
+            })}
+
+            {boardTargets.map((target) => (
+              <BuildTarget
+                disabled={pending}
+                isKeyboardTarget={target.id === effectiveKeyboardTargetId}
+                key={target.id}
+                onClick={(event) => {
+                  const selectedTarget =
+                    event.detail === 0
+                      ? target
+                      : (findPointerTarget(event.clientX, event.clientY) ?? target);
+                  onCommand(selectedTarget.command, selectedTarget.successMessage);
+                }}
+                onFocus={(id) => {
+                  setFocusedTargetId(id);
+                  if (id) {
+                    setKeyboardTargetId(id);
+                  }
+                }}
+                onHover={setHoveredTargetId}
+                onKeyboardNavigate={navigateBuildTargets}
+                onPointerMove={(clientX, clientY) => {
+                  setHoveredTargetId(findPointerTarget(clientX, clientY)?.id ?? null);
+                }}
+                target={target}
+              />
+            ))}
+          </div>
         </div>
       </div>
-      <BoardInspectorDockPortal>
-        <BoardInspector inspection={inspectedItem} />
-      </BoardInspectorDockPortal>
+      <BoardInspector inspection={inspectedItem} />
+      <div
+        aria-label="Map view"
+        className="board-camera"
+        data-moved={isDefaultView ? undefined : true}
+        onPointerDown={(event) => event.stopPropagation()}
+        role="group"
+      >
+        <CameraButton
+          className="board-camera-zoom"
+          disabled={boardViewport.scale >= BOARD_VIEWPORT_SCALE.max}
+          icon={zoomInIcon}
+          label="Zoom in"
+          onClick={() => changeZoomBy(BOARD_VIEWPORT_SCALE.step)}
+        />
+        <CameraButton
+          className="board-camera-zoom"
+          disabled={boardViewport.scale <= BOARD_VIEWPORT_SCALE.min}
+          icon={zoomOutIcon}
+          label="Zoom out"
+          onClick={() => changeZoomBy(-BOARD_VIEWPORT_SCALE.step)}
+        />
+        <CameraButton
+          disabled={isDefaultView}
+          icon={recenterIcon}
+          label="Recenter map"
+          onClick={resetBoardViewport}
+        />
+      </div>
     </section>
+  );
+}
+
+function CameraButton({
+  className,
+  disabled,
+  icon,
+  label,
+  onClick,
+}: {
+  className?: string;
+  disabled: boolean;
+  icon: IconifyIcon;
+  label: string;
+  onClick(): void;
+}) {
+  return (
+    <Tooltip label={label} side="left">
+      <Button
+        aria-label={label}
+        className={className}
+        disabled={disabled}
+        onClick={onClick}
+        size="game-md"
+        variant="game-icon"
+      >
+        <Icon aria-hidden="true" icon={icon} />
+      </Button>
+    </Tooltip>
   );
 }
 
@@ -448,7 +446,6 @@ function BoardHitTarget({
   className,
   inspection,
   isKeyboardTarget,
-  kind,
   onInspect,
   onKeyboardFocus,
   onKeyboardNavigate,
@@ -456,15 +453,13 @@ function BoardHitTarget({
 }: InspectableBoardItemProps & {
   angle?: number;
   className: string;
-  kind: "piece" | "port";
   point: { x: number; y: number };
 }) {
   return (
     <span
       aria-label={inspection.accessibleLabel}
-      className={`board-hit-target board-inspectable ${className}`}
+      className={`board-hit-target ${className}`}
       data-board-inspection-id={inspection.id}
-      data-board-inspectable={kind}
       onBlur={() => onInspect(null)}
       onFocus={() => onKeyboardFocus(inspection.id)}
       onKeyDown={(event) => onKeyboardNavigate(event, inspection.id)}
@@ -504,7 +499,7 @@ function BuildTarget({
   return (
     <button
       aria-label={target.label}
-      className={`build-target target-${target.type} target-${target.asset} player-${target.theme}`}
+      className="build-target"
       data-board-target-id={target.id}
       disabled={disabled}
       onBlur={() => onFocus(null)}
@@ -532,23 +527,27 @@ function BoardInspector({ inspection }: { inspection: BoardInspection | null }) 
   }
 
   return (
-    <aside
-      aria-label="Board inspector"
-      className="grid gap-1.5 p-3 rounded-2xl bg-card/90 shadow-md border border-white/10 text-card-foreground pointer-events-auto"
-    >
-      <span className="text-[0.65rem] font-black tracking-wider uppercase text-foreground/60">
+    <aside aria-label="Board inspector" className="board-inspector">
+      <span className="font-display text-xs tracking-wider uppercase text-foreground/70">
         {inspection.kicker}
       </span>
       <span className="flex items-center gap-2">
         {inspection.resource ? (
-          <ResourceIcon decorative resource={inspection.resource} size={34} />
+          <Image
+            alt=""
+            draggable={false}
+            height={34}
+            src={RESOURCE_CARD_ASSET_PATHS[inspection.resource]}
+            unoptimized
+            width={34}
+          />
         ) : null}
         <strong className="text-sm font-extrabold text-foreground">{inspection.title}</strong>
       </span>
-      <dl className="grid grid-cols-2 gap-2 m-0 pt-1.5 border-t border-white/10">
+      <dl className="grid grid-cols-2 gap-2 m-0">
         {inspection.details.map((detail) => (
           <div className="grid gap-0.5" key={detail.label}>
-            <dt className="text-[0.6rem] font-bold text-muted-foreground uppercase">
+            <dt className="font-display text-xs tracking-wider uppercase text-muted-foreground">
               {detail.label}
             </dt>
             <dd className="m-0 text-xs font-black text-foreground">{detail.value}</dd>
@@ -564,10 +563,10 @@ function createPortInspection(
   trade: "any" | ResourceType,
   edgeKey: string,
   game: PlayerGameView,
-  layout: ReturnType<typeof createBoardLayout>,
+  layout: BoardLayout,
 ): BoardInspection {
   const isAnyResource = trade === "any";
-  const resourceLabel = isAnyResource ? "Any one resource" : RESOURCE_LABELS[trade];
+  const resourceLabel = isAnyResource ? "any resource" : RESOURCE_LABELS[trade];
   const rate = isAnyResource ? "3:1" : "2:1";
   const title = isAnyResource ? "Open harbor" : `${resourceLabel} harbor`;
   const endpointKeys = new Set(layout.topology.edgeVertices[edgeKey] ?? []);
@@ -589,7 +588,7 @@ function createPortInspection(
       : "Build beside it to unlock";
 
   return {
-    accessibleLabel: `${title}; trade at ${rate}; accepts ${resourceLabel.toLowerCase()}; ${access.toLowerCase()}.`,
+    accessibleLabel: `${rate} ${title}, trades ${resourceLabel}. ${access}.`,
     details: [{ label: "Access", value: access }],
     id: `port:${id}`,
     kicker: "Harbor",
@@ -604,48 +603,63 @@ function createRoadInspection(
   longestRoadLength: number,
 ): BoardInspection {
   return {
-    accessibleLabel: `${ownerName}'s road; longest connected route is ${longestRoadLength} segments.`,
-    details: [{ label: "Longest route", value: String(longestRoadLength) }],
+    accessibleLabel: `${ownerName}'s road. Their longest road is ${longestRoadLength} ${longestRoadLength === 1 ? "road" : "roads"} long.`,
+    details: [{ label: "Longest road", value: String(longestRoadLength) }],
     id,
     kicker: "Road",
     title: `${ownerName}'s road`,
   };
 }
 
-function getInspectionNavigationDirection(key: string): "first" | "last" | -1 | 1 | null {
-  if (key === "Home") {
-    return "first";
+/** Arrow keys wrap through the items; Home and End jump to either end. */
+function getRovingTarget(
+  event: ReactKeyboardEvent<HTMLElement>,
+  ids: readonly string[],
+  currentId: string,
+): string | null {
+  const direction = getRovingDirection(event.key);
+  if (direction === null || ids.length === 0) {
+    return null;
   }
-  if (key === "End") {
-    return "last";
-  }
-  if (key === "ArrowLeft" || key === "ArrowUp") {
-    return -1;
-  }
-  if (key === "ArrowRight" || key === "ArrowDown") {
-    return 1;
-  }
-  return null;
+
+  event.preventDefault();
+  event.stopPropagation();
+  const currentIndex = Math.max(0, ids.indexOf(currentId));
+  const nextIndex =
+    direction === "first"
+      ? 0
+      : direction === "last"
+        ? ids.length - 1
+        : (currentIndex + direction + ids.length) % ids.length;
+  return ids[nextIndex] ?? null;
 }
 
-function getKeyboardPanDelta(key: string): { x: number; y: number } | null {
+function getRovingDirection(key: string): "first" | "last" | -1 | 1 | null {
   switch (key) {
-    case "ArrowDown":
-      return { x: 0, y: KEYBOARD_PAN_STEP };
+    case "Home":
+      return "first";
+    case "End":
+      return "last";
     case "ArrowLeft":
-      return { x: -KEYBOARD_PAN_STEP, y: 0 };
-    case "ArrowRight":
-      return { x: KEYBOARD_PAN_STEP, y: 0 };
     case "ArrowUp":
-      return { x: 0, y: -KEYBOARD_PAN_STEP };
+      return -1;
+    case "ArrowRight":
+    case "ArrowDown":
+      return 1;
     default:
       return null;
   }
 }
 
-function getTargetModeLabel(
-  mode: Exclude<ReturnType<typeof resolveBoardTargetMode>, null>,
-): string {
+function focusBoardElement(
+  root: HTMLElement | null,
+  attribute: "data-board-inspection-id" | "data-board-target-id",
+  id: string,
+) {
+  root?.querySelector<HTMLElement>(`[${attribute}="${CSS.escape(id)}"]`)?.focus();
+}
+
+function getTargetModeLabel(mode: BoardTargetMode): string {
   switch (mode) {
     case "city":
       return "Choose a settlement to upgrade";
@@ -656,8 +670,4 @@ function getTargetModeLabel(
     case "settlement":
       return "Choose a corner for your settlement";
   }
-}
-
-export function getPlayerTheme(player: PlayerViewState) {
-  return PLAYER_COLORS[player.seatIndex % PLAYER_COLORS.length] ?? "red";
 }

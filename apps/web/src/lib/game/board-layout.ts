@@ -1,16 +1,43 @@
 import { axialToPixel, getBoardTopology } from "@settersaga/game";
 import type { AxialCoordinate, BoardTopology, PixelCoordinate } from "@settersaga/game";
 
-import { BOARD_TILE, PORT_BOAT_RENDER_SIZE } from "@/constants/game/board-assets";
+import {
+  BOARD_TILE,
+  PORT_BOAT_RENDER_SIZE,
+  PORT_TRADE_BADGE_SIZE,
+} from "@/constants/game/board-assets";
 
 export const BOARD_CANVAS = {
   centerX: 600,
   centerY: 660,
   height: 1320,
   tileRadius: BOARD_TILE.radius,
-  tileSize: BOARD_TILE.renderSize,
   width: 1200,
 } as const;
+
+/** The island is fitted inside this box so the harbor boats around it stay on the canvas. */
+const BOARD_FIT = {
+  height: 1_060,
+  width: 960,
+} as const;
+
+/** Room around the island's corners for a city built on the coast. */
+const BOARD_FRAME_PIECE_MARGIN = 48;
+
+/** A box in canvas units. */
+export interface BoardFrame {
+  height: number;
+  width: number;
+  x: number;
+  y: number;
+}
+
+interface BoardBox {
+  bottom: number;
+  left: number;
+  right: number;
+  top: number;
+}
 
 export interface EdgePlacement extends PixelCoordinate {
   angle: number;
@@ -23,7 +50,6 @@ interface DockPlacement {
 
 export interface PortPlacement extends EdgePlacement {
   docks: readonly [DockPlacement, DockPlacement];
-  outwardAngle: number;
 }
 
 export interface BoardLayout {
@@ -44,8 +70,8 @@ export function createBoardLayout(coordinates: readonly AxialCoordinate[]): Boar
   const assetDiameter = BOARD_TILE.renderSize / BOARD_TILE.radius;
   const tileRadius = Math.min(
     BOARD_CANVAS.tileRadius,
-    960 / (maxX - minX + assetDiameter),
-    1_060 / (maxY - minY + assetDiameter),
+    BOARD_FIT.width / (maxX - minX + assetDiameter),
+    BOARD_FIT.height / (maxY - minY + assetDiameter),
   );
 
   return {
@@ -132,7 +158,68 @@ export function getPortPlacement(layout: BoardLayout, edgeKey: string): PortPlac
       { end: getDockEnd(firstSide), start: firstVertex },
       { end: getDockEnd(-firstSide), start: secondVertex },
     ],
-    outwardAngle: Math.atan2(outward.y, outward.x),
+  };
+}
+
+/** Center of the trade-ratio plaque that hangs below a harbor boat. */
+export function getPortTradeBadgePoint(port: PixelCoordinate): PixelCoordinate {
+  return { x: port.x, y: port.y + PORT_BOAT_RENDER_SIZE.height * 0.48 };
+}
+
+/**
+ * The part of the canvas the island, its coastal pieces and its harbors cover. Maps differ in
+ * shape (the wide isle is much wider than tall), so the view frames this box, not the canvas.
+ */
+export function getBoardFrame(layout: BoardLayout, portEdgeKeys: readonly string[]): BoardFrame {
+  const boxes: BoardBox[] = [
+    ...layout.topology.vertexKeys.flatMap((vertexKey) => {
+      const point = getVertexPoint(layout, vertexKey);
+      return point
+        ? [
+            {
+              bottom: point.y + BOARD_FRAME_PIECE_MARGIN,
+              left: point.x - BOARD_FRAME_PIECE_MARGIN,
+              right: point.x + BOARD_FRAME_PIECE_MARGIN,
+              top: point.y - BOARD_FRAME_PIECE_MARGIN,
+            },
+          ]
+        : [];
+    }),
+    ...portEdgeKeys.flatMap((edgeKey) => {
+      const placement = getPortPlacement(layout, edgeKey);
+      return placement ? [getPortBox(placement)] : [];
+    }),
+  ];
+  const left = Math.max(0, Math.min(...boxes.map((box) => box.left)));
+  const top = Math.max(0, Math.min(...boxes.map((box) => box.top)));
+  const right = Math.min(BOARD_CANVAS.width, Math.max(...boxes.map((box) => box.right)));
+  const bottom = Math.min(BOARD_CANVAS.height, Math.max(...boxes.map((box) => box.bottom)));
+
+  return { height: bottom - top, width: right - left, x: left, y: top };
+}
+
+/** Where the whole canvas sits, in percent, inside a box that shows only `frame`. */
+export function getBoardPlaneStyle(frame: BoardFrame) {
+  return {
+    height: `${(BOARD_CANVAS.height / frame.height) * 100}%`,
+    left: `${(-frame.x / frame.width) * 100}%`,
+    top: `${(-frame.y / frame.height) * 100}%`,
+    width: `${(BOARD_CANVAS.width / frame.width) * 100}%`,
+  };
+}
+
+/** The harbor boat and the trade plaque hanging below it. */
+export function getPortBox(port: PixelCoordinate): BoardBox {
+  const badge = getPortTradeBadgePoint(port);
+  const halfWidth = Math.max(PORT_BOAT_RENDER_SIZE.width, PORT_TRADE_BADGE_SIZE.width) / 2;
+  return {
+    bottom: Math.max(
+      port.y + PORT_BOAT_RENDER_SIZE.height / 2,
+      badge.y + PORT_TRADE_BADGE_SIZE.height / 2,
+    ),
+    left: port.x - halfWidth,
+    right: port.x + halfWidth,
+    top: port.y - PORT_BOAT_RENDER_SIZE.height / 2,
   };
 }
 

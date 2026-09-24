@@ -1,54 +1,69 @@
 import { describe, expect, test } from "bun:test";
 
+import { getPlayerPortraitSrc } from "../src/lib/game/hud-portraits";
 import { getPlayerHudOrder } from "../src/lib/game/view";
 
 describe("player HUD order", () => {
   test.each([
     {
-      playerIds: ["viewer", "blue", "orange", "green"],
-      viewerId: "viewer",
+      expected: ["blue", "orange", "green", "viewer"],
+      turnOrder: ["viewer", "blue", "orange", "green"],
     },
     {
-      playerIds: ["blue", "viewer", "orange", "green"],
-      viewerId: "viewer",
+      expected: ["orange", "green", "blue", "viewer"],
+      turnOrder: ["blue", "viewer", "orange", "green"],
     },
     {
-      playerIds: ["blue", "orange", "green", "viewer"],
-      viewerId: "viewer",
+      expected: ["blue", "orange", "green", "viewer"],
+      turnOrder: ["blue", "orange", "green", "viewer"],
     },
-  ])("places the viewer last when the original order is $playerIds", ({ playerIds, viewerId }) => {
-    const players = playerIds.map((id) => ({ id, isViewer: id === viewerId }));
+  ])(
+    "lists who plays after the viewer, then the viewer, for turn order $turnOrder",
+    ({ expected, turnOrder }) => {
+      const players = ["green", "viewer", "orange", "blue"].map((id) => ({
+        id,
+        isViewer: id === "viewer",
+      }));
 
-    expect(getPlayerHudOrder(players).map((player) => player.id)).toEqual([
-      ...playerIds.filter((id) => id !== viewerId),
-      viewerId,
-    ]);
+      expect(getPlayerHudOrder(players, turnOrder).map((player) => player.id)).toEqual([
+        ...expected,
+      ]);
+    },
+  );
+
+  test("keeps plain turn order when the viewer has no seat", () => {
+    const players = ["green", "orange", "blue"].map((id) => ({ id, isViewer: false }));
+
+    expect(
+      getPlayerHudOrder(players, ["blue", "orange", "green"]).map((player) => player.id),
+    ).toEqual(["blue", "orange", "green"]);
+  });
+});
+
+describe("player portraits", () => {
+  const sources = { botDifficulty: "hard" as const, viewerProfileImageUrl: "/me.png" };
+
+  test("shows the viewer's profile photo", () => {
+    expect(getPlayerPortraitSrc({ isBot: false, isViewer: true, seatIndex: 0 }, sources)).toBe(
+      "/me.png",
+    );
   });
 
-  test("keeps opponent order stable", () => {
-    const players = [
-      { id: "orange", isViewer: false },
-      { id: "viewer", isViewer: true },
-      { id: "green", isViewer: false },
-      { id: "blue", isViewer: false },
-    ];
-
-    expect(getPlayerHudOrder(players).map((player) => player.id)).toEqual([
-      "orange",
-      "green",
-      "blue",
-      "viewer",
-    ]);
+  test("shows a bot's difficulty art", () => {
+    expect(getPlayerPortraitSrc({ isBot: true, isViewer: false, seatIndex: 1 }, sources)).toBe(
+      "/game-assets/bots/bot-hard.png",
+    );
   });
 
-  test("does not mutate the canonical player order", () => {
-    const players = [
-      { id: "viewer", isViewer: true },
-      { id: "blue", isViewer: false },
-    ];
-
-    getPlayerHudOrder(players);
-
-    expect(players.map((player) => player.id)).toEqual(["viewer", "blue"]);
+  test("falls back to the seat's emblem for a person without a photo", () => {
+    expect(
+      getPlayerPortraitSrc(
+        { isBot: false, isViewer: true, seatIndex: 1 },
+        { ...sources, viewerProfileImageUrl: null },
+      ),
+    ).toBe("/game-assets/players/blue-cartographer.png");
+    expect(getPlayerPortraitSrc({ isBot: false, isViewer: false, seatIndex: 0 }, sources)).toBe(
+      "/game-assets/players/red-navigator.png",
+    );
   });
 });

@@ -6,93 +6,51 @@ import {
   type PlayerGameView,
 } from "@settersaga/game";
 
+import { TERRAIN_LABELS } from "@/constants/game/labels";
+
 import { getEdgePlacement, getTilePoint, getVertexPoint, type BoardLayout } from "./board-layout";
 
 export type BoardBuildMode = "city" | "road" | "settlement" | null;
 export type BoardTargetMode = Exclude<BoardBuildMode, null> | "robber";
-export type BoardTargetPlacement = "edge" | "tile" | "vertex";
 
-type BuildCityCommand = Extract<GameCommand, { kind: "build_city" }>;
-type MoveRobberCommand = Extract<GameCommand, { kind: "move_robber" }>;
-type PlaceRoadCommand = Extract<GameCommand, { kind: "place_road" }>;
-type PlaceSettlementCommand = Extract<GameCommand, { kind: "place_settlement" }>;
 type BoardTile = PlayerGameView["board"]["tiles"][number];
 
-const TERRAIN_LABELS: Readonly<Record<BoardTile["terrain"], string>> = {
-  desert: "Desert",
-  fields: "Fields",
-  forest: "Forest",
-  hills: "Hills",
-  mountains: "Mountains",
-  pasture: "Pasture",
-};
-
-interface BoardCanvasTargetPresentation {
-  readonly label: string;
-}
-
-interface BoardCanvasTargetBase<
-  TAsset extends BoardTargetMode,
-  TPlacement extends BoardTargetPlacement,
-  TCommand extends GameCommand,
-> extends BoardCanvasTargetPresentation {
+interface BoardCanvasTargetBase<TAsset extends BoardTargetMode, TCommand extends GameCommand> {
   readonly angle: number;
   readonly asset: TAsset;
   readonly command: TCommand;
   readonly id: string;
-  readonly locationKey: string;
+  readonly label: string;
   readonly point: Readonly<PixelCoordinate>;
   readonly successMessage: string;
   readonly theme: PlayerColor;
-  readonly type: TPlacement;
 }
-
-export type BoardCanvasSettlementTargetModel = BoardCanvasTargetBase<
-  "settlement",
-  "vertex",
-  PlaceSettlementCommand
->;
-
-export type BoardCanvasCityTargetModel = BoardCanvasTargetBase<"city", "vertex", BuildCityCommand>;
-
-export type BoardCanvasRoadTargetModel = BoardCanvasTargetBase<"road", "edge", PlaceRoadCommand>;
-
-export type BoardCanvasRobberTargetModel = BoardCanvasTargetBase<
-  "robber",
-  "tile",
-  MoveRobberCommand
->;
 
 export type BoardCanvasTargetModel =
-  | BoardCanvasCityTargetModel
-  | BoardCanvasRoadTargetModel
-  | BoardCanvasRobberTargetModel
-  | BoardCanvasSettlementTargetModel;
-
-export interface CreateBoardCanvasTargetModelsInput {
-  readonly buildMode: BoardBuildMode;
-  readonly game: PlayerGameView;
-  readonly layout: BoardLayout;
-  readonly viewerTheme: PlayerColor;
-}
+  | BoardCanvasTargetBase<"city", Extract<GameCommand, { kind: "build_city" }>>
+  | BoardCanvasTargetBase<"road", Extract<GameCommand, { kind: "place_road" }>>
+  | BoardCanvasTargetBase<"robber", Extract<GameCommand, { kind: "move_robber" }>>
+  | BoardCanvasTargetBase<"settlement", Extract<GameCommand, { kind: "place_settlement" }>>;
 
 export function createBoardCanvasTargetModels({
-  buildMode,
   game,
   layout,
+  mode,
   viewerTheme,
-}: CreateBoardCanvasTargetModelsInput): readonly BoardCanvasTargetModel[] {
-  const mode = resolveBoardTargetMode(game, buildMode);
-
+}: {
+  game: PlayerGameView;
+  layout: BoardLayout;
+  mode: BoardTargetMode | null;
+  viewerTheme: PlayerColor;
+}): readonly BoardCanvasTargetModel[] {
   switch (mode) {
     case "city":
-      return createCityTargets(game, layout, viewerTheme);
+    case "settlement":
+      return createVertexTargets(mode, game, layout, viewerTheme);
     case "road":
       return createRoadTargets(game, layout, viewerTheme);
     case "robber":
       return createRobberTargets(game, layout, viewerTheme);
-    case "settlement":
-      return createSettlementTargets(game, layout, viewerTheme);
     case null:
       return [];
   }
@@ -149,114 +107,75 @@ export function mapClientPointToBoard(
   };
 }
 
-function createSettlementTargets(
+function createVertexTargets(
+  kind: "city" | "settlement",
   game: PlayerGameView,
   layout: BoardLayout,
   theme: PlayerColor,
-): readonly BoardCanvasSettlementTargetModel[] {
+): readonly BoardCanvasTargetModel[] {
   const tilesByTopologyId = indexTilesByTopologyId(game.board.tiles);
-  const targets = game.legalActions.settlementVertexKeys.flatMap((vertexKey) => {
+  const vertexKeys =
+    kind === "city" ? game.legalActions.cityVertexKeys : game.legalActions.settlementVertexKeys;
+  const targets = vertexKeys.flatMap((vertexKey) => {
     const point = getVertexPoint(layout, vertexKey);
-
-    return point
-      ? [
-          {
-            point,
-            terrainContext: getAdjacentTerrainContext(
-              layout.topology.vertexTileIds[vertexKey],
-              tilesByTopologyId,
-            ),
-            vertexKey,
-          },
-        ]
-      : [];
+    return point ? [{ point, vertexKey }] : [];
   });
 
-  return targets.map(({ point, terrainContext, vertexKey }, index) => ({
-    angle: 0,
-    asset: "settlement",
-    command: { kind: "place_settlement", vertexKey },
-    id: `settlement:${vertexKey}`,
-    locationKey: vertexKey,
-    point,
-    successMessage: "Settlement placed.",
-    theme,
-    type: "vertex",
-    ...createTargetPresentation("settlement", index, targets.length, terrainContext),
-  }));
-}
-
-function createCityTargets(
-  game: PlayerGameView,
-  layout: BoardLayout,
-  theme: PlayerColor,
-): readonly BoardCanvasCityTargetModel[] {
-  const tilesByTopologyId = indexTilesByTopologyId(game.board.tiles);
-  const targets = game.legalActions.cityVertexKeys.flatMap((vertexKey) => {
-    const point = getVertexPoint(layout, vertexKey);
-
-    return point
-      ? [
-          {
-            point,
-            terrainContext: getAdjacentTerrainContext(
-              layout.topology.vertexTileIds[vertexKey],
-              tilesByTopologyId,
-            ),
-            vertexKey,
-          },
-        ]
-      : [];
+  return targets.map(({ point, vertexKey }, index) => {
+    const terrainContext = getAdjacentTerrainContext(
+      layout.topology.vertexTileIds[vertexKey],
+      tilesByTopologyId,
+    );
+    const label = getTargetLabel(kind, terrainContext, index, targets.length);
+    return kind === "city"
+      ? {
+          angle: 0,
+          asset: "city",
+          command: { kind: "build_city", vertexKey },
+          id: `city:${vertexKey}`,
+          label,
+          point,
+          successMessage: "City completed.",
+          theme,
+        }
+      : {
+          angle: 0,
+          asset: "settlement",
+          command: { kind: "place_settlement", vertexKey },
+          id: `settlement:${vertexKey}`,
+          label,
+          point,
+          successMessage: "Settlement placed.",
+          theme,
+        };
   });
-
-  return targets.map(({ point, terrainContext, vertexKey }, index) => ({
-    angle: 0,
-    asset: "city",
-    command: { kind: "build_city", vertexKey },
-    id: `city:${vertexKey}`,
-    locationKey: vertexKey,
-    point,
-    successMessage: "City completed.",
-    theme,
-    type: "vertex",
-    ...createTargetPresentation("city", index, targets.length, terrainContext),
-  }));
 }
 
 function createRoadTargets(
   game: PlayerGameView,
   layout: BoardLayout,
   theme: PlayerColor,
-): readonly BoardCanvasRoadTargetModel[] {
+): readonly BoardCanvasTargetModel[] {
   const tilesByTopologyId = indexTilesByTopologyId(game.board.tiles);
   const targets = game.legalActions.roadEdgeKeys.flatMap((edgeKey) => {
-    const point = getEdgePlacement(layout, edgeKey);
-
-    return point
-      ? [
-          {
-            edgeKey,
-            point,
-            terrainContext: getAdjacentTerrainContext(
-              layout.topology.edgeTileIds[edgeKey],
-              tilesByTopologyId,
-            ),
-          },
-        ]
-      : [];
+    const placement = getEdgePlacement(layout, edgeKey);
+    return placement ? [{ edgeKey, placement }] : [];
   });
 
-  return targets.map(({ edgeKey, point, terrainContext }, index) => ({
-    angle: point.angle,
+  return targets.map(({ edgeKey, placement }, index) => ({
+    angle: placement.angle,
     asset: "road",
     command: { edgeKey, kind: "place_road" },
     id: `road:${edgeKey}`,
-    locationKey: edgeKey,
-    point: { x: point.x, y: point.y },
+    label: getTargetLabel(
+      "road",
+      getAdjacentTerrainContext(layout.topology.edgeTileIds[edgeKey], tilesByTopologyId),
+      index,
+      targets.length,
+    ),
+    point: { x: placement.x, y: placement.y },
     successMessage: "Road placed.",
     theme,
-    type: "edge",
-    ...createTargetPresentation("road", index, targets.length, terrainContext),
   }));
 }
 
@@ -264,39 +183,23 @@ function createRobberTargets(
   game: PlayerGameView,
   layout: BoardLayout,
   theme: PlayerColor,
-): readonly BoardCanvasRobberTargetModel[] {
+): readonly BoardCanvasTargetModel[] {
   const tilesById = new Map(game.board.tiles.map((tile) => [tile.id, tile] as const));
-  const targets = game.legalActions.robberTileIds.flatMap((tileId) => {
+  const tiles = game.legalActions.robberTileIds.flatMap((tileId) => {
     const tile = tilesById.get(tileId);
-
-    return tile
-      ? [{ point: getTilePoint(layout, tile), terrainContext: getTerrainContext(tile), tileId }]
-      : [];
+    return tile ? [tile] : [];
   });
 
-  return targets.map(({ point, terrainContext, tileId }, index) => ({
+  return tiles.map((tile, index) => ({
     angle: 0,
     asset: "robber",
-    command: { kind: "move_robber", tileId },
-    id: `robber:${tileId}`,
-    locationKey: tileId,
-    point,
+    command: { kind: "move_robber", tileId: tile.id },
+    id: `robber:${tile.id}`,
+    label: getTargetLabel("robber", getTerrainContext(tile), index, tiles.length),
+    point: getTilePoint(layout, tile),
     successMessage: "Robber moved.",
     theme,
-    type: "tile",
-    ...createTargetPresentation("robber", index, targets.length, terrainContext),
   }));
-}
-
-function createTargetPresentation(
-  mode: BoardTargetMode,
-  index: number,
-  optionCount: number,
-  terrainContext: string,
-): BoardCanvasTargetPresentation {
-  return {
-    label: `${getTargetActionLabel(mode, terrainContext)}; option ${index + 1} of ${optionCount}`,
-  };
 }
 
 function indexTilesByTopologyId(tiles: readonly BoardTile[]): ReadonlyMap<string, BoardTile> {
@@ -330,6 +233,15 @@ function formatList(values: readonly string[]): string {
   }
 
   return `${values.slice(0, -1).join(", ")}, and ${values.at(-1)}`;
+}
+
+function getTargetLabel(
+  mode: BoardTargetMode,
+  terrainContext: string,
+  index: number,
+  optionCount: number,
+): string {
+  return `${getTargetActionLabel(mode, terrainContext)}; option ${index + 1} of ${optionCount}`;
 }
 
 function getTargetActionLabel(mode: BoardTargetMode, terrainContext: string): string {

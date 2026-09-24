@@ -1,19 +1,49 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import {
+  ANY_PORT_TRADE_RATIO,
+  BANK_TRADE_RATIO,
+  BUILD_COSTS,
+  DEVELOPMENT_CARD_COST,
+  FRIENDLY_ROBBER_MAX_VICTORY_POINTS,
+  LARGEST_ARMY_MINIMUM_KNIGHTS,
+  LARGEST_ARMY_VICTORY_POINTS,
+  LONGEST_ROAD_MINIMUM_LENGTH,
+  LONGEST_ROAD_VICTORY_POINTS,
+  RESOURCE_PORT_TRADE_RATIO,
+  type BaseGameSettings,
+} from "@settersaga/game";
+import arrowLeftIcon from "@iconify-icons/solar/alt-arrow-left-bold";
+import arrowRightIcon from "@iconify-icons/solar/alt-arrow-right-bold";
+import checkIcon from "@iconify-icons/solar/check-circle-bold";
+import { Icon } from "@iconify/react/offline";
 import Image from "next/image";
+import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { ACTION_CARD_ASSET_PATHS, DEVELOPMENT_CARD_ASSETS } from "@/constants/game/card-assets";
 import { AWARD_ASSET_PATHS } from "@/constants/game/award-assets";
-import { END_TURN_ICON_ASSET_PATH } from "@/constants/game/ui-assets";
-import { cn } from "@/lib/utils";
+import { PORT_BOAT_ASSET_PATH, ROBBER_ASSET_PATH } from "@/constants/game/board-assets";
+import {
+  ACTION_CARD_ASSET_PATHS,
+  DEVELOPMENT_CARD_ASSET_PATHS,
+} from "@/constants/game/card-assets";
+import { END_TURN_ICON_ASSET_PATH, VICTORY_FLOURISH_ASSET_PATH } from "@/constants/game/ui-assets";
+import { formatInventory } from "@/lib/game/resources";
+import { HOUSE_RULE_OPTIONS } from "@/lib/lobby/house-rules";
 
 import { GameDialog } from "./game-dialog";
 
-interface GameHelpDialogProps {
-  onClose(): void;
-}
+export const GAME_HELP_DIALOG_ID = "game-help-dialog";
+
+type GuideSettings = Pick<
+  BaseGameSettings,
+  | "balancedDice"
+  | "discardLimit"
+  | "friendlyRobber"
+  | "hideBankCards"
+  | "turnTimerSeconds"
+  | "victoryPoints"
+>;
 
 interface GuideArt {
   alt: string;
@@ -35,342 +65,405 @@ interface GuidePage {
   tips: readonly GuideTip[];
 }
 
-const GUIDE_PAGES: readonly GuidePage[] = [
-  {
-    art: [
-      {
-        alt: "Victory celebration over the island",
-        height: 512,
-        path: "/game-assets/results/victory-flourish.png",
-        width: 1536,
-      },
-    ],
-    lead: "The host sets the target — usually 10. The first player to reach it on their turn wins.",
-    title: "First to the target wins",
-    tips: [
-      {
-        copy: "A settlement is 1 point. Upgrade it to a city for 2.",
-        title: "Build towns",
-      },
-      {
-        copy: "Longest Road and Largest Army are worth 2 points each.",
-        title: "Contest the awards",
-      },
-      {
-        copy: "A few development cards are hidden points. They count as soon as you draw them.",
-        title: "Watch for secret points",
-      },
-    ],
-    topic: "Goal",
-  },
-  {
-    art: [
-      {
-        alt: "Settlement",
-        height: 768,
-        path: ACTION_CARD_ASSET_PATHS.settlement,
-        width: 512,
-      },
-      { alt: "Road", height: 768, path: ACTION_CARD_ASSET_PATHS.road, width: 512 },
-    ],
-    lead: "Before anyone rolls, each player plants two camps. Placement goes around the table, then back the other way.",
-    title: "Place two camps first",
-    tips: [
-      {
-        copy: "Each camp is one settlement and one road touching it.",
-        title: "Settlement, then road",
-      },
-      {
-        copy: "Leave at least two road lengths between any two settlements, yours or anyone else's.",
-        title: "Give towns space",
-      },
-      {
-        copy: "Your second settlement immediately collects one resource from every tile around it.",
-        title: "The second camp pays",
-      },
-    ],
-    topic: "Setup",
-  },
-  {
-    art: [
-      {
-        alt: "End turn compass",
-        height: 256,
-        path: END_TURN_ICON_ASSET_PATH,
-        width: 256,
-      },
-    ],
-    lead: "After setup, every turn is the same three beats. You can trade and build in any order.",
-    title: "Roll, spend, then pass",
-    tips: [
-      {
-        copy: "Buildings next to the rolled number collect that tile’s resource.",
-        title: "1. Roll",
-      },
-      {
-        copy: "Trade, build, or buy a development card. Do as many of those as you can afford.",
-        title: "2. Take actions",
-      },
-      {
-        copy: "Tap End Turn when you are done. A 7 produces nothing — it wakes the robber instead.",
-        title: "3. Pass the turn",
-      },
-    ],
-    topic: "Turn",
-  },
-  {
-    art: [
-      { alt: "Road", height: 768, path: ACTION_CARD_ASSET_PATHS.road, width: 512 },
-      {
-        alt: "Settlement",
-        height: 768,
-        path: ACTION_CARD_ASSET_PATHS.settlement,
-        width: 512,
-      },
-      { alt: "City", height: 768, path: ACTION_CARD_ASSET_PATHS.city, width: 512 },
-    ],
-    lead: "Spend the cards in your hand to stretch your road and grow your towns.",
-    title: "Grow along your roads",
-    tips: [
-      {
-        copy: "1 wood and 1 brick. The new road must touch your network.",
-        title: "Road",
-      },
-      {
-        copy: "Wood, brick, sheep, and wheat. Needs an open crossing two roads away from every town.",
-        title: "Settlement",
-      },
-      {
-        copy: "2 wheat and 3 stone. Replaces one of your settlements and doubles its production.",
-        title: "City",
-      },
-    ],
-    topic: "Build",
-  },
-  {
-    art: [
-      {
-        alt: "Trade action",
-        height: 768,
-        path: ACTION_CARD_ASSET_PATHS.trade,
-        width: 512,
-      },
-      {
-        alt: "Harbor merchant",
-        height: 1182,
-        path: "/game-assets/ui/port-merchant.png",
-        width: 655,
-      },
-    ],
-    lead: "If you are short one resource, do not sit on a dead hand. Trade it away.",
-    title: "Swap for the card you need",
-    tips: [
-      {
-        copy: "On your turn, offer a deal to the table. Anyone can accept.",
-        title: "Trade with players",
-      },
-      {
-        copy: "The bank always takes 4 of one resource and gives you 1 of another.",
-        title: "Bank is 4 for 1",
-      },
-      {
-        copy: "A settlement on a harbor unlocks 3:1 any, or 2:1 of that harbor’s resource.",
-        title: "Harbors are cheaper",
-      },
-    ],
-    topic: "Trade",
-  },
-  {
-    art: [
-      {
-        alt: "The robber",
-        height: 256,
-        path: "/game-assets/pieces/robber-piece.png",
-        width: 256,
-      },
-    ],
-    lead: "A 7 produces nothing. Everyone checks their hand, then the roller moves the robber.",
-    title: "A 7 wakes the robber",
-    tips: [
-      {
-        copy: "Anyone holding more than 7 cards discards half, rounded down.",
-        title: "Discard if you are over 7",
-      },
-      {
-        copy: "Move the robber onto a new tile. That tile stops producing until it moves again.",
-        title: "Block a tile",
-      },
-      {
-        copy: "If an opponent has a building there, take one random card from their hand.",
-        title: "Steal from a neighbor",
-      },
-    ],
-    topic: "Robber",
-  },
-  {
-    art: [
-      {
-        alt: "Knight",
-        height: 512,
-        path: DEVELOPMENT_CARD_ASSETS[0].path,
-        width: 512,
-      },
-      {
-        alt: "Largest army",
-        height: 512,
-        path: AWARD_ASSET_PATHS.largestArmy,
-        width: 512,
-      },
-      {
-        alt: "Longest road",
-        height: 512,
-        path: AWARD_ASSET_PATHS.longestRoad,
-        width: 512,
-      },
-    ],
-    lead: "Development cards and awards are the usual path past a stalled board.",
-    title: "Buy cards. Contest awards.",
-    tips: [
-      {
-        copy: "Costs 1 sheep, 1 wheat, and 1 stone. Play it on a later turn — not the turn you buy it.",
-        title: "Development card",
-      },
-      {
-        copy: "A knight moves the robber and steals. Three played knights can take Largest Army for 2 points.",
-        title: "Largest Army",
-      },
-      {
-        copy: "A continuous road of 5 or more can take Longest Road for 2 points. Someone longer can steal it.",
-        title: "Longest Road",
-      },
-    ],
-    topic: "Bonus",
-  },
-] as const;
+/** The lobby's badge for a house rule, when the rule is on this game. */
+function getRuleArt(
+  settings: GuideSettings,
+  value: (typeof HOUSE_RULE_OPTIONS)[number]["value"],
+): GuideArt[] {
+  return HOUSE_RULE_OPTIONS.filter((rule) => rule.value === value && settings[value]).map(
+    (rule) => ({ alt: rule.label, height: 512, path: rule.artSrc, width: 512 }),
+  );
+}
 
-export function GameHelpDialog({ onClose }: GameHelpDialogProps) {
+function getGuidePages(settings: GuideSettings): readonly GuidePage[] {
+  return [
+    {
+      art: [
+        {
+          alt: "Victory celebration over the island",
+          height: 512,
+          path: VICTORY_FLOURISH_ASSET_PATH,
+          width: 1536,
+        },
+      ],
+      lead: `The first player to reach ${settings.victoryPoints} victory points on their turn wins.`,
+      title: "First to the target wins",
+      tips: [
+        {
+          copy: "A settlement is 1 point. Upgrade it to a city for 2.",
+          title: "Build and upgrade",
+        },
+        {
+          copy: `Longest Road is worth ${LONGEST_ROAD_VICTORY_POINTS} points and Largest Army is worth ${LARGEST_ARMY_VICTORY_POINTS}.`,
+          title: "Win the awards",
+        },
+        {
+          copy: "A few development cards are hidden points. They count as soon as you draw them.",
+          title: "Secret points",
+        },
+      ],
+      topic: "Goal",
+    },
+    {
+      art: [
+        {
+          alt: "Settlement",
+          height: 768,
+          path: ACTION_CARD_ASSET_PATHS.settlement,
+          width: 512,
+        },
+        { alt: "Road", height: 768, path: ACTION_CARD_ASSET_PATHS.road, width: 512 },
+      ],
+      lead: "Before anyone rolls, each player places two settlements, each with a road. Placement goes around the table, then back the other way.",
+      title: "Place two settlements first",
+      tips: [
+        {
+          copy: "Each settlement gets one road touching it.",
+          title: "Settlement, then road",
+        },
+        {
+          copy: "Leave at least two road lengths between any two settlements, yours or anyone else’s.",
+          title: "Give settlements space",
+        },
+        {
+          copy: "Your second settlement immediately collects one resource from every tile around it.",
+          title: "The second one pays",
+        },
+      ],
+      topic: "Setup",
+    },
+    {
+      art: [
+        {
+          alt: "End turn scroll",
+          height: 256,
+          path: END_TURN_ICON_ASSET_PATH,
+          width: 256,
+        },
+        ...getRuleArt(settings, "balancedDice"),
+      ],
+      lead: "After setup, every turn is the same three beats. You can trade and build in any order.",
+      title: "Roll, spend, then pass",
+      tips: [
+        {
+          copy: settings.balancedDice
+            ? "Buildings next to the rolled number collect that tile’s resource. Dice are balanced: rolls come from a shuffled deck of all 36 outcomes, so streaks are rare."
+            : "Buildings next to the rolled number collect that tile’s resource.",
+          title: "Roll",
+        },
+        {
+          copy: "Trade, build, or buy a development card. Do as many of those as you can afford.",
+          title: "Take actions",
+        },
+        {
+          copy:
+            settings.turnTimerSeconds > 0
+              ? `Press End turn when you’re done. You have ${settings.turnTimerSeconds} seconds a turn, then the game ends it for you.`
+              : "Press End turn when you’re done. There is no turn clock, so take your time.",
+          title: "Pass the turn",
+        },
+      ],
+      topic: "Turn",
+    },
+    {
+      art: [
+        { alt: "Road", height: 768, path: ACTION_CARD_ASSET_PATHS.road, width: 512 },
+        {
+          alt: "Settlement",
+          height: 768,
+          path: ACTION_CARD_ASSET_PATHS.settlement,
+          width: 512,
+        },
+        { alt: "City", height: 768, path: ACTION_CARD_ASSET_PATHS.city, width: 512 },
+      ],
+      lead: "Spend the cards in your hand to stretch your roads and grow your settlements into cities.",
+      title: "Grow along your roads",
+      tips: [
+        {
+          copy: `${formatInventory(BUILD_COSTS.road)}. The new road must touch your network.`,
+          title: "Road",
+        },
+        {
+          copy: `${formatInventory(BUILD_COSTS.settlement)}. Needs an open crossing on your road, two road lengths from every other settlement.`,
+          title: "Settlement",
+        },
+        {
+          copy: `${formatInventory(BUILD_COSTS.city)}. Replaces one of your settlements and doubles its production.`,
+          title: "City",
+        },
+      ],
+      topic: "Build",
+    },
+    {
+      art: [
+        {
+          alt: "Trade action",
+          height: 768,
+          path: ACTION_CARD_ASSET_PATHS.trade,
+          width: 512,
+        },
+        {
+          alt: "Harbor merchant",
+          height: 1182,
+          path: PORT_BOAT_ASSET_PATH,
+          width: 655,
+        },
+        ...getRuleArt(settings, "hideBankCards"),
+      ],
+      lead: "If you are short one resource, do not sit on a dead hand. Trade it away.",
+      title: "Swap for the card you need",
+      tips: [
+        {
+          copy: "On your turn, offer a deal to the crew. Anyone can accept, then you pick who to trade with.",
+          title: "Trade with crew",
+        },
+        {
+          copy: settings.hideBankCards
+            ? `The bank takes ${BANK_TRADE_RATIO} of one resource for 1 of another. Its stock is hidden this game, so a trade can come up empty.`
+            : `The bank always takes ${BANK_TRADE_RATIO} of one resource and gives you 1 of another.`,
+          title: `Bank is ${BANK_TRADE_RATIO} for 1`,
+        },
+        {
+          copy: `A settlement on a harbor trades ${ANY_PORT_TRADE_RATIO} of any one resource for 1, or ${RESOURCE_PORT_TRADE_RATIO} of that harbor’s resource for 1.`,
+          title: "Harbor deals",
+        },
+      ],
+      topic: "Trade",
+    },
+    {
+      art: [
+        {
+          alt: "The robber",
+          height: 512,
+          path: ROBBER_ASSET_PATH,
+          width: 512,
+        },
+        ...getRuleArt(settings, "friendlyRobber"),
+      ],
+      lead: "A 7 produces nothing. Everyone checks their hand, then the roller moves the robber.",
+      title: "A 7 wakes the robber",
+      tips: [
+        {
+          copy: `Anyone holding more than ${settings.discardLimit} cards discards half, rounded down.`,
+          title: `Over ${settings.discardLimit}? Discard`,
+        },
+        {
+          copy: "Move the robber onto a new tile. That tile stops producing until it moves again.",
+          title: "Block a tile",
+        },
+        {
+          copy: settings.friendlyRobber
+            ? `If an opponent has a building there, take one random card from their hand. The friendly robber leaves players with ${FRIENDLY_ROBBER_MAX_VICTORY_POINTS} or fewer points alone.`
+            : "If an opponent has a building there, take one random card from their hand.",
+          title: "Steal a card",
+        },
+      ],
+      topic: "Robber",
+    },
+    {
+      art: [
+        {
+          alt: "Knight",
+          height: 768,
+          path: DEVELOPMENT_CARD_ASSET_PATHS.knight,
+          width: 512,
+        },
+        {
+          alt: "Largest army",
+          height: 512,
+          path: AWARD_ASSET_PATHS.largestArmy,
+          width: 512,
+        },
+        {
+          alt: "Longest road",
+          height: 512,
+          path: AWARD_ASSET_PATHS.longestRoad,
+          width: 512,
+        },
+      ],
+      lead: "Development cards and awards are the usual path past a stalled board.",
+      title: "Buy cards. Contest awards.",
+      tips: [
+        {
+          copy: `Costs ${formatInventory(DEVELOPMENT_CARD_COST)}. Play it on a later turn — not the turn you buy it.`,
+          title: "Development card",
+        },
+        {
+          copy: `A knight moves the robber and steals. ${LARGEST_ARMY_MINIMUM_KNIGHTS} played knights can take Largest Army for ${LARGEST_ARMY_VICTORY_POINTS} points.`,
+          title: "Largest Army",
+        },
+        {
+          copy: `A continuous road of ${LONGEST_ROAD_MINIMUM_LENGTH} or more can take Longest Road for ${LONGEST_ROAD_VICTORY_POINTS} points. Someone longer can steal it.`,
+          title: "Longest Road",
+        },
+      ],
+      topic: "Bonus",
+    },
+  ];
+}
+
+export function GameHelpDialog({
+  onClose,
+  settings,
+}: {
+  onClose(): void;
+  settings: GuideSettings;
+}) {
   const [pageIndex, setPageIndex] = useState(0);
-  const page = GUIDE_PAGES[pageIndex];
+  const tabsRef = useRef<HTMLDivElement>(null);
+  const guidePages = getGuidePages(settings);
+  const page = guidePages[pageIndex];
+  const lastPageIndex = guidePages.length - 1;
   const isFirstPage = pageIndex === 0;
-  const isLastPage = pageIndex === GUIDE_PAGES.length - 1;
+  const isLastPage = pageIndex === lastPageIndex;
+
+  const showPage = (index: number) => setPageIndex(Math.min(lastPageIndex, Math.max(0, index)));
 
   useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "ArrowRight") {
+    const onKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
         event.preventDefault();
-        setPageIndex((current) => Math.min(GUIDE_PAGES.length - 1, current + 1));
-      }
-      if (event.key === "ArrowLeft") {
-        event.preventDefault();
-        setPageIndex((current) => Math.max(0, current - 1));
+        setPageIndex((current) =>
+          Math.min(lastPageIndex, Math.max(0, current + (event.key === "ArrowRight" ? 1 : -1))),
+        );
       }
     };
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, []);
+  }, [lastPageIndex]);
+
+  // The selected tab stays in view, and keeps focus when the arrow keys turned the page from it.
+  useEffect(() => {
+    const tabs = tabsRef.current;
+    const selectedTab = tabs?.querySelector<HTMLElement>('[aria-selected="true"]');
+    selectedTab?.scrollIntoView({ block: "nearest", inline: "nearest" });
+    if (tabs?.contains(document.activeElement)) {
+      selectedTab?.focus();
+    }
+  }, [pageIndex]);
 
   return (
     <GameDialog
-      ariaLabel="How to play"
-      dialogClassName="sm:max-w-3xl"
+      dialogClassName="sm:max-w-[min(48rem,calc(100%-2rem))]"
       footer={
         <>
-          <div className="flex items-center justify-between gap-2 sm:contents">
-            <Button
-              className="sm:justify-self-start"
-              disabled={isFirstPage}
-              onClick={() => setPageIndex((current) => current - 1)}
-              variant="ghost"
-            >
-              Back
-            </Button>
-            <p className="text-xs font-medium text-muted-foreground tabular-nums sm:text-center">
-              {pageIndex + 1} of {GUIDE_PAGES.length}
-            </p>
-          </div>
           <Button
-            className="w-full sm:w-auto sm:justify-self-end"
-            onClick={() => {
-              if (isLastPage) {
-                onClose();
-                return;
-              }
-              setPageIndex((current) => current + 1);
-            }}
+            aria-label="Previous topic"
+            className="justify-self-start"
+            disabled={isFirstPage}
+            onClick={() => showPage(pageIndex - 1)}
+            size="game-lg"
+            variant="game-icon"
           >
-            {isLastPage ? "Got it" : "Next"}
+            <Icon aria-hidden="true" icon={arrowLeftIcon} />
           </Button>
+          <p className="m-0 flex items-center gap-1.5" aria-live="polite">
+            {guidePages.map((guidePage, index) => (
+              <span
+                aria-hidden="true"
+                className="game-guide-dot max-sm:hidden"
+                data-active={index === pageIndex || undefined}
+                key={guidePage.topic}
+              />
+            ))}
+            <span className="sr-only">
+              {page.topic}, {pageIndex + 1} of {guidePages.length}
+            </span>
+          </p>
+          {isLastPage ? (
+            <Button
+              className="justify-self-end"
+              onClick={onClose}
+              size="game-lg"
+              variant="game-gold"
+            >
+              <Icon aria-hidden="true" icon={checkIcon} />
+              Got it
+            </Button>
+          ) : (
+            <Button
+              aria-label="Next topic"
+              className="justify-self-end"
+              onClick={() => showPage(pageIndex + 1)}
+              size="game-lg"
+              variant="game-icon"
+            >
+              <Icon aria-hidden="true" icon={arrowRightIcon} />
+            </Button>
+          )}
         </>
       }
-      footerClassName="flex w-full flex-col gap-2 sm:grid sm:grid-cols-[1fr_auto_1fr] sm:items-center"
-      id="game-help-dialog"
-      kicker="Player guide"
+      footerClassName="grid w-full grid-cols-[1fr_auto_1fr] items-center justify-normal gap-3"
+      id={GAME_HELP_DIALOG_ID}
+      kicker={`The whole game in ${guidePages.length} quick pages`}
       onClose={onClose}
       title="How to play"
       toolbar={
-        <nav aria-label="Guide topics" className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
-          {GUIDE_PAGES.map((guidePage, index) => {
+        <div aria-label="Guide topics" className="game-guide-tabs" ref={tabsRef} role="tablist">
+          {guidePages.map((guidePage, index) => {
             const selected = index === pageIndex;
             return (
               <button
-                aria-current={selected ? "page" : undefined}
-                className={cn(
-                  "shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold outline-none",
-                  "focus-visible:ring-3 focus-visible:ring-ring/30",
-                  selected
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground",
-                )}
+                aria-controls="game-guide-page"
+                aria-selected={selected}
+                className="game-guide-tab"
+                id={`game-guide-tab-${index}`}
                 key={guidePage.topic}
-                onClick={() => setPageIndex(index)}
+                onClick={() => showPage(index)}
+                role="tab"
+                tabIndex={selected ? 0 : -1}
                 type="button"
               >
                 {guidePage.topic}
               </button>
             );
           })}
-        </nav>
+        </div>
       }
     >
-      <article aria-live="polite" className="grid gap-4" key={page.topic}>
-        <div className="flex min-h-28 items-center justify-center rounded-2xl bg-muted/40 px-4 py-4">
-          <div className="flex flex-wrap items-center justify-center gap-3">
+      <article
+        aria-labelledby={`game-guide-tab-${pageIndex}`}
+        className="grid content-start gap-5 sm:min-h-90"
+        id="game-guide-page"
+        key={page.topic}
+        role="tabpanel"
+      >
+        <div className="grid items-center gap-4 sm:grid-cols-[17rem_minmax(0,1fr)]">
+          <div className="game-art-stage flex h-32 items-center justify-center gap-3 rounded-2xl p-4 sm:h-36">
             {page.art.map((asset) => (
               <Image
                 alt={asset.alt}
-                className="h-20 w-auto max-w-full object-contain sm:h-24"
+                className="h-full min-w-0 flex-1 object-contain motion-safe:animate-game-pop"
                 draggable={false}
                 height={asset.height}
                 key={asset.path}
                 priority={pageIndex === 0}
-                sizes="220px"
+                sizes={page.art.length > 1 ? "8rem" : "16rem"}
                 src={asset.path}
                 width={asset.width}
               />
             ))}
           </div>
+          <div className="grid gap-2 text-center sm:text-left">
+            <h3 className="game-title m-0 text-2xl text-balance">{page.title}</h3>
+            <p className="m-0 text-base leading-relaxed font-medium text-muted-foreground text-pretty">
+              {page.lead}
+            </p>
+          </div>
         </div>
 
-        <div className="min-w-0 space-y-4">
-          <div className="space-y-1.5">
-            <h3 className="font-heading text-xl font-bold">{page.title}</h3>
-            <p className="text-sm leading-relaxed text-muted-foreground">{page.lead}</p>
-          </div>
-          <ol className="space-y-2">
-            {page.tips.map((tip, index) => (
-              <li className="flex gap-3 rounded-2xl bg-muted/30 px-3 py-2.5" key={tip.title}>
-                <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
-                  {index + 1}
-                </span>
-                <div className="min-w-0 space-y-0.5">
-                  <p className="text-sm font-semibold">{tip.title}</p>
-                  <p className="text-sm leading-relaxed text-muted-foreground">{tip.copy}</p>
-                </div>
-              </li>
-            ))}
-          </ol>
-        </div>
+        <ol className="grid gap-3 sm:grid-cols-3">
+          {page.tips.map((tip, index) => (
+            <li className="game-guide-tip" key={tip.title}>
+              <span aria-hidden="true" className="game-guide-tip-number">
+                {index + 1}
+              </span>
+              <p className="game-guide-tip-title">{tip.title}</p>
+              <p className="game-guide-tip-copy">{tip.copy}</p>
+            </li>
+          ))}
+        </ol>
       </article>
     </GameDialog>
   );

@@ -14,7 +14,8 @@ export function parsePlayerView(serializedGame: string | undefined): PlayerGameV
     const value: unknown = JSON.parse(serializedGame);
     assertPlayerGameView(value);
     return value;
-  } catch {
+  } catch (error) {
+    console.error("Invalid player view payload", error);
     return null;
   }
 }

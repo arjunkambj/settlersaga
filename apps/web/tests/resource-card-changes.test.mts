@@ -14,10 +14,6 @@ const INITIAL_RESOURCES = {
 } as const;
 
 describe("resource card changes", () => {
-  test("uses the first snapshot as a silent baseline", () => {
-    expect(getResourceCardChanges(null, INITIAL_RESOURCES)).toEqual([]);
-  });
-
   test("ignores snapshots with unchanged resource counts", () => {
     expect(getResourceCardChanges(INITIAL_RESOURCES, { ...INITIAL_RESOURCES })).toEqual([]);
   });

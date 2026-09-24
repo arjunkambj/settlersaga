@@ -4,22 +4,32 @@ import {
   RESOURCE_ORDER,
   emptyInventory,
   totalResources,
-  type GameCommand,
   type ResourceInventory,
   type ResourceType,
 } from "@settersaga/game";
+import Image from "next/image";
+import { useState } from "react";
+
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { DEVELOPMENT_CARD_ASSET_PATHS } from "@/constants/game/card-assets";
+import { RESOURCE_LABELS } from "@/constants/game/labels";
+import type { CommandRejection, SendCommand } from "@/lib/game/command-errors";
+import { formatInventory } from "@/lib/game/resources";
 
-import { RESOURCE_CARD_ASSET_PATHS } from "@/constants/game/card-assets";
+import { ResourcePicker } from "./dock-resource";
+import { DockStatus } from "./dock-sheet";
+import { GameDialog } from "./game-dialog";
 
-import { HandDockPortal } from "./hand-dock";
-import { RESOURCE_LABELS } from "./resource-icon";
+export type DevelopmentCardChoice = "monopoly" | "year-of-plenty";
 
-type ChoiceCard = "monopoly" | "year-of-plenty";
+const YEAR_OF_PLENTY_CARDS = 2;
+const RESOURCE_LIST_FORMAT = new Intl.ListFormat("en", { type: "conjunction" });
 
+/**
+ * Monopoly (name one resource) or Year of Plenty (take two from the bank). It stays open until the
+ * card is played; a move the game turns down shows here, above the table's own notices.
+ */
 export function DevelopmentCardDialog({
   bank,
   card,
@@ -27,235 +37,144 @@ export function DevelopmentCardDialog({
   onPlay,
   pending,
 }: {
+  /** Null when the table hides the bank; the bank may then turn a pick down. */
   bank: ResourceInventory | null;
-  card: ChoiceCard;
+  card: DevelopmentCardChoice;
   onClose(): void;
-  onPlay(command: GameCommand, message: string): void;
+  onPlay: SendCommand;
   pending: boolean;
 }) {
-  const dialogRef = useRef<HTMLElement>(null);
   const [monopolyResource, setMonopolyResource] = useState<ResourceType | null>(null);
   const [plentyResources, setPlentyResources] = useState<ResourceInventory>(emptyInventory);
+  const [rejection, setRejection] = useState<string | null>(null);
   const selectedCount = totalResources(plentyResources);
   const isMonopoly = card === "monopoly";
+  const ready = isMonopoly ? monopolyResource !== null : selectedCount === YEAR_OF_PLENTY_CARDS;
 
-  useEffect(() => {
-    dialogRef.current?.focus();
-
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !pending) {
-        onClose();
-      }
-    };
-
-    document.addEventListener("keydown", closeOnEscape);
-    return () => document.removeEventListener("keydown", closeOnEscape);
-  }, [onClose, pending]);
-
-  const changePlentyResource = (resource: ResourceType, change: -1 | 1) => {
-    setPlentyResources((current) => {
-      const nextAmount = current[resource] + change;
-      const bankCount = bank?.[resource];
-      if (
-        nextAmount < 0 ||
-        (change > 0 && totalResources(current) >= 2) ||
-        (bankCount !== undefined && nextAmount > bankCount)
-      ) {
-        return current;
-      }
-      return { ...current, [resource]: nextAmount };
-    });
+  const changePlenty = (resource: ResourceType, delta: -1 | 1) => {
+    setRejection(null);
+    setPlentyResources((current) => ({
+      ...current,
+      [resource]: Math.max(0, current[resource] + delta),
+    }));
   };
 
-  const play = () => {
-    if (isMonopoly && monopolyResource) {
-      onPlay(
-        { kind: "play_monopoly", resource: monopolyResource },
-        `Monopoly played on ${RESOURCE_LABELS[monopolyResource]}.`,
+  const showRejection = (result: CommandRejection | null) => {
+    if (result?.message) {
+      setRejection(result.message);
+    }
+  };
+
+  const play = async () => {
+    if (!isMonopoly) {
+      showRejection(
+        await onPlay(
+          { kind: "play_year_of_plenty", resources: plentyResources },
+          `Year of Plenty: took ${formatInventory(plentyResources)}.`,
+        ),
       );
-      return;
-    }
-    if (!isMonopoly && selectedCount === 2) {
-      onPlay({ kind: "play_year_of_plenty", resources: plentyResources }, "Year of Plenty played.");
+    } else if (monopolyResource) {
+      showRejection(
+        await onPlay(
+          { kind: "play_monopoly", resource: monopolyResource },
+          `Monopoly played on ${RESOURCE_LABELS[monopolyResource]}.`,
+        ),
+      );
     }
   };
 
+  const monopolyPick = emptyInventory();
+  if (monopolyResource) {
+    monopolyPick[monopolyResource] = 1;
+  }
+  const emptyBankResources = bank
+    ? RESOURCE_ORDER.filter((resource) => bank[resource] === 0).map(
+        (resource) => RESOURCE_LABELS[resource],
+      )
+    : [];
+  const cardsLeft = YEAR_OF_PLENTY_CARDS - selectedCount;
+
   return (
-    <HandDockPortal>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/60 backdrop-blur-sm animate-in fade-in duration-200">
-        <section
-          aria-label={isMonopoly ? "Choose a Monopoly resource" : "Choose two resources"}
-          className="grid gap-3 p-4 sm:p-5 rounded-2xl bg-card border border-primary/20 shadow-2xl backdrop-blur-xl max-w-lg w-full text-card-foreground animate-in zoom-in-95 duration-200 focus:outline-none"
-          ref={dialogRef}
-          role="dialog"
-          tabIndex={-1}
-        >
-          <header className="flex items-center justify-between gap-2">
-            <div>
-              <p className="m-0 text-[0.65rem] font-black tracking-wider uppercase text-foreground/60">
-                Development card
-              </p>
-              <h2 className="m-0 text-lg font-extrabold text-foreground leading-tight">
-                {isMonopoly ? "Play Monopoly" : "Year of Plenty"}
-              </h2>
-            </div>
-            <Button
-              className="size-8 rounded-full text-muted-foreground hover:text-foreground"
-              disabled={pending}
-              onClick={onClose}
-              size="icon-sm"
-              variant="ghost"
-            >
-              <span className="sr-only">Close</span>
-              <svg
-                aria-hidden="true"
-                className="size-4 stroke-current stroke-2"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <path d="M6 6l12 12M18 6 6 18" strokeLinecap="round" />
-              </svg>
-            </Button>
-          </header>
-
-          <p className="m-0 text-xs text-muted-foreground">
-            {isMonopoly
-              ? "Choose one resource. Every opponent gives you all cards of that type."
-              : "Choose exactly two available bank cards. You can choose the same type twice."}
-          </p>
-
-          <div className="grid grid-cols-5 gap-2">
-            {RESOURCE_ORDER.map((resource) => {
-              const selected = isMonopoly
-                ? monopolyResource === resource
-                  ? 1
-                  : 0
-                : plentyResources[resource];
-              const knownAvailable = bank?.[resource];
-              const cannotAdd =
-                pending ||
-                (!isMonopoly &&
-                  (selectedCount >= 2 ||
-                    (knownAvailable !== undefined && selected >= knownAvailable)));
-
-              return (
-                <article
-                  className={`grid justify-items-center gap-1 p-2 rounded-xl border text-center transition-all ${
-                    selected > 0
-                      ? "bg-primary/15 border-primary/40 ring-2 ring-primary/20"
-                      : "bg-background/40 border-white/10 hover:bg-background/60"
-                  }`}
-                  data-selected={selected > 0}
-                  key={resource}
-                >
-                  {isMonopoly ? (
-                    <Button
-                      aria-label={`Choose ${RESOURCE_LABELS[resource]}`}
-                      aria-pressed={selected > 0}
-                      className="grid h-auto w-full justify-items-center gap-1 p-0 bg-transparent hover:bg-transparent shadow-none"
-                      disabled={pending}
-                      onClick={() => setMonopolyResource(resource)}
-                      variant="ghost"
-                    >
-                      <ResourceCard resource={resource} selected={selected} />
-                    </Button>
-                  ) : (
-                    <ResourceCard resource={resource} selected={selected} />
-                  )}
-
-                  {!isMonopoly ? (
-                    <div className="inline-flex items-center gap-1 tabular-nums mt-1">
-                      <Button
-                        aria-label={`Remove one ${RESOURCE_LABELS[resource]}`}
-                        className="size-6 p-0 rounded-full text-xs font-bold"
-                        disabled={pending || selected === 0}
-                        onClick={() => changePlentyResource(resource, -1)}
-                        size="icon-sm"
-                        variant="ghost"
-                      >
-                        −
-                      </Button>
-                      <span
-                        aria-label={`${selected} selected`}
-                        className="text-xs font-extrabold px-1"
-                      >
-                        {selected}
-                      </span>
-                      <Button
-                        aria-label={`Add one ${RESOURCE_LABELS[resource]}`}
-                        className="size-6 p-0 rounded-full text-xs font-bold"
-                        disabled={cannotAdd}
-                        onClick={() => changePlentyResource(resource, 1)}
-                        size="icon-sm"
-                        variant="ghost"
-                      >
-                        +
-                      </Button>
-                    </div>
-                  ) : null}
-                </article>
-              );
-            })}
-          </div>
-
-          <footer className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-white/10">
-            <span aria-live="polite" className="text-xs font-bold text-muted-foreground">
-              {isMonopoly
-                ? monopolyResource
-                  ? `${RESOURCE_LABELS[monopolyResource]} selected`
-                  : "Choose a resource"
-                : `${selectedCount} of 2 cards selected`}
-            </span>
-            <div className="flex items-center gap-2">
-              <Button disabled={pending} onClick={onClose} variant="secondary">
-                Cancel
-              </Button>
-              <Button
-                disabled={pending || (isMonopoly ? monopolyResource === null : selectedCount !== 2)}
-                onClick={play}
-                variant="default"
-              >
-                {pending ? (
-                  <>
-                    <Spinner data-icon="inline-start" /> Playing…
-                  </>
-                ) : (
-                  "Play card"
-                )}
-              </Button>
-            </div>
-          </footer>
-        </section>
-      </div>
-    </HandDockPortal>
-  );
-}
-
-function ResourceCard({ resource, selected }: { resource: ResourceType; selected: number }) {
-  return (
-    <>
-      <span className="relative inline-grid place-items-center">
+    <GameDialog
+      dialogClassName="sm:max-w-lg"
+      footer={
+        <>
+          <Button onClick={onClose} size="game-md" variant="game-secondary">
+            Cancel
+          </Button>
+          <Button
+            disabled={pending || !ready}
+            onClick={() => void play()}
+            size="game-md"
+            variant="game-gold"
+          >
+            {pending ? <Spinner /> : null}
+            {pending ? "Playing…" : "Play card"}
+          </Button>
+        </>
+      }
+      footerClassName="game-dev-card-footer"
+      kicker={
+        isMonopoly
+          ? "Name a resource. Everyone hands you all of theirs."
+          : "Take any two cards from the bank. Doubles are fine."
+      }
+      onClose={onClose}
+      title={isMonopoly ? "Monopoly" : "Year of Plenty"}
+    >
+      <div className="game-dev-card-body">
         <Image
           alt=""
-          className="w-10 h-14 object-contain rounded"
+          className="game-dev-card-art"
           draggable={false}
-          height={192}
-          sizes="4rem"
-          src={RESOURCE_CARD_ASSET_PATHS[resource]}
-          width={128}
+          height={768}
+          loading="eager"
+          sizes="6rem"
+          src={DEVELOPMENT_CARD_ASSET_PATHS[card]}
+          width={512}
         />
-        {selected > 0 ? (
-          <span
-            aria-hidden="true"
-            className="absolute -top-1.5 -right-1.5 grid min-w-5 h-5 place-items-center px-1 rounded-full bg-primary text-primary-foreground text-[0.62rem] font-black tabular-nums"
-          >
-            {selected}
-          </span>
-        ) : null}
-      </span>
-      <strong className="text-[0.68rem] font-bold truncate max-w-full text-foreground">
-        {RESOURCE_LABELS[resource]}
-      </strong>
-    </>
+        <div className="game-trade-well">
+          {isMonopoly ? (
+            <ResourcePicker
+              canAdd={() => true}
+              disabled={pending}
+              label="Resource to claim"
+              mode="choose"
+              onAdd={(resource) => {
+                setRejection(null);
+                setMonopolyResource(resource);
+              }}
+              quantities={monopolyPick}
+            />
+          ) : (
+            <ResourcePicker
+              canAdd={(resource) =>
+                selectedCount < YEAR_OF_PLENTY_CARDS &&
+                (bank === null || plentyResources[resource] < bank[resource])
+              }
+              disabled={pending}
+              label="Cards to take"
+              onAdd={(resource) => changePlenty(resource, 1)}
+              onRemove={(resource) => changePlenty(resource, -1)}
+              quantities={plentyResources}
+            />
+          )}
+        </div>
+        <DockStatus tone={rejection ? "error" : ready ? "ready" : "neutral"}>
+          {rejection ??
+            (isMonopoly
+              ? monopolyResource
+                ? `Claim every ${RESOURCE_LABELS[monopolyResource]} at the table`
+                : "Pick one resource"
+              : ready
+                ? `Take ${formatInventory(plentyResources)}`
+                : `Pick ${cardsLeft} more ${cardsLeft === 1 ? "card" : "cards"}${
+                    emptyBankResources.length > 0
+                      ? `. The bank is out of ${RESOURCE_LIST_FORMAT.format(emptyBankResources)}`
+                      : ""
+                  }`)}
+        </DockStatus>
+      </div>
+    </GameDialog>
   );
 }

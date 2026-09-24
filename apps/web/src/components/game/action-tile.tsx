@@ -1,121 +1,112 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import type { ReactNode } from "react";
 
-export type ActionTileSize = "dock" | "poster";
+import { Tooltip } from "@/components/ui/tooltip";
 
 export interface ActionTileProps {
   ariaControls?: string;
-  ariaDescribedBy?: string;
   ariaExpanded?: boolean;
-  ariaHasPopup?: "dialog";
   ariaLabel: string;
   art: ReactNode;
   caption?: ReactNode;
-  className?: string;
+  /** The price as resource pips, hung on the bottom edge of the art. */
+  cost?: ReactNode;
   count?: ReactNode;
-  disabled?: boolean;
+  /** Read by the game screen to return focus to a build tile after placement. */
   kind: string;
+  /** Why the tile can't be used now. The tile stays focusable and pressable so it can say so. */
+  lockReason?: string | null;
   meta?: ReactNode;
-  onPress?(event: React.MouseEvent<HTMLButtonElement>): void;
-  onClick?(): void;
+  onClick(): void;
   pressed?: boolean;
-  size?: ActionTileSize;
+  /** "poster" is the large preset used by the UI preview; the dock look lives in game-dock.css. */
+  size?: "dock" | "poster";
   title: string;
-  unavailable?: boolean;
+  /** Hover and focus hint for an unlocked dock tile, such as its price. */
+  tooltip?: string;
 }
 
 export function ActionTile({
   ariaControls,
-  ariaDescribedBy,
   ariaExpanded,
-  ariaHasPopup,
   ariaLabel,
   art,
   caption,
-  className = "",
+  cost,
   count,
-  disabled = false,
   kind,
+  lockReason,
   meta,
   onClick,
-  onPress,
   pressed,
   size = "dock",
   title,
-  unavailable = false,
+  tooltip,
 }: ActionTileProps) {
-  const handleClick = onPress ?? onClick;
-  return (
-    <Button
+  if (size === "poster") {
+    return (
+      <button
+        aria-label={ariaLabel}
+        className="relative grid w-[4.6rem] justify-items-center gap-1 rounded-lg bg-well p-1.5 text-center select-none"
+        data-action-kind={kind}
+        onClick={onClick}
+        type="button"
+      >
+        <span aria-hidden="true" className="block size-full">
+          {art}
+        </span>
+        {count === undefined ? null : (
+          <span aria-hidden="true" className="game-count-chip">
+            {count}
+          </span>
+        )}
+        <span aria-hidden="true" className="max-w-full truncate font-display text-xs">
+          {title}
+        </span>
+        {meta ? (
+          <span className="max-w-full truncate text-xs text-muted-foreground">{meta}</span>
+        ) : null}
+        {caption ? (
+          <small className="max-w-full truncate text-xs text-muted-foreground">{caption}</small>
+        ) : null}
+      </button>
+    );
+  }
+
+  const tile = (
+    <button
       aria-controls={ariaControls}
-      aria-describedby={ariaDescribedBy}
+      aria-disabled={lockReason ? true : undefined}
       aria-expanded={ariaExpanded}
-      aria-haspopup={ariaHasPopup}
       aria-label={ariaLabel}
       aria-pressed={pressed}
-      className={cn(
-        size === "dock" && "game-action-tile",
-        "relative grid justify-items-center h-auto min-h-0 text-center select-none transition-all duration-150",
-        size === "dock"
-          ? "w-16 min-w-16 p-0 bg-transparent hover:bg-transparent border-0 rounded-lg aspect-[2/3]"
-          : "w-[4.6rem] bg-background/40 hover:bg-card/80 border border-white/5 rounded-lg gap-1 p-1.5",
-        pressed &&
-          (size === "dock" ? "brightness-110 -translate-y-0.5" : "bg-primary/20 border-primary/40"),
-        unavailable && "opacity-60 cursor-not-allowed",
-        size === "dock" &&
-          !unavailable &&
-          !disabled &&
-          "hover:brightness-105 hover:-translate-y-0.5",
-        className,
-      )}
+      className="game-action-tile"
       data-action-kind={kind}
-      disabled={disabled || unavailable}
-      onClick={handleClick}
-      title={title}
-      variant="secondary"
+      onClick={onClick}
+      type="button"
     >
-      <span
-        aria-hidden="true"
-        className={cn(
-          "block size-full rounded-lg overflow-hidden transition-transform duration-150",
-          size === "dock" && !unavailable && "hover:-translate-y-0.5 hover:brightness-105",
-        )}
-      >
+      <span aria-hidden="true" className="game-action-tile-art">
         {art}
       </span>
+      {cost ? <span className="game-action-tile-cost">{cost}</span> : null}
       {count === undefined ? null : (
-        <span
-          aria-hidden="true"
-          className="absolute -top-1.5 -right-1.5 z-10 grid min-w-5 h-5 place-items-center px-1 rounded-full bg-primary text-primary-foreground text-[0.66rem] font-black tabular-nums pointer-events-none shadow-sm"
-        >
+        <span aria-hidden="true" className="game-count-chip">
           {count}
         </span>
       )}
-      {size === "dock" ? (
-        <span aria-hidden="true" className="game-action-label">
-          {title}
-        </span>
-      ) : (
-        <span
-          aria-hidden="true"
-          className="self-center truncate text-center text-[0.52rem] font-extrabold text-muted-foreground leading-none max-w-full"
-        >
-          {title}
-        </span>
-      )}
-      {meta ? (
-        <span className="text-[0.58rem] text-muted-foreground leading-tight max-w-full truncate">
-          {meta}
-        </span>
-      ) : null}
-      {caption ? (
-        <small className="text-[0.55rem] text-muted-foreground/80 leading-tight max-w-full truncate">
-          {caption}
-        </small>
-      ) : null}
-    </Button>
+      <span aria-hidden="true" className="game-action-label">
+        {title}
+      </span>
+    </button>
+  );
+
+  const hint = lockReason ?? tooltip;
+  return hint ? (
+    <Tooltip label={hint} side="top">
+      {tile}
+    </Tooltip>
+  ) : (
+    tile
   );
 }

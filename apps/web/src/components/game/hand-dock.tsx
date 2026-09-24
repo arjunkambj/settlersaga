@@ -1,19 +1,8 @@
 "use client";
 
 import type { ResourceInventory, ResourceType } from "@settersaga/game";
-import {
-  createContext,
-  type ReactNode,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { createContext, type ReactNode, useCallback, useContext, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-
-export const HAND_DOCK_ROOT_ID = "game-hand-dock-root";
-export const BOARD_INSPECTOR_DOCK_ROOT_ID = "board-inspector-dock-root";
 
 export type HandInteractionOwner = "discard" | "trade";
 
@@ -35,11 +24,19 @@ interface HandDockContextValue {
   clearInteraction(owner: HandInteractionOwner): void;
   interaction: HandInteraction | null;
   setInteraction(owner: HandInteractionOwner, interaction: HandInteraction): void;
+  sheetRoot: HTMLElement | null;
 }
 
 const HandDockContext = createContext<HandDockContextValue | null>(null);
 
-export function HandDockProvider({ children }: { children: ReactNode }) {
+/** `sheetRoot` is the slot above the dock that trade and discard sheets render into. */
+export function HandDockProvider({
+  children,
+  sheetRoot,
+}: {
+  children: ReactNode;
+  sheetRoot: HTMLElement | null;
+}) {
   const [ownedInteraction, setOwnedInteraction] = useState<OwnedHandInteraction | null>(null);
 
   const clearInteraction = useCallback((owner: HandInteractionOwner) => {
@@ -58,8 +55,9 @@ export function HandDockProvider({ children }: { children: ReactNode }) {
       clearInteraction,
       interaction: ownedInteraction?.interaction ?? null,
       setInteraction,
+      sheetRoot,
     }),
-    [clearInteraction, ownedInteraction, setInteraction],
+    [clearInteraction, ownedInteraction, setInteraction, sheetRoot],
   );
 
   return <HandDockContext.Provider value={value}>{children}</HandDockContext.Provider>;
@@ -73,20 +71,8 @@ export function useHandDock(): HandDockContextValue {
   return context;
 }
 
-function DockPortal({ children, rootId }: { children: ReactNode; rootId: string }) {
-  const [root, setRoot] = useState<HTMLElement | null>(null);
-
-  useEffect(() => {
-    setRoot(document.getElementById(rootId));
-  }, [rootId]);
-
-  return root ? createPortal(children, root) : null;
-}
-
+/** Renders a sheet (trade, discard) into the sheet slot above the dock. */
 export function HandDockPortal({ children }: { children: ReactNode }) {
-  return <DockPortal rootId={HAND_DOCK_ROOT_ID}>{children}</DockPortal>;
-}
-
-export function BoardInspectorDockPortal({ children }: { children: ReactNode }) {
-  return <DockPortal rootId={BOARD_INSPECTOR_DOCK_ROOT_ID}>{children}</DockPortal>;
+  const { sheetRoot } = useHandDock();
+  return sheetRoot ? createPortal(children, sheetRoot) : null;
 }

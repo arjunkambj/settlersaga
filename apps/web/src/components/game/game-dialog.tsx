@@ -1,34 +1,36 @@
 "use client";
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { ReactNode } from "react";
 
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
 interface GameDialogProps {
-  ariaLabel: string;
-  bodyClassName?: string;
   children: ReactNode;
   dialogClassName?: string;
   footer: ReactNode;
   footerClassName?: string;
   id?: string;
-  isBusy?: boolean;
+  /** A short line under the ribbon title. */
   kicker: string;
   onClose(): void;
   title: string;
   toolbar?: ReactNode;
 }
 
+/** A kit dialog with the ribbon title first (level with the close button), then the kicker. */
 export function GameDialog({
-  ariaLabel,
-  bodyClassName,
   children,
   dialogClassName,
   footer,
   footerClassName,
   id,
-  isBusy = false,
   kicker,
   onClose,
   title,
@@ -38,23 +40,20 @@ export function GameDialog({
     <Dialog
       open
       onOpenChange={(open) => {
-        if (!open && !isBusy) onClose();
+        if (!open) onClose();
       }}
     >
       <DialogContent
-        aria-label={ariaLabel}
         id={id}
-        className={cn("flex max-h-[90vh] flex-col overflow-hidden sm:max-w-2xl", dialogClassName)}
+        className={cn("flex max-h-[90dvh] flex-col overflow-hidden sm:max-w-2xl", dialogClassName)}
       >
         <DialogHeader className="shrink-0">
-          <p className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">
-            {kicker}
-          </p>
           <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{kicker}</DialogDescription>
         </DialogHeader>
         {toolbar ? <div className="shrink-0">{toolbar}</div> : null}
-        <div className={cn("min-h-0 flex-1 overflow-y-auto", bodyClassName)}>{children}</div>
-        <div className={cn("flex shrink-0 justify-end gap-2 pt-2", footerClassName)}>{footer}</div>
+        <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
+        <div className={cn("flex shrink-0 justify-end gap-2", footerClassName)}>{footer}</div>
       </DialogContent>
     </Dialog>
   );

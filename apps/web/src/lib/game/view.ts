@@ -1,78 +1,62 @@
-import type { GamePhase } from "@settersaga/game";
+import {
+  PLAYER_COLORS,
+  getLongestRoadLength,
+  type PlayerColor,
+  type PlayerGameView,
+  type PlayerViewState,
+  type PrivatePlayerState,
+} from "@settersaga/game";
 
-export interface PhaseCopy {
-  detail: string;
-  title: string;
+/** Parsed views are validated to hold exactly one viewer and a known active player. */
+export function getViewerAndActivePlayer(game: PlayerGameView): {
+  activePlayer: PlayerViewState;
+  me: PrivatePlayerState;
+} {
+  const me = game.players.find((player): player is PrivatePlayerState => player.isViewer);
+  const activePlayer = game.players.find((player) => player.id === game.activePlayerId);
+  if (!me || !activePlayer) {
+    throw new Error("Validated player view is missing the viewer or the active player.");
+  }
+  return { activePlayer, me };
 }
 
-export function getPlayerHudOrder<T extends { isViewer: boolean }>(players: readonly T[]): T[] {
-  const opponents: T[] = [];
-  const viewers: T[] = [];
-
-  for (const player of players) {
-    (player.isViewer ? viewers : opponents).push(player);
-  }
-
-  return [...opponents, ...viewers];
+export function getPlayerColor(player: Pick<PlayerViewState, "seatIndex">): PlayerColor {
+  return PLAYER_COLORS[player.seatIndex % PLAYER_COLORS.length] ?? PLAYER_COLORS[0];
 }
 
-export function getPhaseCopy(
-  phase: GamePhase,
-  isViewerTurn: boolean,
-  activePlayerName: string,
-): PhaseCopy {
-  const owner = isViewerTurn ? "Your" : `${activePlayerName}’s`;
+/** Victory point cards are secret until the game ends, except in the viewer's own hand. */
+export function getVictoryPointCardCount(player: PlayerViewState): number {
+  return player.isViewer
+    ? player.developmentCards.filter((card) => card === "victory-point").length
+    : (player.revealedVictoryPointCards ?? 0);
+}
 
-  switch (phase.kind) {
-    case "setup_settlement":
-      return {
-        detail: isViewerTurn
-          ? "Choose a glowing corner for your settlement."
-          : `${activePlayerName} is choosing a settlement.`,
-        title: `${owner} Opening Settlement`,
-      };
-    case "setup_road":
-      return {
-        detail: isViewerTurn
-          ? "Choose a glowing edge connected to your new settlement."
-          : `${activePlayerName} is placing a road.`,
-        title: `${owner} Opening Road`,
-      };
-    case "roll":
-      return {
-        detail: isViewerTurn ? "Roll the dice to begin your turn." : "Waiting for the dice roll.",
-        title: `${owner} Roll`,
-      };
-    case "discard":
-      return {
-        detail: "Players holding too many cards must return half to the bank.",
-        title: "Robber Discard",
-      };
-    case "move_robber":
-      return {
-        detail: isViewerTurn ? "Choose a highlighted terrain tile." : "The robber is on the move.",
-        title: "Move the Robber",
-      };
-    case "steal":
-      return {
-        detail: isViewerTurn ? "Choose a neighboring player." : "A resource is being stolen.",
-        title: "Choose a Player",
-      };
-    case "road_building":
-      return {
-        detail: isViewerTurn
-          ? `Choose ${phase.remainingRoads === 1 ? "one more free road" : "two free roads"}.`
-          : `${activePlayerName} is placing free roads.`,
-        title: "Road Building",
-      };
-    case "build_and_trade":
-      return {
-        detail: isViewerTurn
-          ? "Build, trade with the bank, or finish your turn."
-          : `${activePlayerName} is building and trading.`,
-        title: `${owner} Build Phase`,
-      };
-    case "finished":
-      return { detail: "The island has a new champion.", title: "Game Complete" };
-  }
+export function getDisplayedVictoryPoints(player: PlayerViewState): number {
+  return player.victoryPoints + getVictoryPointCardCount(player);
+}
+
+export function getLongestRoadLengths(game: PlayerGameView): ReadonlyMap<string, number> {
+  return new Map(
+    game.players.map((player) => [player.id, getLongestRoadLength(game.board, player.id)]),
+  );
+}
+
+/**
+ * The crew as every HUD list shows it: the players who come after the viewer, in turn order, and
+ * the viewer last.
+ */
+export function getPlayerHudOrder<T extends { id: string; isViewer: boolean }>(
+  players: readonly T[],
+  turnOrder: readonly string[],
+): T[] {
+  const viewerId = players.find((player) => player.isViewer)?.id;
+  const viewerTurn = viewerId === undefined ? -1 : turnOrder.indexOf(viewerId);
+  const turnsAfterViewer = (player: T) => {
+    const turn = turnOrder.indexOf(player.id);
+    return turn < 0
+      ? turnOrder.length
+      : (turn - viewerTurn - 1 + turnOrder.length) % turnOrder.length;
+  };
+
+  return [...players].sort((left, right) => turnsAfterViewer(left) - turnsAfterViewer(right));
 }
