@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button";
 import pauseIcon from "@iconify-icons/solar/pause-bold";
 import playIcon from "@iconify-icons/solar/play-bold";
-import { Icon } from "@iconify/react";
+import { Icon } from "@iconify/react/offline";
 import { useRef, useState } from "react";
 
 export function AudioPlayButton({ name, src }: { name: string; src: string }) {

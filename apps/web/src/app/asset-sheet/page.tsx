@@ -1,14 +1,33 @@
 import arrowLeftIcon from "@iconify-icons/solar/arrow-left-bold";
-import checkIcon from "@iconify-icons/solar/check-circle-bold";
-import clockIcon from "@iconify-icons/solar/clock-circle-bold";
 import imageIcon from "@iconify-icons/solar/gallery-bold";
-import { Icon } from "@iconify/react";
+import layersIcon from "@iconify-icons/solar/layers-bold";
+import { Icon } from "@iconify/react/offline";
+import { PLAYER_COLORS, type PlayerColor } from "@settersaga/game";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
-import { cn } from "@/lib/utils";
 
-import { getPieceAssetPath } from "@/components/game/piece-icon";
+import {
+  AssetCard,
+  type AssetCardItem,
+  type AssetSwatch,
+} from "@/components/asset-sheet/asset-card";
+import { TerrainBoardPreview } from "@/components/asset-sheet/terrain-board-preview";
+import { AWARD_ASSET_PATHS } from "@/constants/game/award-assets";
+import {
+  OCEAN_BOARD_ASSET_PATH,
+  PIECE_ASSET_PATHS,
+  PORT_BOAT_ASSET_PATH,
+  PORT_DOCK_ASSET_PATH,
+  ROBBER_ASSET_PATH,
+  TERRAIN_ATLAS,
+  TERRAIN_ATLAS_ASSET_PATH,
+} from "@/constants/game/board-assets";
+import {
+  SETTERSAGA_MARK_ASSET_PATH,
+  SETTERSAGA_WORDMARK_ASSET_PATH,
+} from "@/constants/game/brand-assets";
 import {
   ACTION_CARD_ASSET_PATHS,
   DEVELOPMENT_CARD_ASSETS,
@@ -16,104 +35,90 @@ import {
   RESOURCE_CARD_ASSET_PATHS,
   UNKNOWN_RESOURCE_CARD_ASSET_PATH,
 } from "@/constants/game/card-assets";
-import { AWARD_ASSET_PATHS } from "@/constants/game/award-assets";
-import { END_TURN_ICON_ASSET_PATH, WAIT_ICON_ASSET_PATH } from "@/constants/game/ui-assets";
+import { getPlayerPortraitPath } from "@/constants/game/player-assets";
 import {
-  OCEAN_BOARD_ASSET_PATH,
-  PORT_BOAT_ASSET_PATH,
-  PORT_DOCK_ASSET_PATH,
-  TERRAIN_ATLAS_ASSET_PATH,
-} from "@/constants/game/board-assets";
+  END_TURN_ICON_ASSET_PATH,
+  VICTORY_FLOURISH_ASSET_PATH,
+  WAIT_ICON_ASSET_PATH,
+} from "@/constants/game/ui-assets";
 import { SOUND_EFFECT_PATHS, type SoundEffect } from "@/lib/game/audio-cues";
-
-import { AssetCard, type AssetCardItem } from "@/components/asset-sheet/asset-card";
-import { TerrainBoardPreview } from "@/components/asset-sheet/terrain-board-preview";
+import { BOT_DIFFICULTY_OPTIONS } from "@/lib/lobby/bot-difficulty";
+import { HOUSE_RULE_OPTIONS } from "@/lib/lobby/house-rules";
 
 export const metadata: Metadata = {
   description: "Matching asset sets and production briefs for SetterSaga.",
-  title: "Asset Sheet · SetterSaga",
+  robots: { follow: false, index: false },
+  title: "Asset Sheet",
 };
 
-interface AssetItem extends AssetCardItem {
-  description: string;
-  format: string;
-}
-
 interface AssetCategory {
-  assets?: readonly AssetItem[];
-  name: string;
+  assets?: readonly AssetCardItem[];
   brief: string;
   deliverables: string;
+  name: string;
+  preview?: ReactNode;
   subcategories?: readonly AssetSubcategory[];
 }
 
 interface AssetSubcategory {
-  assets: readonly AssetItem[];
+  assets: readonly AssetCardItem[];
   name: string;
 }
 
-const MUSIC_ASSETS = [
-  {
-    description: "A welcoming magical-island theme used on the signed-in home screen.",
-    format: "MP3 · 44.1 kHz · 192 kbps",
+const AUDIO_FORMAT = "MP3 · 44.1 kHz · 192 kbps";
+
+const SOUND_EFFECTS: Record<SoundEffect, { description: string; name: string }> = {
+  action: { description: "Generic game action confirmation.", name: "Action feedback" },
+  city: { description: "Weightier city upgrade cue.", name: "City placed" },
+  dice: { description: "Cushioned arcane roll.", name: "Magic dice" },
+  nextTurn: { description: "Notification when another player's turn begins.", name: "Next turn" },
+  resource: { description: "Resource gain or loss cue.", name: "Resource change" },
+  road: { description: "Short wooden road placement cue.", name: "Road placed" },
+  robber: { description: "Robber sequence warning.", name: "Robber alert" },
+  settlement: { description: "Warm settlement placement cue.", name: "Settlement placed" },
+  trade: { description: "Soft resource exchange.", name: "Trade resolved" },
+  turn: { description: "Notification when your turn begins or has been idle.", name: "Your turn" },
+  victory: { description: "Match-winning celebration.", name: "Victory" },
+};
+
+function soundEffectAssets(sounds: readonly SoundEffect[]): AssetCardItem[] {
+  return sounds.map((sound) => ({
+    ...SOUND_EFFECTS[sound],
+    format: AUDIO_FORMAT,
     kind: "audio",
-    name: "Home music",
-    path: "/music/main-lobby-music.mp3",
-    status: "generated",
+    path: SOUND_EFFECT_PATHS[sound],
+  }));
+}
+
+const PLAYER_PORTRAITS: Record<PlayerColor, { description: string; name: string }> = {
+  blue: { description: "Blue-seat island cartographer.", name: "Blue cartographer" },
+  green: { description: "Green-seat island botanist.", name: "Green botanist" },
+  orange: { description: "Orange-seat village builder.", name: "Orange builder" },
+  pink: { description: "Pink-seat island pathfinder.", name: "Pink pathfinder" },
+  purple: { description: "Purple-seat island astronomer.", name: "Purple astronomer" },
+  red: {
+    description: "Red-seat harbor navigator and default fallback portrait.",
+    name: "Red navigator",
   },
-] satisfies readonly AssetItem[];
+  teal: { description: "Teal-seat harbor shipwright.", name: "Teal shipwright" },
+  yellow: { description: "Yellow-seat island merchant.", name: "Yellow merchant" },
+};
 
-const SOUND_EFFECT_DEFINITIONS = [
-  ["Action feedback", "Generic game action confirmation.", "action"],
-  ["Magic dice", "Cushioned arcane roll.", "dice"],
-  ["Next turn", "Notification when another player's turn begins.", "nextTurn"],
-  ["Your turn", "Notification when your turn begins or has been idle.", "turn"],
-  ["Resource change", "Resource gain or loss cue.", "resource"],
-  ["Road placed", "Short wooden road placement cue.", "road"],
-  ["Settlement placed", "Warm settlement placement cue.", "settlement"],
-  ["City placed", "Weightier city upgrade cue.", "city"],
-  ["Robber alert", "Robber sequence warning.", "robber"],
-  ["Trade resolved", "Soft resource exchange.", "trade"],
-  ["Victory", "Match-winning celebration.", "victory"],
-] satisfies readonly (readonly [name: string, description: string, sound: SoundEffect])[];
+const THEME_SWATCHES: readonly AssetSwatch[] = [
+  { className: "bg-background", label: "background" },
+  { className: "bg-card", label: "card" },
+  { className: "bg-primary", label: "primary" },
+  { className: "bg-accent", label: "accent" },
+  { className: "bg-foreground", label: "foreground" },
+  { className: "bg-muted-foreground", label: "muted-foreground" },
+];
 
-const SOUND_EFFECT_ASSETS = SOUND_EFFECT_DEFINITIONS.map(([name, description, sound]) => ({
-  name,
-  description,
-  format: "MP3 · 44.1 kHz · 192 kbps",
-  kind: "audio" as const,
-  path: SOUND_EFFECT_PATHS[sound],
-  status: "generated" as const,
+const PLAYER_SWATCHES: readonly AssetSwatch[] = PLAYER_COLORS.map((color) => ({
+  className: `player-${color} bg-[var(--player-color)]`,
+  label: color,
 }));
 
-const selectAssets = (assets: readonly AssetItem[], names: readonly string[]) =>
-  assets.filter((asset) => names.includes(asset.name));
-
-const SOUND_EFFECT_SUBCATEGORIES = [
-  {
-    name: "General",
-    assets: selectAssets(SOUND_EFFECT_ASSETS, ["Action feedback"]),
-  },
-  {
-    name: "Turn flow",
-    assets: selectAssets(SOUND_EFFECT_ASSETS, [
-      "Magic dice",
-      "Next turn",
-      "Your turn",
-      "Resource change",
-    ]),
-  },
-  {
-    name: "Building",
-    assets: selectAssets(SOUND_EFFECT_ASSETS, ["Road placed", "Settlement placed", "City placed"]),
-  },
-  {
-    name: "High-priority events",
-    assets: selectAssets(SOUND_EFFECT_ASSETS, ["Robber alert", "Trade resolved", "Victory"]),
-  },
-] satisfies readonly AssetSubcategory[];
-
-const ASSET_CATEGORIES = [
+const ASSET_CATEGORIES: readonly AssetCategory[] = [
   {
     name: "Terrain tiles",
     brief:
@@ -122,14 +127,12 @@ const ASSET_CATEGORIES = [
     assets: [
       {
         name: "Terrain atlas",
-        description:
-          "Single-source 3×2 atlas for fields, forest, hills, mountains, pasture, and desert. The board clips each frame into its exact flat-top hex geometry.",
+        description: `Single-source ${TERRAIN_ATLAS.columns}×${TERRAIN_ATLAS.rows} atlas of ${TERRAIN_ATLAS.frameSize}px frames for fields, forest, hills, mountains, pasture, and desert. The board clips each frame into its exact flat-top hex geometry.`,
         fit: "cover",
-        format: "PNG · 1536×1024 · six 512×512 frames",
         path: TERRAIN_ATLAS_ASSET_PATH,
-        status: "generated" as const,
       },
     ],
+    preview: <TerrainBoardPreview />,
   },
   {
     name: "Cards",
@@ -153,9 +156,7 @@ const ASSET_CATEGORIES = [
         ].map(([name, description, path]) => ({
           name,
           description: `${description} Labels and counts remain code-rendered.`,
-          format: "PNG · 512×768",
           path,
-          status: "generated" as const,
         })),
       },
       {
@@ -164,17 +165,13 @@ const ASSET_CATEGORIES = [
           ...DEVELOPMENT_CARD_ASSETS.map((card) => ({
             name: `${card.label} card`,
             description: card.description,
-            format: "PNG · 512×768",
             path: card.path,
-            status: "generated" as const,
           })),
           {
             name: "Hidden card back",
             description:
               "Concealed card-back concept retained with the development-card art catalog.",
-            format: "PNG · 512×768",
             path: DEVELOPMENT_CARD_BACK_ASSET_PATH,
-            status: "generated" as const,
           },
         ],
       },
@@ -184,30 +181,22 @@ const ASSET_CATEGORIES = [
           {
             name: "Trade card",
             description: "Purple-and-gold market artwork used by the live trade control.",
-            format: "PNG · 512×768",
             path: ACTION_CARD_ASSET_PATHS.trade,
-            status: "generated",
           },
           {
             name: "Road card",
             description: "Purple-and-gold road artwork used by the build-road section card.",
-            format: "PNG · 512×768",
             path: ACTION_CARD_ASSET_PATHS.road,
-            status: "generated",
           },
           {
             name: "House card",
             description: "Purple-and-gold settlement artwork used by the build-house section card.",
-            format: "PNG · 512×768",
             path: ACTION_CARD_ASSET_PATHS.settlement,
-            status: "generated",
           },
           {
             name: "City card",
             description: "Purple-and-gold city artwork used by the build-city section card.",
-            format: "PNG · 512×768",
             path: ACTION_CARD_ASSET_PATHS.city,
-            status: "generated",
           },
         ],
       },
@@ -217,63 +206,46 @@ const ASSET_CATEGORIES = [
     name: "Players",
     brief:
       "Commission all eight portraits together. Keep the same crop, head size, rendering style, lighting, and background treatment, with a clear accent for each reserved player color.",
-    deliverables: "8 portraits · red, blue, orange, green, purple, teal, yellow, pink",
-    assets: [
+    deliverables: `${PLAYER_COLORS.length} portraits · ${PLAYER_COLORS.join(", ")}`,
+    assets: PLAYER_COLORS.map((color) => ({
+      ...PLAYER_PORTRAITS[color],
+      path: getPlayerPortraitPath(color),
+    })),
+  },
+  {
+    name: "Harbor & bots",
+    brief:
+      "Commission the bot captains, house-rule badges and empty seat as one pre-game set. Match the player portraits' crop and lighting so bots and people sit side by side, and keep every badge on a transparent square.",
+    deliverables: `${BOT_DIFFICULTY_OPTIONS.length + HOUSE_RULE_OPTIONS.length + 1} illustrations · bot captains, house rules, empty seat`,
+    subcategories: [
       {
-        name: "Red navigator",
-        description: "Red-seat harbor navigator and default fallback portrait.",
-        format: "PNG · 256×256",
-        path: "/game-assets/players/red-navigator.png",
-        status: "generated",
+        name: "Bot captains",
+        assets: BOT_DIFFICULTY_OPTIONS.map((bot) => ({
+          name: `${bot.label} bot`,
+          description: `Portrait for ${bot.label.toLowerCase()} bots in the harbor, Quick Match and the game.`,
+          path: bot.artSrc,
+          transparent: true,
+        })),
       },
       {
-        name: "Blue cartographer",
-        description: "Blue-seat island cartographer.",
-        format: "PNG · 256×256",
-        path: "/game-assets/players/blue-cartographer.png",
-        status: "generated",
+        name: "House rules",
+        assets: HOUSE_RULE_OPTIONS.map((rule) => ({
+          name: rule.label,
+          description: `Harbor rule tile. ${rule.description}`,
+          path: rule.artSrc,
+          transparent: true,
+        })),
       },
       {
-        name: "Orange builder",
-        description: "Orange-seat village builder.",
-        format: "PNG · 256×256",
-        path: "/game-assets/players/orange-builder.png",
-        status: "generated",
-      },
-      {
-        name: "Green botanist",
-        description: "Green-seat island botanist.",
-        format: "PNG · 256×256",
-        path: "/game-assets/players/green-botanist.png",
-        status: "generated",
-      },
-      {
-        name: "Purple astronomer",
-        description: "Purple-seat island astronomer.",
-        format: "PNG · 256×256",
-        path: "/game-assets/players/purple-astronomer.png",
-        status: "generated",
-      },
-      {
-        name: "Teal shipwright",
-        description: "Teal-seat harbor shipwright.",
-        format: "PNG · 256×256",
-        path: "/game-assets/players/teal-shipwright.png",
-        status: "generated",
-      },
-      {
-        name: "Yellow merchant",
-        description: "Yellow-seat island merchant.",
-        format: "PNG · 256×256",
-        path: "/game-assets/players/yellow-merchant.png",
-        status: "generated",
-      },
-      {
-        name: "Pink pathfinder",
-        description: "Pink-seat island pathfinder.",
-        format: "PNG · 256×256",
-        path: "/game-assets/players/pink-pathfinder.png",
-        status: "generated",
+        name: "Seats",
+        assets: [
+          {
+            name: "Empty seat",
+            description: "Open chair shown on a harbor seat that is still waiting for a player.",
+            path: "/game-assets/ui/empty-seat.png",
+            transparent: true,
+          },
+        ],
       },
     ],
   },
@@ -289,30 +261,26 @@ const ASSET_CATEGORIES = [
           {
             name: "Road piece",
             description: "Player-tintable road used for board placement.",
-            format: "PNG · 512×512",
-            path: getPieceAssetPath("road"),
-            status: "generated",
+            path: PIECE_ASSET_PATHS.road,
+            transparent: true,
           },
           {
             name: "Settlement piece",
             description: "Player-tintable settlement used for board placement.",
-            format: "PNG · 512×512",
-            path: getPieceAssetPath("settlement"),
-            status: "generated",
+            path: PIECE_ASSET_PATHS.settlement,
+            transparent: true,
           },
           {
             name: "City piece",
             description: "Player-tintable city used to upgrade a settlement.",
-            format: "PNG · 512×512",
-            path: getPieceAssetPath("city"),
-            status: "generated",
+            path: PIECE_ASSET_PATHS.city,
+            transparent: true,
           },
           {
             name: "Robber piece",
             description: "Neutral robber piece moved between terrain tiles.",
-            format: "PNG · 256×256",
-            path: "/game-assets/pieces/robber-piece.png",
-            status: "generated",
+            path: ROBBER_ASSET_PATH,
+            transparent: true,
           },
         ],
       },
@@ -322,16 +290,15 @@ const ASSET_CATEGORIES = [
           {
             name: "Port merchant",
             description: "Top-down trading boat marking each offshore port.",
-            format: "PNG · 655×1182 · transparent",
             path: PORT_BOAT_ASSET_PATH,
-            status: "generated",
+            transparent: true,
           },
           {
             name: "Port bridge",
-            description: "Single continuous timber bridge connecting each port to the island.",
-            format: "PNG · 1642×328 · transparent",
+            description:
+              "Timber bridge prop for port docks. The board does not use it yet and draws docks in code.",
             path: PORT_DOCK_ASSET_PATH,
-            status: "generated",
+            transparent: true,
           },
         ],
       },
@@ -350,9 +317,7 @@ const ASSET_CATEGORIES = [
             name: "Island world (supercell)",
             description: "Tabletop island backdrop used by the login, home, and end-of-game views.",
             fit: "cover",
-            format: "PNG · 1672×941",
             path: "/shared-assets/coastal-island-kingdom-supercell.png",
-            status: "generated",
           },
         ],
       },
@@ -363,9 +328,7 @@ const ASSET_CATEGORIES = [
             name: "Ocean board canvas",
             description: "Quiet turquoise water backdrop beneath the playable board.",
             fit: "cover",
-            format: "WebP · 1586×992",
             path: OCEAN_BOARD_ASSET_PATH,
-            status: "generated",
           },
         ],
       },
@@ -375,7 +338,7 @@ const ASSET_CATEGORIES = [
     name: "Menu & interface icons",
     brief:
       "Buy or commission a matching interface illustration pack. Keep materials, lighting, edge treatment, and visual weight consistent, including the small bank and turn-state icons.",
-    deliverables: "6 illustrations · 3 menu illustrations and 3 utility icons",
+    deliverables: "7 illustrations · 3 menu illustrations and 4 utility icons",
     subcategories: [
       {
         name: "Home menu",
@@ -383,23 +346,17 @@ const ASSET_CATEGORIES = [
           {
             name: "Quick match",
             description: "Glossy rolling dice on a floating board island.",
-            format: "PNG · 1080×1080",
             path: "/home-assets/menu/quick-match.png",
-            status: "generated",
           },
           {
             name: "Host island",
             description: "Crooked storybook island home with golden roof.",
-            format: "PNG · 1080×1080",
             path: "/home-assets/menu/host-island.png",
-            status: "generated",
           },
           {
             name: "Join crew",
             description: "Treasure map with brass compass for joining a room.",
-            format: "PNG · 1080×1080",
             path: "/home-assets/menu/join-crew.png",
-            status: "generated",
           },
         ],
       },
@@ -408,24 +365,27 @@ const ASSET_CATEGORIES = [
         assets: [
           {
             name: "Bank icon",
-            description: "Bank-building symbol for the resource market and bank controls.",
-            format: "PNG · 256×256 · transparent",
+            description: "Bank-building symbol. The game UI does not use it yet.",
             path: "/game-assets/ui/bank.png",
-            status: "generated",
+            transparent: true,
           },
           {
             name: "End turn icon",
             description: "Checked turn ledger and dice used by the live end-turn control.",
-            format: "PNG · 256×256 · transparent",
             path: END_TURN_ICON_ASSET_PATH,
-            status: "generated",
+            transparent: true,
           },
           {
             name: "Wait icon",
             description: "Hourglass artwork used when another player is taking their turn.",
-            format: "PNG · 256×256 · transparent",
             path: WAIT_ICON_ASSET_PATH,
-            status: "generated",
+            transparent: true,
+          },
+          {
+            name: "Loading compass",
+            description: "Brass compass that sways on every loading screen.",
+            path: "/game-assets/ui/loading-compass.png",
+            transparent: true,
           },
         ],
       },
@@ -435,28 +395,39 @@ const ASSET_CATEGORIES = [
     name: "Awards & results",
     brief:
       "Commission the award pair and victory treatment together. Match their materials, lighting, and celebration palette, with distinct silhouettes for each achievement.",
-    deliverables: "3 illustrations · longest road, largest army, victory flourish",
+    deliverables:
+      "5 illustrations · longest road, largest army, victory and defeat flourishes, podium",
     assets: [
       {
         name: "Longest Road",
         description: "Award illustration for the longest connected route.",
-        format: "PNG · 512×512 · transparent",
         path: AWARD_ASSET_PATHS.longestRoad,
-        status: "generated",
+        transparent: true,
       },
       {
         name: "Largest Army",
         description: "Award illustration for the strongest knight force.",
-        format: "PNG · 512×512 · transparent",
         path: AWARD_ASSET_PATHS.largestArmy,
-        status: "generated",
+        transparent: true,
       },
       {
         name: "Victory flourish",
         description: "Celebratory crown, rays, and confetti treatment.",
-        format: "PNG · 1536×512 · transparent",
-        path: "/game-assets/results/victory-flourish.png",
-        status: "generated",
+        path: VICTORY_FLOURISH_ASSET_PATH,
+        transparent: true,
+      },
+      {
+        name: "Defeat flourish",
+        description: "Quieter banner treatment behind the results when another player wins.",
+        path: "/game-assets/results/defeat-flourish.png",
+        transparent: true,
+      },
+      {
+        name: "Podium",
+        description:
+          "Three empty wooden steps (tallest in the middle) that the top three players stand on in the results.",
+        path: "/game-assets/results/podium.png",
+        transparent: true,
       },
     ],
   },
@@ -468,27 +439,26 @@ const ASSET_CATEGORIES = [
     assets: [
       {
         name: "Wordmark",
-        description: "Stacked gold 3D title: Setter over Saga, with a hexagonal cottage badge.",
-        format: "PNG · 558×605 · transparent",
-        path: "/game-assets/brand/settersaga-wordmark.png",
-        status: "generated",
+        description:
+          "One-line 3D title: cream Setter and gold Saga in a navy outline, crowned with three rooftops.",
+        path: SETTERSAGA_WORDMARK_ASSET_PATH,
+        transparent: true,
       },
       {
         name: "Mark",
         description:
-          "Hexagonal island crest: golden-thatched cottage, pines, rocky cliffs, and a wooden dock.",
-        format: "PNG · 921×921 · transparent",
-        path: "/game-assets/brand/settersaga-mark.png",
-        status: "generated",
+          "Gold-framed blue hexagon crest with a blue-roofed cottage, tree, and flag on a floating island.",
+        path: SETTERSAGA_MARK_ASSET_PATH,
+        transparent: true,
       },
       {
         name: "Display typography",
         description:
-          "DM Sans gives game titles, the logo lockup, and card headings a clean, friendly voice.",
-        format: "DM Sans · 700–900 · sans serif",
+          "Lilita One gives titles, the logo lockup, and card headings a chunky, friendly voice.",
+        format: "Lilita One · 400 · display",
         kind: "brand",
+        previewClassName: "font-display",
         previewText: "Build your island",
-        status: "generated",
       },
       {
         name: "Interface typography",
@@ -497,34 +467,22 @@ const ASSET_CATEGORIES = [
         format: "DM Sans · 400–900 · system sans fallback",
         kind: "brand",
         previewText: "Roll dice · Trade · Build",
-        status: "generated",
       },
       {
         name: "Ocean night palette",
         description:
           "Single deep ocean theme. Ice-white text, navy surfaces, sky blue on primary actions, cyan glow lines.",
-        format: "#1A4A94 · #143D7C · #F2F7FF · #C3D6F2 · #46B8FF",
+        format: THEME_SWATCHES.map((swatch) => swatch.label).join(" · "),
         kind: "brand",
-        status: "generated",
-        swatches: ["#1A4A94", "#143D7C", "#F2F7FF", "#C3D6F2", "#46B8FF"],
+        swatches: THEME_SWATCHES,
       },
       {
         name: "Player seat colors",
         description:
           "Eight distinct seat colors remain reserved for ownership across pieces, HUDs, and activity states.",
-        format: "#F04F49 · #2F8EE8 · #F18C2C · #2FB86A · #8357D9 · #0F9696 · #BD8100 · #D74786",
+        format: PLAYER_COLORS.join(" · "),
         kind: "brand",
-        status: "generated",
-        swatches: [
-          "#F04F49",
-          "#2F8EE8",
-          "#F18C2C",
-          "#2FB86A",
-          "#8357D9",
-          "#0F9696",
-          "#BD8100",
-          "#D74786",
-        ],
+        swatches: PLAYER_SWATCHES,
       },
     ],
   },
@@ -536,26 +494,34 @@ const ASSET_CATEGORIES = [
     subcategories: [
       {
         name: "Music",
-        assets: MUSIC_ASSETS,
+        assets: [
+          {
+            name: "Home music",
+            description: "A welcoming magical-island theme used on the signed-in home screen.",
+            format: AUDIO_FORMAT,
+            kind: "audio",
+            path: "/music/main-lobby-music.mp3",
+          },
+        ],
       },
-      ...SOUND_EFFECT_SUBCATEGORIES,
+      { name: "General", assets: soundEffectAssets(["action"]) },
+      { name: "Turn flow", assets: soundEffectAssets(["dice", "nextTurn", "turn", "resource"]) },
+      { name: "Building", assets: soundEffectAssets(["road", "settlement", "city"]) },
+      { name: "High-priority events", assets: soundEffectAssets(["robber", "trade", "victory"]) },
     ],
   },
-] satisfies readonly AssetCategory[];
+];
 
-const assetTotals = ASSET_CATEGORIES.reduce(
-  (totals, category) =>
-    categoryAssets(category).reduce(
-      (categoryTotals, asset) => ({
-        ...categoryTotals,
-        [asset.status]: categoryTotals[asset.status] + 1,
-      }),
-      totals,
-    ),
-  { generated: 0, needed: 0 },
+const ASSET_COUNT = ASSET_CATEGORIES.reduce(
+  (count, category) => count + categoryAssets(category).length,
+  0,
 );
 
 export default function AssetSheetPage() {
+  if (process.env.NODE_ENV !== "development") {
+    notFound();
+  }
+
   return (
     <main className="min-h-screen bg-background text-foreground overflow-y-auto" id="main-content">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 space-y-8">
@@ -569,7 +535,7 @@ export default function AssetSheetPage() {
           </Link>
 
           <div className="space-y-1">
-            <p className="text-xs font-bold uppercase tracking-widest text-brand-accent">
+            <p className="text-xs font-bold uppercase tracking-widest text-accent">
               Matching asset sets
             </p>
             <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl lg:text-5xl">
@@ -579,21 +545,13 @@ export default function AssetSheetPage() {
 
           <div className="flex flex-wrap gap-4" aria-label="Asset totals">
             <SummaryItem
-              icon={<Icon aria-hidden="true" icon={checkIcon} />}
-              label="Generated"
-              tone="ready"
-              value={assetTotals.generated}
-            />
-            <SummaryItem
-              icon={<Icon aria-hidden="true" icon={clockIcon} />}
-              label="Pending production"
-              tone="needed"
-              value={assetTotals.needed}
-            />
-            <SummaryItem
               icon={<Icon aria-hidden="true" icon={imageIcon} />}
+              label="Assets"
+              value={ASSET_COUNT}
+            />
+            <SummaryItem
+              icon={<Icon aria-hidden="true" icon={layersIcon} />}
               label="Asset sets"
-              tone="neutral"
               value={ASSET_CATEGORIES.length}
             />
           </div>
@@ -631,27 +589,10 @@ export default function AssetSheetPage() {
   );
 }
 
-function SummaryItem({
-  icon,
-  label,
-  tone,
-  value,
-}: {
-  icon: ReactNode;
-  label: string;
-  tone: "needed" | "neutral" | "ready";
-  value: number;
-}) {
+function SummaryItem({ icon, label, value }: { icon: ReactNode; label: string; value: number }) {
   return (
     <div className="flex items-center gap-3.5 rounded-xl border border-border bg-card text-card-foreground p-4 shadow-none min-w-[140px]">
-      <span
-        className={cn(
-          "flex h-9 w-9 items-center justify-center rounded-lg text-lg",
-          tone === "ready" && "text-signal-success bg-signal-success/12",
-          tone === "needed" && "text-signal-warning bg-signal-warning/12",
-          tone === "neutral" && "text-muted-foreground bg-muted",
-        )}
-      >
+      <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent/10 text-lg text-accent">
         {icon}
       </span>
       <span className="flex flex-col">
@@ -664,13 +605,11 @@ function SummaryItem({
 
 function AssetCategoryRow({ category }: { category: AssetCategory }) {
   const assets = categoryAssets(category);
-  const generatedCount = assets.filter((asset) => asset.status === "generated").length;
 
   return (
     <section
       aria-labelledby={`category-${toId(category.name)}`}
       className="py-6 border-b border-border last:border-b-0 space-y-4"
-      data-live-preview={category.name === "Terrain tiles" || undefined}
     >
       <div className="flex items-center justify-between gap-4">
         <h2
@@ -680,7 +619,7 @@ function AssetCategoryRow({ category }: { category: AssetCategory }) {
           {category.name}
         </h2>
         <span className="rounded-full border border-border px-3 py-1 text-xs font-semibold text-muted-foreground whitespace-nowrap">
-          {generatedCount}/{assets.length} available
+          {assets.length} {assets.length === 1 ? "asset" : "assets"}
         </span>
       </div>
 
@@ -703,25 +642,25 @@ function AssetCategoryRow({ category }: { category: AssetCategory }) {
               >
                 {subcategory.name}
               </h3>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-                {subcategory.assets.map((asset) => (
-                  <AssetCard asset={asset} key={`${subcategory.name}-${asset.name}`} />
-                ))}
-              </div>
+              <AssetGrid assets={subcategory.assets} />
             </section>
           ))}
         </div>
       ) : (
-        <>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-            {assets.map((asset) => (
-              <AssetCard asset={asset} key={`${category.name}-${asset.name}`} />
-            ))}
-          </div>
-          {category.name === "Terrain tiles" ? <TerrainBoardPreview /> : null}
-        </>
+        <AssetGrid assets={assets} />
       )}
+      {category.preview}
     </section>
+  );
+}
+
+function AssetGrid({ assets }: { assets: readonly AssetCardItem[] }) {
+  return (
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+      {assets.map((asset) => (
+        <AssetCard asset={asset} key={asset.name} />
+      ))}
+    </div>
   );
 }
 

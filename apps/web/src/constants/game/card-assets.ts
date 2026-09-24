@@ -1,4 +1,4 @@
-import type { ResourceType } from "@settersaga/game";
+import type { DevelopmentCardType, ResourceType } from "@settersaga/game";
 
 export const RESOURCE_CARD_ASSET_PATHS: Readonly<Record<ResourceType, string>> = {
   brick: "/game-assets/cards/resources/brick-card.png",
@@ -21,39 +21,43 @@ export const ACTION_CARD_ASSET_PATHS = {
   trade: "/game-assets/cards/actions/trade.png",
 } as const;
 
+export const DEVELOPMENT_CARD_ASSET_PATHS: Readonly<Record<DevelopmentCardType, string>> = {
+  knight: "/game-assets/cards/development/knight.png",
+  monopoly: "/game-assets/cards/development/monopoly.png",
+  "road-building": "/game-assets/cards/development/road-building.png",
+  "victory-point": "/game-assets/cards/development/victory-point.png",
+  "year-of-plenty": "/game-assets/cards/development/year-of-plenty.png",
+};
+
 export const DEVELOPMENT_CARD_ASSETS = [
   {
     description: "Move the robber and steal a resource.",
     id: "knight",
     label: "Knight",
-    path: "/game-assets/cards/development/knight.png",
+    path: DEVELOPMENT_CARD_ASSET_PATHS.knight,
   },
   {
     description: "Build two roads without paying their resource costs.",
     id: "road-building",
     label: "Road Building",
-    path: "/game-assets/cards/development/road-building.png",
+    path: DEVELOPMENT_CARD_ASSET_PATHS["road-building"],
   },
   {
     description: "Take two available resources from the bank.",
     id: "year-of-plenty",
     label: "Year of Plenty",
-    path: "/game-assets/cards/development/year-of-plenty.png",
+    path: DEVELOPMENT_CARD_ASSET_PATHS["year-of-plenty"],
   },
   {
     description: "Collect one named resource from every opponent.",
     id: "monopoly",
     label: "Monopoly",
-    path: "/game-assets/cards/development/monopoly.png",
+    path: DEVELOPMENT_CARD_ASSET_PATHS.monopoly,
   },
   {
     description: "A hidden victory point toward winning the game.",
     id: "victory-point",
     label: "Victory Point",
-    path: "/game-assets/cards/development/victory-point.png",
+    path: DEVELOPMENT_CARD_ASSET_PATHS["victory-point"],
   },
 ] as const;
-
-export function getResourceCardAssetPath(resource: ResourceType): string {
-  return RESOURCE_CARD_ASSET_PATHS[resource];
-}
