@@ -15,6 +15,12 @@ export const DEVELOPMENT_CARD_TYPES = [
 export type DevelopmentCardType = (typeof DEVELOPMENT_CARD_TYPES)[number];
 export type PlayableDevelopmentCardType = Exclude<DevelopmentCardType, "victory-point">;
 
+export function isPlayableDevelopmentCard(
+  card: DevelopmentCardType,
+): card is PlayableDevelopmentCardType {
+  return card !== "victory-point";
+}
+
 export const TERRAIN_TYPES = [
   "desert",
   "fields",
@@ -25,25 +31,24 @@ export const TERRAIN_TYPES = [
 ] as const;
 
 export type TerrainType = (typeof TERRAIN_TYPES)[number];
+
+export const NUMBER_TOKENS = [2, 3, 4, 5, 6, 8, 9, 10, 11, 12] as const;
+export type NumberToken = (typeof NUMBER_TOKENS)[number];
+
 export type PlayerId = string;
 export type BuildingKind = "city" | "settlement";
-export type BotDifficulty = "easy" | "medium" | "hard";
+
+export const BOT_DIFFICULTIES = ["easy", "medium", "hard"] as const;
+export type BotDifficulty = (typeof BOT_DIFFICULTIES)[number];
+
 export const GAME_MAP_IDS = ["base", "extended-6", "extended-8"] as const;
 export type GameMapId = (typeof GAME_MAP_IDS)[number];
+
 export const PLAYER_COUNTS = [3, 4, 5, 6, 7, 8] as const;
 export type PlayerCount = (typeof PLAYER_COUNTS)[number];
-export const PLAYER_COLORS = [
-  "red",
-  "blue",
-  "orange",
-  "green",
-  "purple",
-  "teal",
-  "yellow",
-  "pink",
-] as const;
-export type PlayerColor = (typeof PLAYER_COLORS)[number];
-export type TurnTimerSeconds = 0 | 30 | 60 | 90 | 120;
+
+export const TURN_TIMER_OPTIONS = [0, 30, 60, 90, 120] as const;
+export type TurnTimerSeconds = (typeof TURN_TIMER_OPTIONS)[number];
 
 export interface BaseGameSettings {
   balancedDice: boolean;
@@ -66,12 +71,13 @@ export interface PixelCoordinate {
   y: number;
 }
 
-export interface GamePlayerInput {
-  botDifficulty?: BotDifficulty;
-  id: PlayerId;
+interface PlayerIdentity {
   displayName: string;
-  isBot: boolean;
+  id: PlayerId;
 }
+
+export type GamePlayerInput = PlayerIdentity &
+  ({ botDifficulty: BotDifficulty; isBot: true } | { isBot: false });
 
 export interface PlayerPieces {
   cities: number;
@@ -79,25 +85,30 @@ export interface PlayerPieces {
   settlements: number;
 }
 
-export interface PlayerState extends GamePlayerInput {
+interface PlayerProgress {
   developmentCards: DevelopmentCardType[];
   piecesRemaining: PlayerPieces;
   playedDevelopmentCards: PlayableDevelopmentCardType[];
   resources: ResourceInventory;
   seatIndex: number;
+  /** Public score: buildings and awards, excluding unrevealed victory-point cards. */
   victoryPoints: number;
 }
 
+export type PlayerState = GamePlayerInput & PlayerProgress;
+
 export interface TileState extends AxialCoordinate {
   id: string;
-  numberToken: number | null;
+  numberToken: NumberToken | null;
   terrain: TerrainType;
 }
+
+export type PortTrade = "any" | ResourceType;
 
 export interface PortDescriptor {
   edgeKey: string;
   id: string;
-  trade: "any" | ResourceType;
+  trade: PortTrade;
 }
 
 export interface BuildingState {
@@ -119,56 +130,55 @@ export interface BoardState {
   tiles: TileState[];
 }
 
-export interface SetupSettlementPhase {
+interface SetupSettlementPhase {
   kind: "setup_settlement";
   setupIndex: number;
 }
 
-export interface SetupRoadPhase {
+interface SetupRoadPhase {
   kind: "setup_road";
   settlementVertexKey: string;
   setupIndex: number;
 }
 
-export interface RollPhase {
+interface RollPhase {
   kind: "roll";
 }
 
-export interface DiscardRequirement {
+interface DiscardRequirement {
   count: number;
   playerId: PlayerId;
 }
 
-export interface DiscardPhase {
+interface DiscardPhase {
   kind: "discard";
   pending: DiscardRequirement[];
-  rollerPlayerId: PlayerId;
 }
 
-export interface MoveRobberPhase {
+type ResumePhase = "build_and_trade" | "roll";
+
+interface MoveRobberPhase {
   kind: "move_robber";
-  rollerPlayerId: PlayerId;
-  resumePhase: "build_and_trade" | "roll";
+  resumePhase: ResumePhase;
 }
 
-export interface StealPhase {
+interface StealPhase {
   eligibleVictimIds: PlayerId[];
   kind: "steal";
-  rollerPlayerId: PlayerId;
-  resumePhase: "build_and_trade" | "roll";
+  resumePhase: ResumePhase;
 }
 
-export interface RoadBuildingPhase {
+interface RoadBuildingPhase {
   kind: "road_building";
   remainingRoads: number;
-  resumePhase: "build_and_trade" | "roll";
+  resumePhase: ResumePhase;
 }
 
-export interface BuildAndTradePhase {
+interface BuildAndTradePhase {
   kind: "build_and_trade";
 }
 
-export interface FinishedPhase {
+interface FinishedPhase {
   kind: "finished";
 }
 
@@ -190,6 +200,7 @@ export interface DiceRoll {
 }
 
 export interface TradeOffer {
+  acceptedPlayerIds: PlayerId[];
   give: ResourceInventory;
   offerActionNumber: number;
   proposerPlayerId: PlayerId;
@@ -215,11 +226,9 @@ export interface GameState {
   randomIndex: number;
   seed: string;
   settings: BaseGameSettings;
-  status: "active" | "completed";
   tradeOffer: TradeOffer | null;
   turnNumber: number;
   turnOrder: PlayerId[];
-  version: 4;
   winnerPlayerId: PlayerId | null;
 }
 
@@ -253,6 +262,11 @@ export type GameCommand =
       offerActionNumber: number;
     }
   | {
+      kind: "confirm_trade";
+      offerActionNumber: number;
+      partnerPlayerId: PlayerId;
+    }
+  | {
       kind: "cancel_trade";
       offerActionNumber: number;
     }
@@ -275,25 +289,25 @@ export interface LegalActions {
   cityVertexKeys: string[];
   discardCount: number | null;
   isRequiredActor: boolean;
-  phase: GamePhase["kind"];
   playableDevelopmentCards: PlayableDevelopmentCardType[];
   roadEdgeKeys: string[];
   robberTileIds: string[];
   settlementVertexKeys: string[];
+  tradePartnerPlayerIds: PlayerId[];
   victimPlayerIds: PlayerId[];
 }
 
-export interface PublicPlayerState extends Omit<PlayerState, "developmentCards" | "resources"> {
+interface PublicPlayerState extends Omit<PlayerState, "developmentCards" | "resources"> {
   developmentCardCount: number;
   isViewer: false;
   revealedVictoryPointCards: number | null;
   resourceCount: number;
 }
 
-export interface PrivatePlayerState extends PlayerState {
+export type PrivatePlayerState = PlayerState & {
   isViewer: true;
   resourceCount: number;
-}
+};
 
 export type PlayerViewState = PublicPlayerState | PrivatePlayerState;
 
@@ -318,6 +332,7 @@ export type GameRuleErrorCode =
   | "INVALID_LOCATION"
   | "INVALID_PHASE"
   | "INVALID_ROBBER_TILE"
+  | "INVALID_SETTINGS"
   | "INVALID_TRADE"
   | "INVALID_VICTIM"
   | "LOCATION_OCCUPIED"

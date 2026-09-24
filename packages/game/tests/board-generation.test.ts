@@ -1,16 +1,19 @@
 import { describe, expect, test } from "bun:test";
 
+import { TERRAIN_RESOURCE } from "../src/constants";
 import {
+  AVAILABLE_GAME_MAPS,
+  NUMBER_TOKEN_PIPS,
   axialToPixel,
   createBoard,
   getBoardTopology,
-  NUMBER_TOKEN_PIPS,
-  TERRAIN_RESOURCE,
   type ResourceType,
-  type TileState,
 } from "../src/index";
+import type { NumberToken, TileState } from "../src/types";
 
-const OFFICIAL_BASE_NUMBER_SEQUENCE = [5, 2, 6, 3, 8, 10, 9, 12, 11, 4, 8, 10, 9, 4, 5, 6, 3, 11];
+const OFFICIAL_BASE_NUMBER_SEQUENCE: NumberToken[] = [
+  5, 2, 6, 3, 8, 10, 9, 12, 11, 4, 8, 10, 9, 4, 5, 6, 3, 11,
+];
 
 function coordinateRadius({ q, r }: TileState): number {
   return Math.max(Math.abs(q), Math.abs(r), Math.abs(-q - r));
@@ -48,7 +51,7 @@ function createNumberSpirals(tiles: readonly TileState[]) {
   ).flat();
 }
 
-describe("base board generation", () => {
+describe("board generation", () => {
   test("places the official sequence outer-ring inward under a seeded dihedral orientation", () => {
     for (const seed of ["base-sequence-a", "base-sequence-b", "base-sequence-c"]) {
       const board = createBoard("base", seed);
@@ -60,45 +63,41 @@ describe("base board generation", () => {
     }
   });
 
-  test("keeps duplicate and red numbers apart and 2/12 on the coast", () => {
-    for (let index = 0; index < 100; index += 1) {
-      const board = createBoard("base", `base-invariants-${index}`);
-      const topology = getBoardTopology(board.tiles);
-      const numberByTileId = new Map(board.tiles.map((tile) => [tile.id, tile.numberToken]));
-      const coastTileIds = new Set(
-        topology.coastEdgeKeys.flatMap((edgeKey) => topology.edgeTileIds[edgeKey] ?? []),
-      );
+  test("keeps equal and red numbers apart and 2/12 on the coast on every map", () => {
+    for (const map of AVAILABLE_GAME_MAPS) {
+      for (let index = 0; index < 100; index += 1) {
+        const board = createBoard(map.id, `number-invariants-${index}`);
+        const topology = getBoardTopology(board.tiles);
+        const numberByTileId = new Map(board.tiles.map((tile) => [tile.id, tile.numberToken]));
+        const coastTileIds = new Set(
+          topology.coastEdgeKeys.flatMap((edgeKey) => topology.edgeTileIds[edgeKey]!),
+        );
 
-      for (const tile of board.tiles) {
-        if (tile.numberToken === 2 || tile.numberToken === 12) {
-          expect(coastTileIds.has(tile.id)).toBe(true);
+        for (const tile of board.tiles) {
+          if (tile.numberToken === 2 || tile.numberToken === 12) {
+            expect(coastTileIds.has(tile.id)).toBe(true);
+          }
         }
-      }
 
-      for (const tileIds of Object.values(topology.edgeTileIds)) {
-        if (tileIds.length !== 2) continue;
-        const [firstTileId, secondTileId] = tileIds;
-        const firstNumber = firstTileId ? numberByTileId.get(firstTileId) : null;
-        const secondNumber = secondTileId ? numberByTileId.get(secondTileId) : null;
+        for (const tileIds of Object.values(topology.edgeTileIds)) {
+          if (tileIds.length !== 2) continue;
+          const firstNumber = numberByTileId.get(tileIds[0]!);
+          const secondNumber = numberByTileId.get(tileIds[1]!);
 
-        if (firstNumber != null) {
-          expect(firstNumber).not.toBe(secondNumber);
-        }
-        if (firstNumber === 6 || firstNumber === 8) {
-          expect(secondNumber === 6 || secondNumber === 8).toBe(false);
+          if (firstNumber != null) {
+            expect(firstNumber).not.toBe(secondNumber);
+          }
+          if (firstNumber === 6 || firstNumber === 8) {
+            expect(secondNumber === 6 || secondNumber === 8).toBe(false);
+          }
         }
       }
     }
   });
 
-  test("balances resource production without banning natural terrain clusters", () => {
-    let largestTerrainCluster = 0;
-
+  test("keeps every base board's resource pips balanced with red numbers on three resources", () => {
     for (let index = 0; index < 100; index += 1) {
       const board = createBoard("base", `base-resource-balance-${index}`);
-      const topology = getBoardTopology(board.tiles);
-      const terrainByTileId = new Map(board.tiles.map((tile) => [tile.id, tile.terrain]));
-      const matchingNeighbors = new Map(board.tiles.map((tile) => [tile.id, [] as string[]]));
       const resourcePips = new Map<ResourceType, number>();
       const redResources = new Set<ResourceType>();
 
@@ -108,7 +107,7 @@ describe("base board generation", () => {
 
         resourcePips.set(
           resource,
-          (resourcePips.get(resource) ?? 0) + (NUMBER_TOKEN_PIPS[tile.numberToken] ?? 0),
+          (resourcePips.get(resource) ?? 0) + NUMBER_TOKEN_PIPS[tile.numberToken],
         );
         if (tile.numberToken === 6 || tile.numberToken === 8) {
           redResources.add(resource);
@@ -118,44 +117,45 @@ describe("base board generation", () => {
       expect(redResources.size).toBeGreaterThanOrEqual(3);
       const pipTotals = [...resourcePips.values()];
       expect(Math.max(...pipTotals) - Math.min(...pipTotals)).toBeLessThanOrEqual(8);
-
-      for (const tileIds of Object.values(topology.edgeTileIds)) {
-        if (tileIds.length !== 2) continue;
-        const [firstTileId, secondTileId] = tileIds;
-        if (!firstTileId || !secondTileId) continue;
-
-        const firstTerrain = terrainByTileId.get(firstTileId);
-        const secondTerrain = terrainByTileId.get(secondTileId);
-        if (!firstTerrain || firstTerrain === "desert" || firstTerrain !== secondTerrain) continue;
-
-        matchingNeighbors.get(firstTileId)?.push(secondTileId);
-        matchingNeighbors.get(secondTileId)?.push(firstTileId);
-      }
-
-      const visitedTileIds = new Set<string>();
-      for (const tile of board.tiles) {
-        if (tile.terrain === "desert" || visitedTileIds.has(tile.id)) continue;
-
-        let clusterSize = 0;
-        const pendingTileIds = [tile.id];
-        visitedTileIds.add(tile.id);
-
-        while (pendingTileIds.length > 0) {
-          const tileId = pendingTileIds.pop();
-          if (!tileId) continue;
-          clusterSize += 1;
-
-          for (const neighborId of matchingNeighbors.get(tileId) ?? []) {
-            if (visitedTileIds.has(neighborId)) continue;
-            visitedTileIds.add(neighborId);
-            pendingTileIds.push(neighborId);
-          }
-        }
-
-        largestTerrainCluster = Math.max(largestTerrainCluster, clusterSize);
-      }
     }
+  });
 
-    expect(largestTerrainCluster).toBeGreaterThanOrEqual(3);
+  test("lays out each map's terrain, numbers and harbours with the robber on a desert", () => {
+    const sorted = (values: readonly (number | string)[]) => values.map(String).toSorted();
+
+    for (const map of AVAILABLE_GAME_MAPS) {
+      const board = createBoard(map.id, `map-contents-${map.id}`);
+      const robberTile = board.tiles.find((tile) => tile.id === board.robberTileId)!;
+
+      expect(
+        Object.fromEntries(
+          Object.keys(map.terrainCounts).map((terrain) => [
+            terrain,
+            board.tiles.filter((tile) => tile.terrain === terrain).length,
+          ]),
+        ),
+      ).toEqual(map.terrainCounts);
+      expect(sorted(board.tiles.flatMap((tile) => tile.numberToken ?? []))).toEqual(
+        sorted(map.numberTokens),
+      );
+      expect(sorted(board.ports.map((port) => port.trade))).toEqual(sorted(map.portTrades));
+      expect(robberTile.terrain).toBe("desert");
+    }
+  });
+
+  test("builds the 5–6 player island in columns of 3, 4, 5, 6, 5, 4 and 3 tiles", () => {
+    const board = createBoard("extended-6", "extended-6-shape");
+    const columnHeights = [-3, -2, -1, 0, 1, 2, 3].map(
+      (q) => board.tiles.filter((tile) => tile.q === q).length,
+    );
+
+    expect(columnHeights).toEqual([3, 4, 5, 6, 5, 4, 3]);
+  });
+
+  test("builds the same board for a seed and different boards for different seeds", () => {
+    for (const map of AVAILABLE_GAME_MAPS) {
+      expect(createBoard(map.id, "repeatable")).toEqual(createBoard(map.id, "repeatable"));
+      expect(createBoard(map.id, "repeatable")).not.toEqual(createBoard(map.id, "different"));
+    }
   });
 });

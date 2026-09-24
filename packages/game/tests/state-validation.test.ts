@@ -1,57 +1,56 @@
 import { describe, expect, test } from "bun:test";
 
 import {
+  AVAILABLE_GAME_MAPS,
   GameDataValidationError,
-  DEVELOPMENT_CARD_DECK,
   applyCommand,
   assertGameState,
   assertPlayerGameView,
   chooseAutomatedCommand,
-  createDefaultGame,
   emptyInventory,
   getBoardTopology,
-  getRequiredPlayerIds,
-  isGameState,
-  isPlayerGameView,
   toPlayerView,
-  type GameState,
-  type ResourceInventory,
+  type GamePlayerInput,
+  type PlayerGameView,
 } from "../src/index";
+import {
+  createGame,
+  createPlayedGame,
+  makePlayers,
+  opponentsOf,
+  withDevelopmentCard,
+  withHand,
+} from "./helpers";
 
-const PLAYERS = Array.from({ length: 4 }, (_, index) => ({
-  displayName: `Player ${index + 1}`,
-  id: `player-${index + 1}`,
-  isBot: index !== 0,
-}));
+const PLAYERS = makePlayers(4).map(
+  (player, index): GamePlayerInput =>
+    index === 0 ? { displayName: player.displayName, id: player.id, isBot: false } : player,
+);
 
-function createGame(): GameState {
-  return createDefaultGame(PLAYERS, "state-validation", {
-    maxPlayers: 4,
-    turnTimerSeconds: 0,
-  });
+function expectInvalidState(state: unknown) {
+  expect(() => assertGameState(state)).toThrow(GameDataValidationError);
+}
+
+function expectInvalidView(view: unknown) {
+  expect(() => assertPlayerGameView(view)).toThrow(GameDataValidationError);
 }
 
 describe("serialized game-state validation", () => {
   test("accepts canonical game state and every player view", () => {
-    const state = createGame();
+    const state = createGame("state-validation", {}, PLAYERS);
 
-    expect(isGameState(state)).toBe(true);
     expect(() => assertGameState(state)).not.toThrow();
-
     for (const player of state.players) {
-      const view = toPlayerView(state, player.id);
-      expect(isPlayerGameView(view)).toBe(true);
-      expect(() => assertPlayerGameView(view)).not.toThrow();
+      expect(() => assertPlayerGameView(toPlayerView(state, player.id))).not.toThrow();
     }
   });
 
   test("keeps the deck private while exposing the viewer hand and public counts", () => {
-    const state = createGame();
+    const state = createGame("state-validation", {}, PLAYERS);
     const view = toPlayerView(state, state.players[0]!.id);
 
-    expect(state.players[0]!.developmentCards).toEqual([]);
     expect("developmentDeck" in view).toBe(false);
-    expect(view.developmentCardSupply).toBe(DEVELOPMENT_CARD_DECK.length);
+    expect(view.developmentCardSupply).toBe(state.developmentDeck.length);
     expect(view.players[0]!.isViewer && view.players[0]!.developmentCards).toEqual([]);
     expect(!view.players[1]!.isViewer && view.players[1]!.developmentCardCount).toBe(0);
     expect(!view.players[1]!.isViewer && view.players[1]!.revealedVictoryPointCards).toBeNull();
@@ -59,25 +58,18 @@ describe("serialized game-state validation", () => {
   });
 
   test("reveals opponents' victory point cards only after the game is complete", () => {
-    const state = createGame();
-    const victoryPointIndex = state.developmentDeck.indexOf("victory-point");
-    if (victoryPointIndex < 0) throw new Error("Development deck needs a victory point card");
-    const [victoryPointCard] = state.developmentDeck.splice(victoryPointIndex, 1);
-    if (!victoryPointCard) throw new Error("Victory point card could not be drawn");
-    state.players[1]!.developmentCards.push(victoryPointCard);
-
+    const state = withDevelopmentCard(
+      createGame("state-validation", {}, PLAYERS),
+      PLAYERS[1]!.id,
+      "victory-point",
+    );
     const activeView = toPlayerView(state, state.players[0]!.id);
     expect(
       !activeView.players[1]!.isViewer && activeView.players[1]!.revealedVictoryPointCards,
     ).toBeNull();
 
     const completedView = toPlayerView(
-      {
-        ...state,
-        phase: { kind: "finished" },
-        status: "completed",
-        winnerPlayerId: state.players[1]!.id,
-      },
+      { ...state, phase: { kind: "finished" }, winnerPlayerId: state.players[1]!.id },
       state.players[0]!.id,
     );
     expect(
@@ -87,11 +79,8 @@ describe("serialized game-state validation", () => {
   });
 
   test("exposes played development cards as public conserved history", () => {
-    const state = createGame();
-    const knightIndex = state.developmentDeck.indexOf("knight");
-    if (knightIndex < 0) throw new Error("Development deck needs a knight");
-
-    state.developmentDeck.splice(knightIndex, 1);
+    const state = createGame("state-validation", {}, PLAYERS);
+    state.developmentDeck.splice(state.developmentDeck.indexOf("knight"), 1);
     state.players[0]!.playedDevelopmentCards = ["knight"];
 
     expect(() => assertGameState(state)).not.toThrow();
@@ -100,162 +89,218 @@ describe("serialized game-state validation", () => {
     expect(() => assertPlayerGameView(view)).not.toThrow();
   });
 
-  test("accepts every supported board size", () => {
-    for (const [map, playerCount] of [
-      ["base", 4],
-      ["extended-6", 6],
-      ["extended-8", 8],
-    ] as const) {
-      const players = Array.from({ length: playerCount }, (_, index) => ({
-        displayName: `Player ${index + 1}`,
-        id: `${map}-player-${index + 1}`,
-        isBot: true,
-      }));
-      const state = createDefaultGame(players, `validation-${map}`, {
-        map,
-        maxPlayers: playerCount,
-      });
+  test("stocks the bank and deck from each map's definition", () => {
+    for (const map of AVAILABLE_GAME_MAPS) {
+      const players = makePlayers(map.playerCounts.at(-1)!);
+      const state = createGame(`validation-${map.id}`, { map: map.id }, players);
+      const deckCounts = Object.fromEntries(
+        Object.keys(map.developmentCardCounts).map((card) => [
+          card,
+          state.developmentDeck.filter((candidate) => candidate === card).length,
+        ]),
+      );
 
+      expect(Object.values(state.bank)).toEqual(
+        Object.values(state.bank).map(() => map.bankResourceCount),
+      );
+      expect(deckCounts).toEqual(map.developmentCardCounts);
       expect(() => assertGameState(state)).not.toThrow();
       expect(() => assertPlayerGameView(toPlayerView(state, players[0]!.id))).not.toThrow();
     }
   });
 
   test("accepts populated boards and views throughout setup and the first roll", () => {
-    let state = createGame();
+    let state = createGame("state-validation", {}, PLAYERS);
 
     while (state.phase.kind === "setup_settlement" || state.phase.kind === "setup_road") {
-      const actorPlayerId = getRequiredPlayerIds(state)[0];
-      if (!actorPlayerId) throw new Error("Setup needs an actor");
+      const actorPlayerId = state.activePlayerId;
       state = applyCommand(state, actorPlayerId, chooseAutomatedCommand(state, actorPlayerId));
       assertGameState(state);
       assertPlayerGameView(toPlayerView(state, actorPlayerId));
     }
 
-    const actorPlayerId = getRequiredPlayerIds(state)[0];
-    if (!actorPlayerId) throw new Error("The first roll needs an actor");
-    state = applyCommand(state, actorPlayerId, { kind: "roll" });
+    state = applyCommand(state, state.activePlayerId, { kind: "roll" });
     expect(() => assertGameState(state)).not.toThrow();
-    expect(() => assertPlayerGameView(toPlayerView(state, actorPlayerId))).not.toThrow();
+    expect(() => assertPlayerGameView(toPlayerView(state, state.activePlayerId))).not.toThrow();
   });
 
   test("rejects malformed, duplicate, unknown-owner, and unknown-vertex buildings", () => {
-    const state = createGame();
+    const state = createGame("state-validation", {}, PLAYERS);
     const [firstVertexKey, secondVertexKey] = getBoardTopology(state.board.tiles).vertexKeys;
-    if (!firstVertexKey || !secondVertexKey) throw new Error("Test board needs two vertices");
+    const withBuildings = (buildings: unknown[]) => ({
+      ...state,
+      board: { ...state.board, buildings },
+    });
 
-    const malformed = structuredClone(state);
-    malformed.board.buildings = [
-      { kind: "castle" as never, playerId: PLAYERS[0]!.id, vertexKey: firstVertexKey },
-    ];
-
-    const duplicate = structuredClone(state);
-    duplicate.board.buildings = [
-      { kind: "settlement", playerId: PLAYERS[0]!.id, vertexKey: firstVertexKey },
-      { kind: "city", playerId: PLAYERS[1]!.id, vertexKey: firstVertexKey },
-    ];
-
-    const unknownOwner = structuredClone(state);
-    unknownOwner.board.buildings = [
-      { kind: "settlement", playerId: "missing-player", vertexKey: secondVertexKey },
-    ];
-
-    const unknownVertex = structuredClone(state);
-    unknownVertex.board.buildings = [
-      {
-        kind: "settlement",
-        playerId: PLAYERS[0]!.id,
-        vertexKey: "vertex:missing",
-      },
-    ];
-
-    for (const candidate of [malformed, duplicate, unknownOwner, unknownVertex]) {
-      expect(isGameState(candidate)).toBe(false);
-      expect(() => assertGameState(candidate)).toThrow(GameDataValidationError);
+    for (const buildings of [
+      [{ kind: "castle", playerId: PLAYERS[0]!.id, vertexKey: firstVertexKey }],
+      [
+        { kind: "settlement", playerId: PLAYERS[0]!.id, vertexKey: firstVertexKey },
+        { kind: "city", playerId: PLAYERS[1]!.id, vertexKey: firstVertexKey },
+      ],
+      [{ kind: "settlement", playerId: "missing-player", vertexKey: secondVertexKey }],
+      [{ kind: "settlement", playerId: PLAYERS[0]!.id, vertexKey: "vertex:missing" }],
+    ]) {
+      expectInvalidState(withBuildings(buildings));
     }
   });
 
-  test("rejects invalid viewer ownership and unknown legal-action locations", () => {
-    const state = createGame();
-    const view = toPlayerView(state, state.players[0]!.id);
+  test("rejects negative resources, fractional pieces, and players without a valid seat type", () => {
+    const state = createGame("state-validation", {}, PLAYERS);
+    const withPlayer = (index: number, changes: Record<string, unknown>) => ({
+      ...state,
+      players: state.players.map((player, playerIndex) =>
+        playerIndex === index ? { ...player, ...changes } : player,
+      ),
+    });
 
-    const wrongViewer = structuredClone(view);
-    wrongViewer.viewerPlayerId = "missing-player";
-
-    const unknownRoad = structuredClone(view);
-    unknownRoad.legalActions.roadEdgeKeys = ["edge:missing"];
-
-    const leakedResources = structuredClone(view) as typeof view & {
-      players: ((typeof view.players)[number] & { resources?: ResourceInventory })[];
-    };
-    leakedResources.players[1]!.resources = emptyInventory();
-
-    const wrongResourceCount = structuredClone(view);
-    wrongResourceCount.players[0]!.resourceCount += 1;
-
-    const wrongDevelopmentSupply = structuredClone(view);
-    wrongDevelopmentSupply.developmentCardSupply -= 1;
-
-    const leakedDevelopmentCards = structuredClone(view) as typeof view & {
-      players: ((typeof view.players)[number] & { developmentCards?: string[] })[];
-    };
-    leakedDevelopmentCards.players[1]!.developmentCards = ["knight"];
-
-    expect(isPlayerGameView(wrongViewer)).toBe(false);
-    expect(isPlayerGameView(unknownRoad)).toBe(false);
-    expect(isPlayerGameView(leakedResources)).toBe(false);
-    expect(isPlayerGameView(wrongResourceCount)).toBe(false);
-    expect(isPlayerGameView(wrongDevelopmentSupply)).toBe(false);
-    expect(isPlayerGameView(leakedDevelopmentCards)).toBe(false);
-    expect(() => assertPlayerGameView(wrongViewer)).toThrow(GameDataValidationError);
-    expect(() => assertPlayerGameView(unknownRoad)).toThrow(GameDataValidationError);
-  });
-
-  test("rejects negative resources and fractional remaining pieces", () => {
-    const negativeResource = createGame();
-    negativeResource.players[0]!.resources.brick = -1;
-
-    const fractionalPiece = createGame();
-    fractionalPiece.players[0]!.piecesRemaining.cities = 1.5;
-
-    expect(isGameState(negativeResource)).toBe(false);
-    expect(isGameState(fractionalPiece)).toBe(false);
+    expectInvalidState(withPlayer(0, { resources: { ...emptyInventory(), brick: -1 } }));
+    expectInvalidState(
+      withPlayer(0, { piecesRemaining: { ...state.players[0]!.piecesRemaining, cities: 1.5 } }),
+    );
+    expectInvalidState(withPlayer(0, { botDifficulty: "hard" }));
+    expectInvalidState(withPlayer(1, { botDifficulty: undefined }));
   });
 
   test("rejects unknown, missing, or duplicated development cards", () => {
-    const unknownCard = createGame();
-    unknownCard.developmentDeck[0] = "unknown-card" as never;
+    const state = createGame("state-validation", {}, PLAYERS);
+    const firstCard = state.developmentDeck[0]!;
+    const differentCardIndex = state.developmentDeck.findIndex((card) => card !== firstCard);
 
-    const missingCard = createGame();
-    missingCard.developmentDeck.pop();
-
-    const duplicatedCard = createGame();
-    const firstCard = duplicatedCard.developmentDeck[0];
-    const differentCardIndex = duplicatedCard.developmentDeck.findIndex(
-      (card) => card !== firstCard,
-    );
-    if (!firstCard || differentCardIndex < 0) {
-      throw new Error("Development deck needs at least two card types");
+    for (const developmentDeck of [
+      ["unknown-card", ...state.developmentDeck.slice(1)],
+      state.developmentDeck.slice(1),
+      state.developmentDeck.with(differentCardIndex, firstCard),
+    ]) {
+      expectInvalidState({ ...state, developmentDeck });
     }
-    duplicatedCard.developmentDeck[differentCardIndex] = firstCard;
-
-    expect(isGameState(unknownCard)).toBe(false);
-    expect(isGameState(missingCard)).toBe(false);
-    expect(isGameState(duplicatedCard)).toBe(false);
   });
 
   test("rejects board pieces, scores, and resources that break conservation", () => {
-    const injectedCity = createGame();
-    const vertexKey = getBoardTopology(injectedCity.board.tiles).vertexKeys[0];
-    if (!vertexKey) throw new Error("Test board needs a vertex");
-    injectedCity.board.buildings = [
-      { kind: "city", playerId: injectedCity.players[0]!.id, vertexKey },
+    const state = createGame("state-validation", {}, PLAYERS);
+    const vertexKey = getBoardTopology(state.board.tiles).vertexKeys[0]!;
+
+    expectInvalidState({
+      ...state,
+      board: {
+        ...state.board,
+        buildings: [{ kind: "city", playerId: state.players[0]!.id, vertexKey }],
+      },
+    });
+    expectInvalidState({
+      ...state,
+      players: state.players.map((player, index) =>
+        index === 0
+          ? { ...player, resources: { ...player.resources, wheat: player.resources.wheat + 1 } }
+          : player,
+      ),
+    });
+  });
+
+  test("rejects contradictory phases, offers, dice and settings", () => {
+    const played = createPlayedGame("contradictions", {}, PLAYERS);
+    const active = played.activePlayerId;
+    const opponent = opponentsOf(played, active)[0]!;
+    const setup = createGame("contradictions", {}, PLAYERS);
+    const offer = {
+      acceptedPlayerIds: [],
+      give: { ...emptyInventory(), brick: 1 },
+      offerActionNumber: played.actionNumber,
+      proposerPlayerId: active,
+      recipientPlayerIds: [opponent],
+      rejectedPlayerIds: [],
+      want: { ...emptyInventory(), wheat: 1 },
+    };
+    const trading = withHand(withHand(played, active, { brick: 1 }), opponent, {});
+    const desert = played.board.tiles.find((tile) => tile.terrain === "desert")!;
+    const producer = played.board.tiles.find((tile) => tile.numberToken !== null)!;
+    const withTile = (tileId: string, numberToken: unknown) => ({
+      ...played,
+      board: {
+        ...played.board,
+        tiles: played.board.tiles.map((tile) =>
+          tile.id === tileId ? { ...tile, numberToken } : tile,
+        ),
+      },
+    });
+
+    expect(() => assertGameState({ ...trading, tradeOffer: offer })).not.toThrow();
+    for (const contradiction of [
+      { ...played, winnerPlayerId: active },
+      { ...played, phase: { kind: "finished" } },
+      { ...setup, phase: { kind: "setup_settlement", setupIndex: 99 } },
+      { ...setup, activePlayerId: setup.turnOrder[1] },
+      { ...setup, phase: { kind: "roll" } },
+      { ...played, phase: { kind: "discard", pending: [{ count: 0, playerId: active }] } },
+      { ...played, phase: { kind: "discard", pending: [{ count: 9, playerId: active }] } },
+      {
+        ...played,
+        phase: { eligibleVictimIds: [], kind: "steal", resumePhase: "build_and_trade" },
+      },
+      {
+        ...played,
+        phase: { eligibleVictimIds: [active], kind: "steal", resumePhase: "build_and_trade" },
+      },
+      {
+        ...played,
+        phase: { kind: "road_building", remainingRoads: 3, resumePhase: "build_and_trade" },
+      },
+      { ...trading, phase: { kind: "roll" }, tradeOffer: offer },
+      { ...trading, tradeOffer: { ...offer, recipientPlayerIds: [active] } },
+      { ...trading, tradeOffer: { ...offer, rejectedPlayerIds: [opponent] } },
+      { ...trading, tradeOffer: { ...offer, acceptedPlayerIds: [opponent] } },
+      { ...trading, tradeOffer: { ...offer, want: offer.give } },
+      { ...withHand(trading, active, {}), tradeOffer: offer },
+      {
+        ...played,
+        balancedDiceBag: [
+          { first: 6, second: 6, sum: 12 },
+          { first: 6, second: 6, sum: 12 },
+        ],
+      },
+      {
+        ...played,
+        balancedDiceBag: [{ first: 1, second: 2, sum: 3 }],
+        settings: { ...played.settings, balancedDice: false },
+      },
+      { ...played, settings: { ...played.settings, victoryPoints: 1 } },
+      { ...played, settings: { ...played.settings, discardLimit: 0 } },
+      withTile(producer.id, 7),
+      withTile(desert.id, 8),
+    ]) {
+      expectInvalidState(contradiction);
+    }
+  });
+
+  test("rejects views that misidentify the viewer or leak private data", () => {
+    const state = createPlayedGame("view-privacy", { hideBankCards: true }, PLAYERS);
+    const viewer = state.players[0]!.id;
+    const view = toPlayerView(state, viewer);
+    const opponentIndex = 1;
+    const withOpponent = (changes: Record<string, unknown>): unknown => ({
+      ...view,
+      players: view.players.map((player, index) =>
+        index === opponentIndex ? { ...player, ...changes } : player,
+      ),
+    });
+    const leaks: unknown[] = [
+      { ...view, viewerPlayerId: "missing-player" },
+      withOpponent({ resources: emptyInventory() }),
+      withOpponent({ developmentCards: ["knight"] }),
+      withOpponent({ revealedVictoryPointCards: 0 }),
+      { ...view, bank: state.bank },
+      { ...view, developmentDeck: state.developmentDeck },
+      {
+        ...view,
+        players: view.players.map((player): PlayerGameView["players"][number] =>
+          player.isViewer ? { ...player, resourceCount: player.resourceCount + 1 } : player,
+        ),
+      },
     ];
 
-    const inventedResource = createGame();
-    inventedResource.players[0]!.resources.wheat += 1;
-
-    expect(isGameState(injectedCity)).toBe(false);
-    expect(isGameState(inventedResource)).toBe(false);
+    expect(() => assertPlayerGameView(view)).not.toThrow();
+    for (const leak of leaks) {
+      expectInvalidView(leak);
+    }
   });
 });

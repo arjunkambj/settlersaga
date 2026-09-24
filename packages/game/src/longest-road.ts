@@ -27,17 +27,13 @@ export function getLongestRoadLength(board: BoardState, playerId: PlayerId): num
 
     let longestLength = usedEdgeKeys.size;
 
-    for (const edgeKey of topology.vertexEdges[vertexKey] ?? []) {
+    for (const edgeKey of topology.vertexEdges[vertexKey]!) {
       if (!playerRoadEdgeKeys.has(edgeKey) || usedEdgeKeys.has(edgeKey)) {
         continue;
       }
 
-      const [firstVertexKey, secondVertexKey] = topology.edgeVertices[edgeKey] ?? [];
+      const [firstVertexKey, secondVertexKey] = topology.edgeVertices[edgeKey]!;
       const nextVertexKey = firstVertexKey === vertexKey ? secondVertexKey : firstVertexKey;
-      if (!nextVertexKey) {
-        continue;
-      }
-
       usedEdgeKeys.add(edgeKey);
       longestLength = Math.max(longestLength, visit(nextVertexKey, usedEdgeKeys));
       usedEdgeKeys.delete(edgeKey);
@@ -47,7 +43,7 @@ export function getLongestRoadLength(board: BoardState, playerId: PlayerId): num
   };
 
   const endpointKeys = new Set(
-    [...playerRoadEdgeKeys].flatMap((edgeKey) => topology.edgeVertices[edgeKey] ?? []),
+    [...playerRoadEdgeKeys].flatMap((edgeKey) => topology.edgeVertices[edgeKey]!),
   );
 
   let longestLength = 0;

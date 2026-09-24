@@ -1,225 +1,163 @@
 import { describe, expect, test } from "bun:test";
 
+import { NUMBER_TOKEN_PIPS, TERRAIN_RESOURCE } from "../src/constants";
 import {
   BUILD_COSTS,
   DEVELOPMENT_CARD_COST,
-  DEVELOPMENT_CARD_DECK,
-  GameRuleError,
+  GAME_SETTINGS_LIMITS,
   RESOURCE_TYPES,
-  SUPERHERO_BOT_NAMES,
   applyCommand,
   assertGameState,
+  assertPlayerGameView,
   chooseAutomatedCommand,
-  createDefaultGame,
-  distributeResourcesForRoll,
+  chooseFallbackCommand,
   emptyInventory,
   getBoardTopology,
   getLegalActions,
   getRequiredPlayerIds,
-  mapSupportsPlayerCount,
   toPlayerView,
-  type DevelopmentCardType,
+  type GameCommand,
+  type GamePlayerInput,
   type GameState,
   type ResourceInventory,
 } from "../src/index";
+import { reconcileLargestArmyAward } from "../src/largest-army";
+import { subtractResources } from "../src/resources";
+import { getSettlementVertexKeys } from "../src/rules";
+import type { BoardTopology } from "../src/topology";
+import type { PortDescriptor } from "../src/types";
+import {
+  boardPieces,
+  createGame,
+  createPlayedGame,
+  makePlayers,
+  opponentsOf,
+  playThroughSetup,
+  playerById,
+  ruleError,
+  surroundings,
+  withBoardPieces,
+  withCardsFromBank,
+  withDevelopmentCard,
+  withHand,
+  withNextRoll,
+} from "./helpers";
 
-const PLAYERS = Array.from({ length: 4 }, (_, index) => ({
-  botDifficulty: "hard" as const,
-  displayName: SUPERHERO_BOT_NAMES[index]!,
-  id: `player-${index + 1}`,
-  isBot: true,
-}));
+const HUMANS = makePlayers(4).map(
+  ({ displayName, id }): GamePlayerInput => ({ displayName, id, isBot: false }),
+);
 
-function createGame(seed: string) {
-  return createDefaultGame(PLAYERS, seed, {
-    maxPlayers: 4,
-    turnTimerSeconds: 0,
-    victoryPoints: 10,
+function handChange(before: GameState, after: GameState, playerId: string): ResourceInventory {
+  return subtractResources(
+    playerById(after, playerId).resources,
+    playerById(before, playerId).resources,
+  );
+}
+
+function tileAdjacentBuildings(state: GameState, topology: BoardTopology, tileId: string) {
+  const vertexKeys = topology.tileById[tileId]!.vertexKeys;
+  return state.board.buildings.filter((building) => vertexKeys.includes(building.vertexKey));
+}
+
+function withPlayedKnights(state: GameState, playerId: string, count: number): GameState {
+  let next = state;
+  for (let played = 0; played < count; played += 1) {
+    next = {
+      ...next,
+      developmentDeck: next.developmentDeck.toSpliced(next.developmentDeck.indexOf("knight"), 1),
+      players: next.players.map((player) =>
+        player.id === playerId
+          ? { ...player, playedDevelopmentCards: [...player.playedDevelopmentCards, "knight"] }
+          : player,
+      ),
+    };
+  }
+  return reconcileLargestArmyAward(next);
+}
+
+function playEntireGame(initial: GameState) {
+  let state = initial;
+  for (let step = 0; step < 5_000 && state.phase.kind !== "finished"; step += 1) {
+    const actorPlayerId = getRequiredPlayerIds(state)[0]!;
+    const command = chooseAutomatedCommand(state, actorPlayerId);
+    const previousActionNumber = state.actionNumber;
+    state = applyCommand(state, actorPlayerId, command);
+    expect(state.actionNumber).toBe(previousActionNumber + 1);
+    assertGameState(state);
+  }
+  return state;
+}
+
+describe("game creation", () => {
+  test("draws the turn order from the seed while seats stay in lobby order", () => {
+    const playerIds = makePlayers(4).map((player) => player.id);
+    const openingPlayers = new Set<string>();
+
+    for (let index = 0; index < 12; index += 1) {
+      const game = createGame(`turn-order-${index}`);
+
+      expect(game.players.map((player) => player.id)).toEqual(playerIds);
+      expect(game.players.map((player) => player.seatIndex)).toEqual([0, 1, 2, 3]);
+      expect(game.turnOrder.toSorted()).toEqual(playerIds);
+      expect(game.activePlayerId).toBe(game.turnOrder[0]!);
+      expect(createGame(`turn-order-${index}`).turnOrder).toEqual(game.turnOrder);
+      openingPlayers.add(game.activePlayerId);
+    }
+
+    expect(openingPlayers.size).toBeGreaterThan(1);
   });
-}
 
-function cityReadyState(ownerId = PLAYERS[0]!.id): { state: GameState; vertexKey: string } {
-  const state = createGame("city-upgrade");
-  const vertexKey = getBoardTopology(state.board.tiles).vertexKeys[0]!;
-  const resources = { ...BUILD_COSTS.city };
+  test("rejects settings outside the shared limits and maps too small for the table", () => {
+    const { discardLimit, victoryPoints } = GAME_SETTINGS_LIMITS;
 
-  return {
-    state: {
-      ...state,
-      activePlayerId: PLAYERS[0]!.id,
-      bank: RESOURCE_TYPES.reduce<ResourceInventory>(
-        (bank, resource) => {
-          bank[resource] -= resources[resource];
-          return bank;
-        },
-        { ...state.bank },
-      ),
-      board: {
-        ...state.board,
-        buildings: [{ kind: "settlement", playerId: ownerId, vertexKey }],
-      },
-      phase: { kind: "build_and_trade" },
-      players: state.players.map((player) =>
-        player.id === PLAYERS[0]!.id
-          ? {
-              ...player,
-              piecesRemaining: { ...player.piecesRemaining, settlements: 4 },
-              resources,
-              victoryPoints: ownerId === player.id ? 1 : 0,
-            }
-          : player.id === ownerId
-            ? {
-                ...player,
-                piecesRemaining: { ...player.piecesRemaining, settlements: 4 },
-                victoryPoints: 1,
-              }
-            : player,
-      ),
-      turnNumber: 1,
-    },
-    vertexKey,
-  };
-}
-
-function developmentCardReadyState(seed = "development-card-purchase"): GameState {
-  const state = createGame(seed);
-  return {
-    ...state,
-    activePlayerId: PLAYERS[0]!.id,
-    bank: RESOURCE_TYPES.reduce<ResourceInventory>(
-      (bank, resource) => {
-        bank[resource] -= DEVELOPMENT_CARD_COST[resource];
-        return bank;
-      },
-      { ...state.bank },
-    ),
-    phase: { kind: "build_and_trade" },
-    players: state.players.map((player) =>
-      player.id === PLAYERS[0]!.id
-        ? { ...player, resources: { ...DEVELOPMENT_CARD_COST } }
-        : player,
-    ),
-    turnNumber: 1,
-  };
-}
-
-function giveDevelopmentCard(
-  state: GameState,
-  playerId: string,
-  card: DevelopmentCardType,
-): GameState {
-  const developmentDeck = [...state.developmentDeck];
-  const cardIndex = developmentDeck.indexOf(card);
-  if (cardIndex < 0) throw new Error(`Development deck needs a ${card} card`);
-  developmentDeck.splice(cardIndex, 1);
-
-  return {
-    ...state,
-    developmentDeck,
-    players: state.players.map((player) =>
-      player.id === playerId
-        ? { ...player, developmentCards: [...player.developmentCards, card] }
-        : player,
-    ),
-  };
-}
-
-function expectRuleError(action: () => unknown, code: GameRuleError["code"]) {
-  try {
-    action();
-    throw new Error(`Expected ${code}`);
-  } catch (error) {
-    expect(error).toBeInstanceOf(GameRuleError);
-    expect((error as GameRuleError).code).toBe(code);
-  }
-}
-
-function expectConservedState(state: GameState) {
-  const occupiedVertices = new Set<string>();
-  for (const building of state.board.buildings) {
-    expect(occupiedVertices.has(building.vertexKey)).toBe(false);
-    occupiedVertices.add(building.vertexKey);
-  }
-
-  const occupiedEdges = new Set<string>();
-  for (const road of state.board.roads) {
-    expect(occupiedEdges.has(road.edgeKey)).toBe(false);
-    occupiedEdges.add(road.edgeKey);
-  }
-
-  for (const player of state.players) {
-    const buildings = state.board.buildings.filter((building) => building.playerId === player.id);
-    const settlementCount = buildings.filter((building) => building.kind === "settlement").length;
-    const cityCount = buildings.filter((building) => building.kind === "city").length;
-    const roadCount = state.board.roads.filter((road) => road.playerId === player.id).length;
-
-    expect(player.piecesRemaining.settlements + settlementCount).toBe(5);
-    expect(player.piecesRemaining.cities + cityCount).toBe(4);
-    expect(player.piecesRemaining.roads + roadCount).toBe(15);
-    expect(player.victoryPoints).toBe(
-      settlementCount +
-        cityCount * 2 +
-        (state.largestArmyPlayerId === player.id ? 2 : 0) +
-        (state.longestRoadPlayerId === player.id ? 2 : 0),
+    for (const settings of [
+      { victoryPoints: victoryPoints.min - 1 },
+      { victoryPoints: victoryPoints.max + 1 },
+      { discardLimit: discardLimit.min - 1 },
+      { discardLimit: discardLimit.max + 1 },
+    ]) {
+      expect(() => createGame("invalid-settings", settings)).toThrow(ruleError("INVALID_SETTINGS"));
+    }
+    expect(() => createGame("crowded-map", { map: "base" }, makePlayers(5))).toThrow(
+      ruleError("INVALID_SETTINGS"),
     );
-  }
-
-  for (const resource of RESOURCE_TYPES) {
-    const playerCards = state.players.reduce(
-      (total, player) => total + player.resources[resource],
-      0,
-    );
-    expect(state.bank[resource] + playerCards).toBe(19);
-  }
-
-  expect(
-    [
-      ...state.developmentDeck,
-      ...state.players.flatMap((player) => player.developmentCards),
-      ...state.players.flatMap((player) => player.playedDevelopmentCards),
-    ].toSorted(),
-  ).toEqual([...DEVELOPMENT_CARD_DECK].toSorted());
-}
+  });
+});
 
 describe("opening setup", () => {
-  test("does not allow a roll while any player is missing opening placements", () => {
-    const created = createGame("incomplete-opening-roll");
-    const firstPlayerId = created.activePlayerId;
-    const settlementVertexKey = getLegalActions(created, firstPlayerId).settlementVertexKeys[0];
-    if (!settlementVertexKey) throw new Error("Opening setup needs a settlement location");
+  test("snakes through the turn order and pays the second settlement's neighbouring tiles", () => {
+    let state = createGame("snake-order");
+    const topology = getBoardTopology(state.board.tiles);
+    const settlers: string[] = [];
 
-    const withSettlement = applyCommand(created, firstPlayerId, {
-      kind: "place_settlement",
-      vertexKey: settlementVertexKey,
-    });
-    const roadEdgeKey = getLegalActions(withSettlement, firstPlayerId).roadEdgeKeys[0];
-    if (!roadEdgeKey) throw new Error("Opening setup needs a road location");
+    while (state.phase.kind === "setup_settlement" || state.phase.kind === "setup_road") {
+      const actorPlayerId = state.activePlayerId;
+      const command = chooseAutomatedCommand(state, actorPlayerId);
+      const next = applyCommand(state, actorPlayerId, command);
 
-    const partialSetup = applyCommand(withSettlement, firstPlayerId, {
-      edgeKey: roadEdgeKey,
-      kind: "place_road",
-    });
-    const inconsistentRollState: GameState = {
-      ...partialSetup,
-      activePlayerId: firstPlayerId,
-      phase: { kind: "roll" },
-    };
+      if (command.kind === "place_settlement") {
+        const expected = emptyInventory();
+        if (settlers.includes(actorPlayerId)) {
+          for (const tileId of topology.vertexTileIds[command.vertexKey]!) {
+            const tile = state.board.tiles.find((candidate) => candidate.id === tileId)!;
+            const resource = TERRAIN_RESOURCE[tile.terrain];
+            if (resource) expected[resource] += 1;
+          }
+        }
+        settlers.push(actorPlayerId);
+        expect(handChange(state, next, actorPlayerId)).toEqual(expected);
+      }
+      state = next;
+    }
 
-    expect(getLegalActions(inconsistentRollState, firstPlayerId).canRoll).toBe(false);
-    expectRuleError(
-      () => applyCommand(inconsistentRollState, firstPlayerId, { kind: "roll" }),
-      "INVALID_PHASE",
-    );
+    expect(settlers).toEqual([...state.turnOrder, ...state.turnOrder.toReversed()]);
+    expect(state.phase).toEqual({ kind: "roll" });
+    expect(state.activePlayerId).toBe(state.turnOrder[0]!);
+    assertGameState(state);
   });
 
   test("allows the first roll only after every player completes opening setup", () => {
-    let state = createGame("complete-opening-roll");
-
-    while (state.phase.kind === "setup_settlement" || state.phase.kind === "setup_road") {
-      const actorPlayerId = getRequiredPlayerIds(state)[0];
-      if (!actorPlayerId) throw new Error("Opening setup needs an actor");
-      state = applyCommand(state, actorPlayerId, chooseAutomatedCommand(state, actorPlayerId));
-    }
+    const state = playThroughSetup(createGame("complete-opening-roll"));
 
     for (const player of state.players) {
       expect(
@@ -232,326 +170,702 @@ describe("opening setup", () => {
   });
 });
 
-describe("city upgrades", () => {
-  test("a bot upgrades only its persisted settlement and pays the full cost", () => {
-    const { state, vertexKey } = cityReadyState();
+describe("rolling", () => {
+  test("a seven makes only hands over the discard limit discard half, rounded down", () => {
+    const played = createPlayedGame("discard-on-seven");
+    const roller = played.turnOrder[0]!;
+    const largeHand = played.turnOrder[1]!;
+    const limitHand = played.turnOrder[2]!;
+    const smallHand = played.turnOrder[3]!;
+    const hands = withHand(
+      withHand(
+        withHand(
+          withHand(played, roller, { brick: 3, sheep: 2, stone: 2, tree: 1, wheat: 1 }),
+          largeHand,
+          { brick: 2, sheep: 2, stone: 2, tree: 2 },
+        ),
+        limitHand,
+        { wheat: 7 },
+      ),
+      smallHand,
+      { tree: 3 },
+    );
 
-    expect(chooseAutomatedCommand(state, PLAYERS[0]!.id)).toEqual({
-      kind: "build_city",
-      vertexKey,
+    const rolled = applyCommand(withNextRoll(hands, 7), roller, { kind: "roll" });
+
+    expect(rolled.lastDiceRoll?.sum).toBe(7);
+    expect(getRequiredPlayerIds(rolled).toSorted()).toEqual([roller, largeHand].toSorted());
+    expect(getLegalActions(rolled, roller).discardCount).toBe(4);
+    expect(getLegalActions(rolled, largeHand).discardCount).toBe(4);
+    expect(getLegalActions(rolled, limitHand).discardCount).toBeNull();
+    expect(() =>
+      applyCommand(rolled, roller, {
+        kind: "discard",
+        resources: { ...emptyInventory(), brick: 3 },
+      }),
+    ).toThrow(ruleError("INVALID_DISCARD"));
+
+    const rollerDiscarded = applyCommand(rolled, roller, {
+      kind: "discard",
+      resources: { ...emptyInventory(), brick: 3, sheep: 1 },
     });
+    expect(getRequiredPlayerIds(rollerDiscarded)).toEqual([largeHand]);
 
-    const next = applyCommand(state, PLAYERS[0]!.id, { kind: "build_city", vertexKey });
-    const player = next.players[0]!;
-
-    expect(next.board.buildings).toEqual([{ kind: "city", playerId: PLAYERS[0]!.id, vertexKey }]);
-    expect(player.resources).toEqual(emptyInventory());
-    expect(player.piecesRemaining).toEqual({ cities: 3, roads: 15, settlements: 5 });
-    expect(player.victoryPoints).toBe(2);
-    expectConservedState(next);
+    const allDiscarded = applyCommand(rollerDiscarded, largeHand, {
+      kind: "discard",
+      resources: { ...emptyInventory(), stone: 2, tree: 2 },
+    });
+    expect(allDiscarded.phase).toEqual({ kind: "move_robber", resumePhase: "build_and_trade" });
+    expect(playerById(allDiscarded, largeHand).resources).toEqual({
+      ...emptyInventory(),
+      brick: 2,
+      sheep: 2,
+    });
+    assertGameState(allDiscarded);
   });
 
-  test("an empty vertex or an opponent settlement cannot become a city", () => {
-    const empty = cityReadyState();
-    empty.state.board.buildings = [];
-    empty.state.players[0]!.piecesRemaining.settlements = 5;
-    empty.state.players[0]!.victoryPoints = 0;
+  test("a short bank pays nobody when several players are owed, but pays out a lone claimant", () => {
+    const base = createPlayedGame("bank-shortage");
+    const roller = base.activePlayerId;
+    const claims = [2, 3, 4, 5, 6, 8, 9, 10, 11, 12].flatMap((sum) => {
+      const rolled = applyCommand(withNextRoll(base, sum), roller, { kind: "roll" });
+      return RESOURCE_TYPES.map((resource) => ({
+        owed: base.players.map((player) => handChange(base, rolled, player.id)[resource]),
+        resource,
+        sum,
+      }));
+    });
+    const rollWithBankHolding = (claim: (typeof claims)[number], remaining: number) => {
+      const drained = withCardsFromBank(base, roller, {
+        [claim.resource]: base.bank[claim.resource] - remaining,
+      });
+      const rolled = applyCommand(withNextRoll(drained, claim.sum), roller, { kind: "roll" });
+      assertGameState(rolled);
+      return drained.players.map(
+        (player) => handChange(drained, rolled, player.id)[claim.resource],
+      );
+    };
+    const shared = claims.find(({ owed }) => owed.filter((count) => count > 0).length > 1)!;
+    const lone = claims.find(
+      ({ owed }) => owed.filter((count) => count > 0).length === 1 && Math.max(...owed) > 1,
+    )!;
+    const loneTotal = Math.max(...lone.owed);
 
-    expectRuleError(
-      () =>
-        applyCommand(empty.state, PLAYERS[0]!.id, {
-          kind: "build_city",
-          vertexKey: empty.vertexKey,
-        }),
-      "INVALID_LOCATION",
+    expect(rollWithBankHolding(shared, 1)).toEqual(shared.owed.map(() => 0));
+    expect(rollWithBankHolding(lone, loneTotal - 1)).toEqual(
+      lone.owed.map((count) => (count > 0 ? loneTotal - 1 : 0)),
     );
+  });
 
-    const opponent = cityReadyState(PLAYERS[1]!.id);
-    expectRuleError(
-      () =>
-        applyCommand(opponent.state, PLAYERS[0]!.id, {
-          kind: "build_city",
-          vertexKey: opponent.vertexKey,
-        }),
-      "INVALID_LOCATION",
-    );
+  test("balanced dice draw from the bag and reshuffle once 5 rolls are left", () => {
+    const played = createPlayedGame("balanced-dice-reshuffle");
+    const roller = played.activePlayerId;
+    const stacked = withNextRoll(played, 8);
+    const sixLeft = { ...stacked, balancedDiceBag: stacked.balancedDiceBag.slice(0, 6) };
+
+    const drawn = applyCommand(sixLeft, roller, { kind: "roll" });
+    expect(drawn.lastDiceRoll).toEqual(sixLeft.balancedDiceBag[0]!);
+    expect(drawn.balancedDiceBag).toEqual(sixLeft.balancedDiceBag.slice(1));
+    expect(drawn.randomIndex).toBe(sixLeft.randomIndex);
+
+    const reshuffled = applyCommand({ ...drawn, phase: { kind: "roll" } }, roller, {
+      kind: "roll",
+    });
+    expect(reshuffled.balancedDiceBag).toHaveLength(35);
+    expect(reshuffled.randomIndex).toBe(drawn.randomIndex + 35);
+  });
+
+  test("the robber's tile produces nothing", () => {
+    const base = createPlayedGame("robber-production-block");
+    const topology = getBoardTopology(base.board.tiles);
+    const tile = base.board.tiles.find(
+      (candidate) =>
+        candidate.numberToken !== null &&
+        candidate.id !== base.board.robberTileId &&
+        tileAdjacentBuildings(base, topology, candidate.id).length > 0,
+    )!;
+    const resource = TERRAIN_RESOURCE[tile.terrain]!;
+    const rollTile = (state: GameState) =>
+      applyCommand(withNextRoll(state, tile.numberToken!), state.activePlayerId, { kind: "roll" });
+    const open = rollTile(base);
+    const blocked = rollTile({ ...base, board: { ...base.board, robberTileId: tile.id } });
+
+    for (const player of base.players) {
+      const buildingsOnTile = tileAdjacentBuildings(base, topology, tile.id).filter(
+        (building) => building.playerId === player.id,
+      ).length;
+      expect(
+        handChange(base, open, player.id)[resource] -
+          handChange(base, blocked, player.id)[resource],
+      ).toBe(buildingsOnTile);
+    }
   });
 });
 
-describe("development card purchases", () => {
-  test("draws the deterministic top card, pays the bank, and updates legal actions", () => {
-    const state = developmentCardReadyState();
-    const playerId = PLAYERS[0]!.id;
-    const topCard = state.developmentDeck[0];
-    if (!topCard) throw new Error("Development deck must not be empty");
+describe("building", () => {
+  test("a settlement must keep its distance and connect to the player's roads", () => {
+    const played = createPlayedGame("settlement-placement");
+    const builder = played.activePlayerId;
+    const state = withHand(played, builder, BUILD_COSTS.settlement);
+    const topology = getBoardTopology(state.board.tiles);
+    const ownSettlement = boardPieces(state)[builder]!.settlements[0]!;
+    const crowdedVertexKey = topology.vertexNeighbors[ownSettlement]![0]!;
+    const legalVertexKeys = getLegalActions(state, builder).settlementVertexKeys;
+    const unconnectedVertexKey = getSettlementVertexKeys(state, builder, false).find(
+      (vertexKey) => !legalVertexKeys.includes(vertexKey),
+    )!;
 
-    expect(getLegalActions(state, playerId).canBuyDevelopmentCard).toBe(true);
-    const next = applyCommand(state, playerId, { kind: "buy_development_card" });
+    expect(() =>
+      applyCommand(state, builder, { kind: "place_settlement", vertexKey: crowdedVertexKey }),
+    ).toThrow(ruleError("DISTANCE_RULE"));
+    expect(() =>
+      applyCommand(state, builder, { kind: "place_settlement", vertexKey: unconnectedVertexKey }),
+    ).toThrow(ruleError("ROAD_NOT_CONNECTED"));
+  });
+
+  test("a road cannot continue through an opponent's settlement", () => {
+    const played = createPlayedGame("blocked-road");
+    const builder = played.activePlayerId;
+    const rival = opponentsOf(played, builder)[0]!;
+    const topology = getBoardTopology(played.board.tiles);
+    const pieces = boardPieces(played);
+    const occupied = surroundings(
+      topology,
+      played.board.buildings.map((building) => building.vertexKey),
+    );
+    const roadedEdgeKeys = new Set(played.board.roads.map((road) => road.edgeKey));
+    const extension = pieces[builder]!.roads.flatMap((roadEdgeKey) =>
+      topology.edgeVertices[roadEdgeKey]!.flatMap((junction) =>
+        topology.vertexEdges[junction]!.map((edgeKey) => ({
+          edgeKey,
+          outpost: topology.edgeVertices[edgeKey]!.find((vertexKey) => vertexKey !== junction)!,
+        })),
+      ),
+    ).find(({ edgeKey, outpost }) => !roadedEdgeKeys.has(edgeKey) && !occupied.has(outpost))!;
+    const blockedEdgeKey = topology.vertexEdges[extension.outpost]!.find(
+      (edgeKey) => edgeKey !== extension.edgeKey && !roadedEdgeKeys.has(edgeKey),
+    )!;
+    const state = withHand(
+      withBoardPieces(played, {
+        ...pieces,
+        [builder]: { ...pieces[builder]!, roads: [...pieces[builder]!.roads, extension.edgeKey] },
+        [rival]: {
+          ...pieces[rival]!,
+          settlements: [...pieces[rival]!.settlements, extension.outpost],
+        },
+      }),
+      builder,
+      BUILD_COSTS.road,
+    );
+    assertGameState(state);
+
+    expect(getLegalActions(state, builder).roadEdgeKeys).not.toContain(blockedEdgeKey);
+    expect(() =>
+      applyCommand(state, builder, { edgeKey: blockedEdgeKey, kind: "place_road" }),
+    ).toThrow(ruleError("ROAD_NOT_CONNECTED"));
+  });
+
+  test("a player with no settlements left cannot place another", () => {
+    const played = createPlayedGame("out-of-settlements");
+    const builder = played.activePlayerId;
+    let state = played;
+    for (let added = 0; added < 3; added += 1) {
+      const pieces = boardPieces(state);
+      const vertexKey = getSettlementVertexKeys(state, builder, false)[0]!;
+      state = withBoardPieces(state, {
+        ...pieces,
+        [builder]: {
+          ...pieces[builder]!,
+          settlements: [...pieces[builder]!.settlements, vertexKey],
+        },
+      });
+    }
+    state = withHand(state, builder, BUILD_COSTS.settlement);
+    assertGameState(state);
+
+    expect(getLegalActions(state, builder).settlementVertexKeys).toEqual([]);
+    expect(() =>
+      applyCommand(state, builder, {
+        kind: "place_settlement",
+        vertexKey: getSettlementVertexKeys(state, builder, false)[0]!,
+      }),
+    ).toThrow(ruleError("NO_PIECE_AVAILABLE"));
+  });
+
+  test("a bot upgrades one of its own settlements and pays the full city cost", () => {
+    const played = createPlayedGame("city-upgrade");
+    const builder = played.activePlayerId;
+    const state = withHand(played, builder, BUILD_COSTS.city);
+    const command = chooseAutomatedCommand(state, builder);
+    if (command.kind !== "build_city") throw new Error(`Expected a city, got ${command.kind}`);
+
+    const next = applyCommand(state, builder, command);
+
+    expect(next.board.buildings).toContainEqual({
+      kind: "city",
+      playerId: builder,
+      vertexKey: command.vertexKey,
+    });
+    expect(playerById(next, builder)).toMatchObject({
+      piecesRemaining: { cities: 3, roads: 13, settlements: 4 },
+      resources: emptyInventory(),
+      victoryPoints: playerById(state, builder).victoryPoints + 1,
+    });
+    assertGameState(next);
+  });
+
+  test("an empty vertex or an opponent's settlement cannot become a city", () => {
+    const played = createPlayedGame("invalid-city");
+    const builder = played.activePlayerId;
+    const state = withHand(played, builder, BUILD_COSTS.city);
+    const opponentSettlement = boardPieces(state)[opponentsOf(state, builder)[0]!]!.settlements[0]!;
+    const emptyVertexKey = getSettlementVertexKeys(state, builder, false)[0]!;
+
+    for (const vertexKey of [emptyVertexKey, opponentSettlement]) {
+      expect(() => applyCommand(state, builder, { kind: "build_city", vertexKey })).toThrow(
+        ruleError("INVALID_LOCATION"),
+      );
+    }
+  });
+});
+
+describe("bank trades", () => {
+  test("harbours lower the rate from 4:1 to 3:1, and to 2:1 for their resource", () => {
+    const played = createPlayedGame("harbour-rates");
+    const trader = played.activePlayerId;
+    const topology = getBoardTopology(played.board.tiles);
+    const occupied = surroundings(
+      topology,
+      played.board.buildings.map((building) => building.vertexKey),
+    );
+    const freeHarbourVertex = (port: PortDescriptor) =>
+      topology.edgeVertices[port.edgeKey]!.find((vertexKey) => !occupied.has(vertexKey));
+    const genericPort = played.board.ports.find(
+      (port) => port.trade === "any" && freeHarbourVertex(port),
+    )!;
+    const resourcePort = played.board.ports.find(
+      (port) =>
+        port.trade !== "any" &&
+        freeHarbourVertex(port) &&
+        !surroundings(topology, [freeHarbourVertex(genericPort)!]).has(freeHarbourVertex(port)!),
+    )!;
+    const withHarbours = (ports: readonly PortDescriptor[]) => {
+      const pieces = boardPieces(played);
+      return withHand(
+        withBoardPieces(played, {
+          ...pieces,
+          [trader]: {
+            ...pieces[trader]!,
+            settlements: [
+              ...pieces[trader]!.settlements,
+              ...ports.map((port) => freeHarbourVertex(port)!),
+            ],
+          },
+        }),
+        trader,
+        { brick: 4, sheep: 4, stone: 4, tree: 4, wheat: 4 },
+      );
+    };
+    const ratios = (state: GameState) =>
+      Object.fromEntries(
+        getLegalActions(state, trader).bankTrades.map((trade) => [trade.give, trade.ratio]),
+      );
+    const expectedRatios = (ratio: number) =>
+      Object.fromEntries(RESOURCE_TYPES.map((resource) => [resource, ratio]));
+
+    expect(ratios(withHarbours([]))).toEqual(expectedRatios(4));
+    expect(ratios(withHarbours([genericPort]))).toEqual(expectedRatios(3));
+
+    const bothHarbours = withHarbours([genericPort, resourcePort]);
+    const harbourResource = resourcePort.trade;
+    if (harbourResource === "any") throw new Error("Expected a resource harbour");
+    expect(ratios(bothHarbours)).toEqual({ ...expectedRatios(3), [harbourResource]: 2 });
+
+    const receive = RESOURCE_TYPES.find((resource) => resource !== harbourResource)!;
+    const traded = applyCommand(bothHarbours, trader, {
+      give: harbourResource,
+      kind: "trade_bank",
+      receive,
+    });
+    expect(handChange(bothHarbours, traded, trader)).toEqual({
+      ...emptyInventory(),
+      [harbourResource]: -2,
+      [receive]: 1,
+    });
+    assertGameState(traded);
+  });
+
+  test("a hidden bank does not reveal an exhausted resource through legal actions", () => {
+    const played = createPlayedGame("hidden-bank", { hideBankCards: true });
+    const trader = played.activePlayerId;
+    const hoarder = opponentsOf(played, trader)[0]!;
+    const state = withCardsFromBank(withHand(played, trader, { wheat: 4 }), hoarder, {
+      brick: played.bank.brick + playerById(played, trader).resources.brick,
+    });
+    const receivesBrick = { give: "wheat", receive: "brick" };
+
+    expect(state.bank.brick).toBe(0);
+    expect(toPlayerView(state, trader).legalActions.bankTrades).toContainEqual(
+      expect.objectContaining(receivesBrick),
+    );
+    expect(getLegalActions(state, trader).bankTrades).not.toContainEqual(
+      expect.objectContaining(receivesBrick),
+    );
+    expect(() =>
+      applyCommand(state, trader, { give: "wheat", kind: "trade_bank", receive: "brick" }),
+    ).toThrow(ruleError("BANK_OUT_OF_RESOURCE"));
+  });
+});
+
+describe("player trades", () => {
+  function tradeTable(seed: string) {
+    const played = createPlayedGame(seed);
+    const proposer = played.turnOrder[0]!;
+    const first = played.turnOrder[1]!;
+    const second = played.turnOrder[2]!;
+    const third = played.turnOrder[3]!;
+    const state = withHand(
+      withHand(
+        withHand(withHand(played, proposer, { stone: 3, wheat: 2 }), first, { wheat: 1 }),
+        second,
+        {
+          wheat: 2,
+        },
+      ),
+      third,
+      {},
+    );
+    const propose = (recipientPlayerIds: string[]): GameState =>
+      applyCommand(state, proposer, {
+        give: { ...emptyInventory(), stone: 1 },
+        kind: "propose_trade",
+        recipientPlayerIds,
+        want: { ...emptyInventory(), wheat: 1 },
+      });
+    return { first, propose, proposer, second, state, third };
+  }
+
+  function respond(state: GameState, playerId: string, accept: boolean): GameState {
+    return applyCommand(state, playerId, {
+      accept,
+      kind: "respond_trade",
+      offerActionNumber: state.tradeOffer!.offerActionNumber,
+    });
+  }
+
+  test("a trade waits for the proposer to confirm one of the players who accepted", () => {
+    const { first, propose, proposer, second, state, third } = tradeTable("confirmed-trade");
+    const proposed = propose([first, second, third]);
+    const offerActionNumber = proposed.tradeOffer!.offerActionNumber;
+
+    const firstAccepted = respond(proposed, first, true);
+    expect(firstAccepted.players).toEqual(proposed.players);
+    expect(getRequiredPlayerIds(firstAccepted)).toEqual([proposer, second, third]);
+    expect(getLegalActions(firstAccepted, first).canRespondToTrade).toBe(false);
+
+    const responded = respond(respond(firstAccepted, second, true), third, false);
+    expect(responded.tradeOffer).toMatchObject({
+      acceptedPlayerIds: [first, second],
+      rejectedPlayerIds: [third],
+    });
+    expect(getRequiredPlayerIds(responded)).toEqual([proposer]);
+    expect(getLegalActions(responded, proposer).tradePartnerPlayerIds).toEqual([first, second]);
+    for (const viewerPlayerId of state.turnOrder) {
+      const view = toPlayerView(responded, viewerPlayerId);
+      expect(view.tradeOffer).toEqual(responded.tradeOffer);
+      assertPlayerGameView(view);
+    }
+    expect(() =>
+      applyCommand(responded, proposer, {
+        kind: "confirm_trade",
+        offerActionNumber,
+        partnerPlayerId: third,
+      }),
+    ).toThrow(ruleError("INVALID_TRADE"));
+
+    const traded = applyCommand(responded, proposer, {
+      kind: "confirm_trade",
+      offerActionNumber,
+      partnerPlayerId: second,
+    });
+
+    expect(traded.tradeOffer).toBeNull();
+    expect(handChange(responded, traded, proposer)).toEqual({
+      ...emptyInventory(),
+      stone: -1,
+      wheat: 1,
+    });
+    expect(handChange(responded, traded, second)).toEqual({
+      ...emptyInventory(),
+      stone: 1,
+      wheat: -1,
+    });
+    expect(handChange(responded, traded, first)).toEqual(emptyInventory());
+    assertGameState(traded);
+  });
+
+  test("an offer closes when everyone declines, it is cancelled, the turn ends, or the proposer spends the cards", () => {
+    const { first, propose, proposer, second } = tradeTable("closed-trade");
+    const proposed = propose([first, second]);
+    const offerActionNumber = proposed.tradeOffer!.offerActionNumber;
+    const cityVertexKey = boardPieces(proposed)[proposer]!.settlements[0]!;
+    const closings: GameCommand[] = [
+      { kind: "cancel_trade", offerActionNumber },
+      { kind: "end_turn" },
+      { kind: "build_city", vertexKey: cityVertexKey },
+    ];
+
+    expect(respond(respond(proposed, first, false), second, false).tradeOffer).toBeNull();
+    for (const command of closings) {
+      const closed = applyCommand(proposed, proposer, command);
+      expect(closed.tradeOffer).toBeNull();
+      assertGameState(closed);
+    }
+  });
+
+  test("an offer must be affordable and cannot trade a resource for itself", () => {
+    const { first, propose, proposer, state, third } = tradeTable("invalid-trade");
+
+    expect(() => respond(propose([third]), third, true)).toThrow(
+      ruleError("INSUFFICIENT_RESOURCES"),
+    );
+    expect(() => respond(propose([first]), first, true)).not.toThrow();
+    expect(() =>
+      applyCommand(state, proposer, {
+        give: { ...emptyInventory(), stone: 1 },
+        kind: "propose_trade",
+        recipientPlayerIds: [first],
+        want: { ...emptyInventory(), stone: 1, wheat: 1 },
+      }),
+    ).toThrow(ruleError("INVALID_TRADE"));
+  });
+});
+
+describe("development cards", () => {
+  test("draws the deterministic top card, pays the bank, and hides it from opponents", () => {
+    const played = createPlayedGame("development-card-purchase");
+    const buyer = played.activePlayerId;
+    const state = withHand(played, buyer, DEVELOPMENT_CARD_COST);
+    const topCard = state.developmentDeck[0]!;
+
+    expect(getLegalActions(state, buyer).canBuyDevelopmentCard).toBe(true);
+    const next = applyCommand(state, buyer, { kind: "buy_development_card" });
 
     expect(next.developmentDeck).toEqual(state.developmentDeck.slice(1));
-    expect(next.players[0]!.developmentCards).toEqual([topCard]);
-    expect(next.players[0]!.resources).toEqual(emptyInventory());
-    expect(next.bank).toEqual(createGame("development-card-purchase").bank);
-    expect(getLegalActions(next, playerId).canBuyDevelopmentCard).toBe(false);
-    const buyerView = toPlayerView(next, playerId);
-    const opponentView = toPlayerView(next, PLAYERS[1]!.id);
-    expect(buyerView.developmentCardSupply).toBe(24);
-    expect(buyerView.players[0]!.isViewer && buyerView.players[0]!.developmentCards).toEqual([
-      topCard,
-    ]);
-    expect(
-      !opponentView.players[0]!.isViewer && opponentView.players[0]!.developmentCardCount,
-    ).toBe(1);
-    expect("developmentCards" in opponentView.players[0]!).toBe(false);
-    expectConservedState(next);
+    expect(playerById(next, buyer).developmentCards).toEqual([topCard]);
+    expect(playerById(next, buyer).resources).toEqual(emptyInventory());
+    expect(getLegalActions(next, buyer).canBuyDevelopmentCard).toBe(false);
+    const opponentView = toPlayerView(next, opponentsOf(next, buyer)[0]!);
+    const buyerAsSeenByOpponent = opponentView.players.find((player) => player.id === buyer)!;
+    expect(opponentView.developmentCardSupply).toBe(state.developmentDeck.length - 1);
+    expect(buyerAsSeenByOpponent).toMatchObject({ developmentCardCount: 1, isViewer: false });
+    expect("developmentCards" in buyerAsSeenByOpponent).toBe(false);
+    assertGameState(next);
   });
 
   test("rejects an unaffordable purchase, an empty supply, and the wrong phase", () => {
-    const ready = developmentCardReadyState();
-    const playerId = PLAYERS[0]!.id;
-    const unaffordable: GameState = {
-      ...ready,
-      bank: { ...ready.bank, sheep: ready.bank.sheep + 1 },
-      players: ready.players.map((player) =>
-        player.id === playerId
-          ? { ...player, resources: { ...player.resources, sheep: 0 } }
-          : player,
-      ),
-    };
+    const played = createPlayedGame("development-card-rejections");
+    const buyer = played.activePlayerId;
+    const ready = withHand(played, buyer, DEVELOPMENT_CARD_COST);
+    const unaffordable = withHand(played, buyer, { sheep: 1, stone: 1 });
     const emptySupply: GameState = { ...ready, developmentDeck: [] };
     const wrongPhase: GameState = { ...ready, phase: { kind: "roll" } };
 
-    expect(getLegalActions(unaffordable, playerId).canBuyDevelopmentCard).toBe(false);
-    expect(getLegalActions(emptySupply, playerId).canBuyDevelopmentCard).toBe(false);
-    expectRuleError(
-      () => applyCommand(unaffordable, playerId, { kind: "buy_development_card" }),
-      "INSUFFICIENT_RESOURCES",
+    expect(getLegalActions(unaffordable, buyer).canBuyDevelopmentCard).toBe(false);
+    expect(getLegalActions(emptySupply, buyer).canBuyDevelopmentCard).toBe(false);
+    expect(() => applyCommand(unaffordable, buyer, { kind: "buy_development_card" })).toThrow(
+      ruleError("INSUFFICIENT_RESOURCES"),
     );
-    expectRuleError(
-      () => applyCommand(emptySupply, playerId, { kind: "buy_development_card" }),
-      "NO_DEVELOPMENT_CARD_AVAILABLE",
+    expect(() => applyCommand(emptySupply, buyer, { kind: "buy_development_card" })).toThrow(
+      ruleError("NO_DEVELOPMENT_CARD_AVAILABLE"),
     );
-    expectRuleError(
-      () => applyCommand(wrongPhase, playerId, { kind: "buy_development_card" }),
-      "INVALID_PHASE",
+    expect(() => applyCommand(wrongPhase, buyer, { kind: "buy_development_card" })).toThrow(
+      ruleError("INVALID_PHASE"),
     );
   });
 
-  test("counts a drawn victory-point card without exposing it as building score", () => {
-    const ready = developmentCardReadyState("development-card-victory");
-    const playerId = PLAYERS[0]!.id;
-    const vertexKeys = getBoardTopology(ready.board.tiles).vertexKeys.slice(0, 2);
-    if (vertexKeys.length !== 2) throw new Error("Test board needs two vertices");
-    const developmentDeck = [...ready.developmentDeck];
-    const victoryPointIndex = developmentDeck.indexOf("victory-point");
-    if (victoryPointIndex < 0) throw new Error("Development deck needs a victory-point card");
-    [developmentDeck[0], developmentDeck[victoryPointIndex]] = [
-      developmentDeck[victoryPointIndex]!,
-      developmentDeck[0]!,
-    ];
-    const state: GameState = {
-      ...ready,
-      board: {
-        ...ready.board,
-        buildings: vertexKeys.map((vertexKey) => ({
-          kind: "settlement" as const,
-          playerId,
-          vertexKey,
-        })),
+  test("a bought victory-point card wins at once without showing in the public score", () => {
+    const played = createPlayedGame("development-card-victory", { victoryPoints: 3 });
+    const buyer = played.activePlayerId;
+    const victoryPointIndex = played.developmentDeck.indexOf("victory-point");
+    const state = withHand(
+      {
+        ...played,
+        developmentDeck: [
+          "victory-point",
+          ...played.developmentDeck.toSpliced(victoryPointIndex, 1),
+        ],
       },
-      developmentDeck,
-      players: ready.players.map((player) =>
-        player.id === playerId
-          ? {
-              ...player,
-              piecesRemaining: { ...player.piecesRemaining, settlements: 3 },
-              victoryPoints: 2,
-            }
-          : player,
-      ),
-      settings: { ...ready.settings, victoryPoints: 3 },
-    };
+      buyer,
+      DEVELOPMENT_CARD_COST,
+    );
     assertGameState(state);
 
-    const next = applyCommand(state, playerId, { kind: "buy_development_card" });
+    const next = applyCommand(state, buyer, { kind: "buy_development_card" });
 
-    expect(next.players[0]!.victoryPoints).toBe(2);
-    expect(next.players[0]!.developmentCards).toEqual(["victory-point"]);
-    expect(next.status).toBe("completed");
+    expect(playerById(next, buyer).victoryPoints).toBe(2);
     expect(next.phase.kind).toBe("finished");
-    expect(next.winnerPlayerId).toBe(playerId);
+    expect(next.winnerPlayerId).toBe(buyer);
+    expect(
+      toPlayerView(next, opponentsOf(next, buyer)[0]!).players.find(
+        (player) => player.id === buyer,
+      ),
+    ).toMatchObject({ revealedVictoryPointCards: 1 });
     assertGameState(next);
   });
-});
 
-describe("development card plays", () => {
-  test("plays a Knight before rolling and awards Largest Army at three knights", () => {
-    const playerId = PLAYERS[0]!.id;
-    let state = createGame("play-knight");
-    state = giveDevelopmentCard(state, playerId, "knight");
-    for (let count = 0; count < 2; count += 1) {
-      const knightIndex = state.developmentDeck.indexOf("knight");
-      if (knightIndex < 0) throw new Error("Development deck needs another Knight");
-      state.developmentDeck.splice(knightIndex, 1);
-    }
-    state = {
-      ...state,
-      phase: { kind: "roll" },
-      players: state.players.map((player) =>
-        player.id === playerId
-          ? { ...player, playedDevelopmentCards: ["knight", "knight"] }
-          : player,
-      ),
-      turnNumber: 1,
-    };
+  test("a Knight before rolling moves the robber and a third Knight takes Largest Army", () => {
+    const played: GameState = { ...createPlayedGame("play-knight"), phase: { kind: "roll" } };
+    const player = played.activePlayerId;
+    const state = withDevelopmentCard(withPlayedKnights(played, player, 2), player, "knight");
 
-    expect(getLegalActions(state, playerId).playableDevelopmentCards).toContain("knight");
-    const next = applyCommand(state, playerId, { kind: "play_knight" });
+    expect(getLegalActions(state, player).playableDevelopmentCards).toContain("knight");
+    const next = applyCommand(state, player, { kind: "play_knight" });
 
-    expect(next.phase).toEqual({
-      kind: "move_robber",
-      resumePhase: "roll",
-      rollerPlayerId: playerId,
-    });
-    expect(next.players[0]!.developmentCards).toEqual([]);
-    expect(next.players[0]!.playedDevelopmentCards).toEqual(["knight", "knight", "knight"]);
-    expect(next.largestArmyPlayerId).toBe(playerId);
-    expect(next.players[0]!.victoryPoints).toBe(2);
-    expectConservedState(next);
+    expect(next.phase).toEqual({ kind: "move_robber", resumePhase: "roll" });
+    expect(playerById(next, player).playedDevelopmentCards).toEqual(["knight", "knight", "knight"]);
+    expect(next.largestArmyPlayerId).toBe(player);
+    expect(playerById(next, player).victoryPoints).toBe(
+      playerById(state, player).victoryPoints + 2,
+    );
     assertGameState(next);
+  });
+
+  test("Largest Army changes hands only for a strictly larger army", () => {
+    const played = createPlayedGame("largest-army-transfer");
+    const challenger = played.activePlayerId;
+    const holder = opponentsOf(played, challenger)[0]!;
+    const state = withDevelopmentCard(
+      withPlayedKnights(withPlayedKnights(played, holder, 3), challenger, 2),
+      challenger,
+      "knight",
+    );
+    expect(state.largestArmyPlayerId).toBe(holder);
+
+    const tied = applyCommand(state, challenger, { kind: "play_knight" });
+    expect(tied.largestArmyPlayerId).toBe(holder);
+
+    const nextTurn = withDevelopmentCard(
+      { ...tied, developmentCardPlayedThisTurn: false, phase: { kind: "build_and_trade" } },
+      challenger,
+      "knight",
+    );
+    const overtaken = applyCommand(nextTurn, challenger, { kind: "play_knight" });
+
+    expect(overtaken.largestArmyPlayerId).toBe(challenger);
+    expect(playerById(overtaken, holder).victoryPoints).toBe(
+      playerById(tied, holder).victoryPoints - 2,
+    );
+    assertGameState(overtaken);
   });
 
   test("Monopoly collects the named resource from every opponent", () => {
-    const playerId = PLAYERS[0]!.id;
-    let state = giveDevelopmentCard(createGame("play-monopoly"), playerId, "monopoly");
-    state = {
-      ...state,
-      bank: { ...state.bank, brick: state.bank.brick - 3 },
-      phase: { kind: "build_and_trade" },
-      players: state.players.map((player) =>
-        player.id === PLAYERS[1]!.id
-          ? { ...player, resources: { ...player.resources, brick: 2 } }
-          : player.id === PLAYERS[2]!.id
-            ? { ...player, resources: { ...player.resources, brick: 1 } }
-            : player,
-      ),
-      turnNumber: 1,
-    };
+    const played = createPlayedGame("play-monopoly");
+    const player = played.activePlayerId;
+    const [first, second] = opponentsOf(played, player);
+    const state = withDevelopmentCard(
+      withHand(withHand(withHand(played, player, {}), first!, { brick: 2, wheat: 1 }), second!, {
+        brick: 1,
+      }),
+      player,
+      "monopoly",
+    );
+    const opponentBrick = opponentsOf(state, player).reduce(
+      (total, opponentId) => total + playerById(state, opponentId).resources.brick,
+      0,
+    );
 
-    const next = applyCommand(state, playerId, {
-      kind: "play_monopoly",
-      resource: "brick",
-    });
+    const next = applyCommand(state, player, { kind: "play_monopoly", resource: "brick" });
 
-    expect(next.players[0]!.resources.brick).toBe(3);
-    expect(next.players.slice(1).every((player) => player.resources.brick === 0)).toBe(true);
-    expect(next.players[0]!.playedDevelopmentCards).toEqual(["monopoly"]);
-    expect(next.phase.kind).toBe("build_and_trade");
-    expectConservedState(next);
+    expect(playerById(next, player).resources.brick).toBe(opponentBrick);
+    for (const opponentId of opponentsOf(next, player)) {
+      expect(playerById(next, opponentId).resources.brick).toBe(0);
+    }
+    expect(playerById(next, first!).resources.wheat).toBe(1);
+    assertGameState(next);
   });
 
-  test("Year of Plenty takes exactly two selected cards from the bank", () => {
-    const playerId = PLAYERS[0]!.id;
-    const state = {
-      ...giveDevelopmentCard(createGame("play-year-of-plenty"), playerId, "year-of-plenty"),
-      phase: { kind: "roll" as const },
-      turnNumber: 1,
+  test("Year of Plenty takes two chosen cards, if the bank has them", () => {
+    const played: GameState = {
+      ...createPlayedGame("play-year-of-plenty"),
+      phase: { kind: "roll" },
     };
+    const player = played.activePlayerId;
+    const state = withDevelopmentCard(withHand(played, player, {}), player, "year-of-plenty");
     const resources = { ...emptyInventory(), brick: 1, wheat: 1 };
-    const next = applyCommand(state, playerId, {
-      kind: "play_year_of_plenty",
-      resources,
-    });
 
-    expect(next.players[0]!.resources).toEqual(resources);
-    expect(next.bank.brick).toBe(state.bank.brick - 1);
-    expect(next.bank.wheat).toBe(state.bank.wheat - 1);
+    const next = applyCommand(state, player, { kind: "play_year_of_plenty", resources });
+
+    expect(playerById(next, player).resources).toEqual(resources);
+    expect(next.bank).toEqual(subtractResources(state.bank, resources));
     expect(next.phase.kind).toBe("roll");
-    expectConservedState(next);
-    expectRuleError(
-      () =>
-        applyCommand(
-          giveDevelopmentCard(
-            { ...createGame("invalid-year-of-plenty"), phase: { kind: "roll" } },
-            playerId,
-            "year-of-plenty",
-          ),
-          playerId,
-          {
-            kind: "play_year_of_plenty",
-            resources: { ...emptyInventory(), wheat: 1 },
-          },
-        ),
-      "INVALID_COMMAND",
-    );
+    assertGameState(next);
+
+    const scarceWheat = withCardsFromBank(state, opponentsOf(state, player)[0]!, {
+      wheat: state.bank.wheat - 1,
+    });
+    expect(() =>
+      applyCommand(state, player, {
+        kind: "play_year_of_plenty",
+        resources: { ...emptyInventory(), wheat: 1 },
+      }),
+    ).toThrow(ruleError("INVALID_COMMAND"));
+    expect(() =>
+      applyCommand(scarceWheat, player, {
+        kind: "play_year_of_plenty",
+        resources: { ...emptyInventory(), wheat: 2 },
+      }),
+    ).toThrow(ruleError("BANK_OUT_OF_RESOURCE"));
   });
 
   test("Road Building places two connected roads for free and resumes the prior phase", () => {
-    const playerId = PLAYERS[0]!.id;
-    let state = createGame("play-road-building");
-    while (state.phase.kind === "setup_settlement" || state.phase.kind === "setup_road") {
-      const actorPlayerId = getRequiredPlayerIds(state)[0];
-      if (!actorPlayerId) throw new Error("Setup needs an actor");
-      state = applyCommand(state, actorPlayerId, chooseAutomatedCommand(state, actorPlayerId));
-    }
-    state = giveDevelopmentCard(state, playerId, "road-building");
-    const resourcesBefore = { ...state.players[0]!.resources };
-    const roadsBefore = state.board.roads.length;
-
-    state = applyCommand(state, playerId, { kind: "play_road_building" });
-    expect(state.phase).toEqual({
-      kind: "road_building",
-      remainingRoads: 2,
-      resumePhase: "roll",
+    const played: GameState = {
+      ...createPlayedGame("play-road-building"),
+      phase: { kind: "roll" },
+    };
+    const player = played.activePlayerId;
+    let state = applyCommand(withDevelopmentCard(played, player, "road-building"), player, {
+      kind: "play_road_building",
     });
 
-    for (let count = 0; count < 2; count += 1) {
-      const edgeKey = getLegalActions(state, playerId).roadEdgeKeys[0];
-      if (!edgeKey) throw new Error("Road Building needs a legal road");
-      state = applyCommand(state, playerId, { edgeKey, kind: "place_road" });
+    expect(state.phase).toEqual({ kind: "road_building", remainingRoads: 2, resumePhase: "roll" });
+    for (let placed = 0; placed < 2; placed += 1) {
+      const edgeKey = getLegalActions(state, player).roadEdgeKeys[0]!;
+      state = applyCommand(state, player, { edgeKey, kind: "place_road" });
     }
 
-    expect(state.phase.kind).toBe("roll");
-    expect(state.board.roads).toHaveLength(roadsBefore + 2);
-    expect(state.players[0]!.resources).toEqual(resourcesBefore);
-    expect(state.players[0]!.playedDevelopmentCards).toEqual(["road-building"]);
-    expectConservedState(state);
+    expect(state.phase).toEqual({ kind: "roll" });
+    expect(state.board.roads).toHaveLength(played.board.roads.length + 2);
+    expect(playerById(state, player).resources).toEqual(playerById(played, player).resources);
+    expect(playerById(state, player).playedDevelopmentCards).toEqual(["road-building"]);
+    assertGameState(state);
   });
 
   test("blocks a card bought this turn and a second card in the same turn", () => {
-    const playerId = PLAYERS[0]!.id;
-    const boughtThisTurn = {
-      ...giveDevelopmentCard(createGame("new-development-card"), playerId, "monopoly"),
-      developmentCardsBoughtThisTurn: 1,
-      phase: { kind: "roll" as const },
-      turnNumber: 1,
+    const played: GameState = {
+      ...createPlayedGame("new-development-card"),
+      phase: { kind: "roll" },
     };
-    expect(getLegalActions(boughtThisTurn, playerId).playableDevelopmentCards).toEqual([]);
-    expectRuleError(
-      () =>
-        applyCommand(boughtThisTurn, playerId, {
-          kind: "play_monopoly",
-          resource: "brick",
-        }),
-      "DEVELOPMENT_CARD_NOT_PLAYABLE",
-    );
-
-    const alreadyPlayed = {
+    const player = played.activePlayerId;
+    const monopoly: GameCommand = { kind: "play_monopoly", resource: "brick" };
+    const boughtThisTurn: GameState = {
+      ...withDevelopmentCard(played, player, "monopoly"),
+      developmentCardsBoughtThisTurn: 1,
+    };
+    const alreadyPlayed: GameState = {
       ...boughtThisTurn,
       developmentCardPlayedThisTurn: true,
       developmentCardsBoughtThisTurn: 0,
     };
-    expect(getLegalActions(alreadyPlayed, playerId).playableDevelopmentCards).toEqual([]);
-    expectRuleError(
-      () =>
-        applyCommand(alreadyPlayed, playerId, {
-          kind: "play_monopoly",
-          resource: "brick",
-        }),
-      "DEVELOPMENT_CARD_NOT_PLAYABLE",
-    );
 
-    const ended = applyCommand({ ...alreadyPlayed, phase: { kind: "build_and_trade" } }, playerId, {
+    for (const state of [boughtThisTurn, alreadyPlayed]) {
+      expect(getLegalActions(state, player).playableDevelopmentCards).toEqual([]);
+      expect(() => applyCommand(state, player, monopoly)).toThrow(
+        ruleError("DEVELOPMENT_CARD_NOT_PLAYABLE"),
+      );
+    }
+
+    const ended = applyCommand({ ...alreadyPlayed, phase: { kind: "build_and_trade" } }, player, {
       kind: "end_turn",
     });
     expect(ended.developmentCardPlayedThisTurn).toBe(false);
@@ -559,341 +873,249 @@ describe("development card plays", () => {
   });
 });
 
-describe("trade offers", () => {
-  test("spending offered resources cancels the offer and stale bots reject it", () => {
-    const cityReady = cityReadyState();
-    const state: GameState = {
-      ...cityReady.state,
-      bank: { ...cityReady.state.bank, brick: cityReady.state.bank.brick - 1 },
-      players: cityReady.state.players.map((player) =>
-        player.id === PLAYERS[1]!.id
-          ? { ...player, resources: { ...player.resources, brick: 1 } }
-          : player,
-      ),
-    };
-    const proposed = applyCommand(state, PLAYERS[0]!.id, {
-      give: { brick: 0, sheep: 0, stone: 1, tree: 0, wheat: 0 },
-      kind: "propose_trade",
-      recipientPlayerIds: [PLAYERS[1]!.id],
-      want: { brick: 1, sheep: 0, stone: 0, tree: 0, wheat: 0 },
-    });
-    const stale = {
-      ...proposed,
-      players: proposed.players.map((player) =>
-        player.id === PLAYERS[0]!.id
-          ? { ...player, resources: { ...player.resources, stone: 0 } }
-          : player,
-      ),
-    };
-    const offerActionNumber = proposed.tradeOffer?.offerActionNumber;
-    if (offerActionNumber === undefined) throw new Error("Trade offer needs an action number");
-
-    expect(chooseAutomatedCommand(stale, PLAYERS[1]!.id)).toEqual({
-      accept: false,
-      kind: "respond_trade",
-      offerActionNumber,
-    });
-
-    const next = applyCommand(proposed, PLAYERS[0]!.id, {
-      kind: "build_city",
-      vertexKey: cityReady.vertexKey,
-    });
-    expect(next.tradeOffer).toBeNull();
-    expectConservedState(next);
-  });
-});
-
-describe("friendly robber", () => {
-  test("is opt-in so standard games can target player-adjacent tiles", () => {
-    const created = createGame("standard-robber");
-    const tile = created.board.tiles.find(
-      (candidate) => candidate.id !== created.board.robberTileId,
-    );
-    const vertexKey = tile
-      ? getBoardTopology(created.board.tiles).tileById[tile.id]?.vertexKeys[0]
-      : undefined;
-    if (!tile || !vertexKey) throw new Error("Robber test needs another occupied tile");
-    const state: GameState = {
-      ...created,
-      board: {
-        ...created.board,
-        buildings: [{ kind: "settlement", playerId: PLAYERS[1]!.id, vertexKey }],
-      },
-      phase: {
-        kind: "move_robber",
-        resumePhase: "build_and_trade",
-        rollerPlayerId: PLAYERS[0]!.id,
-      },
-      players: created.players.map((player) =>
-        player.id === PLAYERS[1]!.id
-          ? {
-              ...player,
-              piecesRemaining: { ...player.piecesRemaining, settlements: 4 },
-              victoryPoints: 1,
-            }
-          : player,
-      ),
-    };
-
-    expect(state.settings.friendlyRobber).toBe(false);
-    expect(getLegalActions(state, PLAYERS[0]!.id).robberTileIds).toContain(tile.id);
-  });
-
-  test("still requires a move when every other tile is protected", () => {
-    let state = createGame("fr7:58");
-    state = { ...state, settings: { ...state.settings, friendlyRobber: true } };
-
-    while (state.phase.kind === "setup_settlement" || state.phase.kind === "setup_road") {
-      const actorPlayerId = getRequiredPlayerIds(state)[0];
-      if (!actorPlayerId) throw new Error("Setup requires an actor");
-      state = applyCommand(state, actorPlayerId, chooseAutomatedCommand(state, actorPlayerId));
-    }
-
-    const protectingVertexKeys = [
-      "vertex:-1:-3",
-      "vertex:-5:-1",
-      "vertex:-5:1",
-      "vertex:-5:3",
-      "vertex:1:1",
-      "vertex:1:3",
-      "vertex:4:-2",
-      "vertex:5:1",
-    ];
-    state = {
+describe("robber", () => {
+  function robberTurn(state: GameState): GameState {
+    return {
       ...state,
-      board: {
-        ...state.board,
-        buildings: state.board.buildings.map((building, index) => ({
-          ...building,
-          vertexKey: protectingVertexKeys[index] ?? building.vertexKey,
-        })),
-      },
+      phase: { kind: "move_robber", resumePhase: "build_and_trade" },
+      settings: { ...state.settings, friendlyRobber: false },
     };
-
-    state = applyCommand(state, state.activePlayerId, { kind: "roll" });
-    expect(state.lastDiceRoll?.sum).toBe(7);
-    expect(state.phase.kind).toBe("move_robber");
-
-    const currentTileId = state.board.robberTileId;
-    const legalTileIds = getLegalActions(state, state.activePlayerId).robberTileIds;
-    expect(legalTileIds).not.toContain(currentTileId);
-    expect(legalTileIds).toHaveLength(state.board.tiles.length - 1);
-    const destinationTileId = legalTileIds[0];
-    if (!destinationTileId) throw new Error("Robber needs a legal destination");
-
-    const next = applyCommand(state, state.activePlayerId, {
-      kind: "move_robber",
-      tileId: destinationTileId,
-    });
-    expect(next.board.robberTileId).toBe(destinationTileId);
-  });
-});
-
-describe("robber production blocking", () => {
-  test("a settlement or city receives nothing from the occupied terrain tile", () => {
-    const created = createGame("robber-production-block");
-    const topology = getBoardTopology(created.board.tiles);
-    const tilesById = new Map(created.board.tiles.map((tile) => [tile.id, tile]));
-    const placement = created.board.tiles.flatMap((tile) => {
-      if (tile.numberToken === null || tile.terrain === "desert") {
-        return [];
-      }
-      const vertexKey = (topology.tileById[tile.id]?.vertexKeys ?? []).find((candidate) =>
-        (topology.vertexTileIds[candidate] ?? []).every(
-          (tileId) => tileId === tile.id || tilesById.get(tileId)?.numberToken !== tile.numberToken,
-        ),
-      );
-      return vertexKey ? [{ rollTotal: tile.numberToken, tileId: tile.id, vertexKey }] : [];
-    })[0];
-    if (!placement) throw new Error("Test board needs an isolated production vertex");
-
-    for (const kind of ["settlement", "city"] as const) {
-      const state: GameState = {
-        ...created,
-        board: {
-          ...created.board,
-          buildings: [{ kind, playerId: PLAYERS[0]!.id, vertexKey: placement.vertexKey }],
-          robberTileId: placement.tileId,
-        },
-        players: created.players.map((player) =>
-          player.id === PLAYERS[0]!.id
-            ? {
-                ...player,
-                piecesRemaining: {
-                  ...player.piecesRemaining,
-                  cities: kind === "city" ? 3 : 4,
-                  settlements: kind === "settlement" ? 4 : 5,
-                },
-                victoryPoints: kind === "city" ? 2 : 1,
-              }
-            : player,
-        ),
-      };
-
-      const next = distributeResourcesForRoll(state, placement.rollTotal);
-
-      expect(next.players[0]!.resources).toEqual(emptyInventory());
-      expect(next.bank).toEqual(created.bank);
-      expectConservedState(next);
-    }
-  });
-});
-
-describe("robber theft", () => {
-  function robberReadyState(victimPlayerIds: string[]) {
-    const created = createGame(`robber-theft:${victimPlayerIds.length}`);
-    const tile = created.board.tiles.find(
-      (candidate) => candidate.id !== created.board.robberTileId,
-    );
-    if (!tile) throw new Error("Robber needs another tile");
-
-    const vertexKeys = getBoardTopology(created.board.tiles).tileById[tile.id]?.vertexKeys ?? [];
-    if (vertexKeys.length < victimPlayerIds.length) {
-      throw new Error("Robber tile needs enough adjacent vertices");
-    }
-
-    const victimIdSet = new Set(victimPlayerIds);
-    const state: GameState = {
-      ...created,
-      activePlayerId: PLAYERS[0]!.id,
-      bank: {
-        ...created.bank,
-        brick: created.bank.brick - victimPlayerIds.length,
-      },
-      board: {
-        ...created.board,
-        buildings: victimPlayerIds.map((playerId, index) => ({
-          kind: "settlement",
-          playerId,
-          vertexKey: vertexKeys[index]!,
-        })),
-      },
-      phase: {
-        kind: "move_robber",
-        resumePhase: "build_and_trade",
-        rollerPlayerId: PLAYERS[0]!.id,
-      },
-      players: created.players.map((player) =>
-        victimIdSet.has(player.id)
-          ? {
-              ...player,
-              piecesRemaining: { ...player.piecesRemaining, settlements: 4 },
-              resources: { ...player.resources, brick: 1 },
-              victoryPoints: 1,
-            }
-          : player,
-      ),
-      settings: { ...created.settings, friendlyRobber: false },
-    };
-
-    return { state, tileId: tile.id };
   }
 
-  test("automatically steals when only one adjacent player is eligible", () => {
-    const { state, tileId } = robberReadyState([PLAYERS[1]!.id]);
-    const next = applyCommand(state, PLAYERS[0]!.id, { kind: "move_robber", tileId });
+  test("standard games may target any tile next to a player", () => {
+    const state = robberTurn(createPlayedGame("standard-robber"));
+    const topology = getBoardTopology(state.board.tiles);
+    const occupiedTileIds = state.board.tiles
+      .filter(
+        (tile) =>
+          tile.id !== state.board.robberTileId &&
+          tileAdjacentBuildings(state, topology, tile.id).length > 0,
+      )
+      .map((tile) => tile.id);
 
-    expect(next.phase).toEqual({ kind: "build_and_trade" });
-    expect(next.players[0]!.resources.brick).toBe(1);
-    expect(next.players[1]!.resources.brick).toBe(0);
-    expect(next.randomIndex).toBe(state.randomIndex + 1);
-    expectConservedState(next);
-  });
-
-  test("still asks for a victim when multiple adjacent players are eligible", () => {
-    const victimPlayerIds = [PLAYERS[1]!.id, PLAYERS[2]!.id];
-    const { state, tileId } = robberReadyState(victimPlayerIds);
-    const next = applyCommand(state, PLAYERS[0]!.id, { kind: "move_robber", tileId });
-
-    expect(next.phase).toEqual({
-      eligibleVictimIds: victimPlayerIds,
-      kind: "steal",
-      resumePhase: "build_and_trade",
-      rollerPlayerId: PLAYERS[0]!.id,
-    });
-    expect(next.players[0]!.resources.brick).toBe(0);
-    expect(next.randomIndex).toBe(state.randomIndex);
-    expectConservedState(next);
-  });
-});
-
-describe("maps and turn limits", () => {
-  test("each supported map exposes only its intended player counts", () => {
-    expect([3, 4, 5, 6, 7, 8].filter((count) => mapSupportsPlayerCount("base", count))).toEqual([
-      3, 4,
-    ]);
-    expect(
-      [3, 4, 5, 6, 7, 8].filter((count) => mapSupportsPlayerCount("extended-6", count)),
-    ).toEqual([5, 6]);
-    expect(
-      [3, 4, 5, 6, 7, 8].filter((count) => mapSupportsPlayerCount("extended-8", count)),
-    ).toEqual([7, 8]);
-
-    expectRuleError(
-      () =>
-        createDefaultGame(
-          [
-            ...PLAYERS,
-            {
-              botDifficulty: "hard",
-              displayName: SUPERHERO_BOT_NAMES[4],
-              id: "player-5",
-              isBot: true,
-            } as const,
-          ],
-          "invalid-map-size",
-          { map: "base", maxPlayers: 5 },
-        ),
-      "INVALID_COMMAND",
+    expect(getLegalActions(state, state.activePlayerId).robberTileIds).toEqual(
+      expect.arrayContaining(occupiedTileIds),
     );
   });
 
-  test("ending turn 500 continues to the next player", () => {
-    const state: GameState = {
-      ...createGame("long-game"),
-      phase: { kind: "build_and_trade" },
-      turnNumber: 500,
-    };
-    const next = applyCommand(state, PLAYERS[0]!.id, { kind: "end_turn" });
+  test("steals at once from a lone victim and asks when several players are eligible", () => {
+    const played = robberTurn(createPlayedGame("robber-theft"));
+    const thief = played.activePlayerId;
+    const topology = getBoardTopology(played.board.tiles);
+    const state = opponentsOf(played, thief).reduce(
+      (current, opponentId) => withHand(current, opponentId, { brick: 1 }),
+      withHand(played, thief, {}),
+    );
+    const victimsAt = (tileId: string) => [
+      ...new Set(
+        tileAdjacentBuildings(state, topology, tileId)
+          .map((building) => building.playerId)
+          .filter((playerId) => playerId !== thief),
+      ),
+    ];
+    const candidateTiles = state.board.tiles.filter((tile) => tile.id !== state.board.robberTileId);
+    const loneTile = candidateTiles.find((tile) => victimsAt(tile.id).length === 1)!;
+    const sharedTile = candidateTiles.find((tile) => victimsAt(tile.id).length > 1)!;
 
-    expect(next.status).toBe("active");
-    expect(next.phase).toEqual({ kind: "roll" });
-    expect(next.activePlayerId).toBe(PLAYERS[1]!.id);
-    expect(next.turnNumber).toBe(501);
-    expect(next.winnerPlayerId).toBeNull();
+    const stolen = applyCommand(state, thief, { kind: "move_robber", tileId: loneTile.id });
+    expect(stolen.phase).toEqual({ kind: "build_and_trade" });
+    expect(playerById(stolen, thief).resources).toEqual({ ...emptyInventory(), brick: 1 });
+    expect(playerById(stolen, victimsAt(loneTile.id)[0]!).resources).toEqual(emptyInventory());
+    assertGameState(stolen);
+
+    const choosing = applyCommand(state, thief, { kind: "move_robber", tileId: sharedTile.id });
+    expect(choosing.phase).toEqual({
+      eligibleVictimIds: state.players
+        .map((player) => player.id)
+        .filter((playerId) => victimsAt(sharedTile.id).includes(playerId)),
+      kind: "steal",
+      resumePhase: "build_and_trade",
+    });
+    expect(choosing.randomIndex).toBe(state.randomIndex);
+    assertGameState(choosing);
+  });
+
+  test("the friendly robber spares the tiles and hands of players with 2 or fewer points", () => {
+    const played = createPlayedGame("friendly-robber", { friendlyRobber: true });
+    const thief = played.activePlayerId;
+    const target = opponentsOf(played, thief)[0]!;
+    const pieces = boardPieces(played);
+    const [cityVertexKey, ...settlements] = pieces[target]!.settlements;
+    const state: GameState = {
+      ...withHand(
+        withBoardPieces(played, {
+          ...pieces,
+          [target]: { ...pieces[target]!, cities: [cityVertexKey!], settlements },
+        }),
+        target,
+        { brick: 1 },
+      ),
+      phase: { kind: "move_robber", resumePhase: "build_and_trade" },
+    };
+    assertGameState(state);
+    const topology = getBoardTopology(state.board.tiles);
+    const touchesOnlyTarget = (tileId: string) =>
+      tileAdjacentBuildings(state, topology, tileId).every(
+        (building) => building.playerId === target,
+      );
+    const candidateTileIds = state.board.tiles
+      .map((tile) => tile.id)
+      .filter((tileId) => tileId !== state.board.robberTileId);
+    const unprotectedTileIds = candidateTileIds.filter(touchesOnlyTarget);
+    const protectedTileId = candidateTileIds.find((tileId) => !touchesOnlyTarget(tileId))!;
+    const targetTileId = unprotectedTileIds.find(
+      (tileId) => tileAdjacentBuildings(state, topology, tileId).length > 0,
+    )!;
+
+    expect(targetTileId).toBeDefined();
+    expect(getLegalActions(state, thief).robberTileIds).toEqual(unprotectedTileIds);
+    expect(() =>
+      applyCommand(state, thief, { kind: "move_robber", tileId: protectedTileId }),
+    ).toThrow(ruleError("INVALID_ROBBER_TILE"));
+
+    const robbed = applyCommand(state, thief, { kind: "move_robber", tileId: targetTileId });
+    expect(handChange(state, robbed, thief)).toEqual({ ...emptyInventory(), brick: 1 });
+    expect(playerById(robbed, target).resources).toEqual(emptyInventory());
+  });
+
+  test("the friendly robber still moves when every tile touches a protected player", () => {
+    const game = createGame("friendly-robber-fallback", { friendlyRobber: true });
+    const topology = getBoardTopology(game.board.tiles);
+    const uncoveredTileIds = new Set(
+      game.board.tiles
+        .map((tile) => tile.id)
+        .filter((tileId) => tileId !== game.board.robberTileId),
+    );
+    const settlements: string[] = [];
+    while (uncoveredTileIds.size > 0) {
+      const blocked = surroundings(topology, settlements);
+      const coverage = (vertexKey: string) =>
+        topology.vertexTileIds[vertexKey]!.filter((tileId) => uncoveredTileIds.has(tileId)).length;
+      const vertexKey = topology.vertexKeys
+        .filter((candidate) => !blocked.has(candidate))
+        .toSorted((first, second) => coverage(second) - coverage(first))[0]!;
+      settlements.push(vertexKey);
+      for (const tileId of topology.vertexTileIds[vertexKey]!) uncoveredTileIds.delete(tileId);
+    }
+    expect(settlements.length).toBeLessThanOrEqual(game.players.length * 2);
+    const roadAt = (vertexKey: string) => topology.vertexEdges[vertexKey]![0]!;
+    const thief = game.activePlayerId;
+    const state: GameState = {
+      ...opponentsOf(game, thief).reduce(
+        (current, opponentId) => withHand(current, opponentId, { brick: 1 }),
+        withBoardPieces(
+          game,
+          Object.fromEntries(
+            game.turnOrder.map((playerId, index) => {
+              const owned = settlements.slice(index * 2, index * 2 + 2);
+              const fallback = getSettlementVertexKeys(game, playerId, false).filter(
+                (vertexKey) => !surroundings(topology, settlements).has(vertexKey),
+              );
+              const vertexKeys = [...owned, ...fallback].slice(0, 2);
+              return [playerId, { roads: vertexKeys.map(roadAt), settlements: vertexKeys }];
+            }),
+          ),
+        ),
+      ),
+      phase: { kind: "move_robber", resumePhase: "build_and_trade" },
+    };
+    assertGameState(state);
+
+    const legalTileIds = getLegalActions(state, thief).robberTileIds;
+    expect(legalTileIds).toHaveLength(state.board.tiles.length - 1);
+
+    const opponentTileId = legalTileIds.find((tileId) =>
+      tileAdjacentBuildings(state, topology, tileId).some(
+        (building) => building.playerId !== thief,
+      ),
+    )!;
+    const moved = applyCommand(state, thief, { kind: "move_robber", tileId: opponentTileId });
+    expect(moved.board.robberTileId).toBe(opponentTileId);
+    expect(moved.phase).toEqual({ kind: "build_and_trade" });
+    expect(moved.players).toEqual(state.players);
   });
 });
 
 describe("automated decisions", () => {
-  test("a human timeout never spends cards on an optional build", () => {
-    const { state } = cityReadyState();
-    state.players[0]!.isBot = false;
-    state.players[0]!.botDifficulty = undefined;
+  test("a timed-out human never spends cards on an optional build", () => {
+    const played = createPlayedGame("human-timeout-build", {}, HUMANS);
+    const state = withHand(played, played.activePlayerId, BUILD_COSTS.city);
 
-    expect(chooseAutomatedCommand(state, PLAYERS[0]!.id)).toEqual({ kind: "end_turn" });
+    expect(chooseAutomatedCommand(state, state.activePlayerId)).toEqual({ kind: "end_turn" });
+  });
+
+  test("a timed-out human settles the most productive spot and robs someone else's tile", () => {
+    const game = createGame("human-timeout-choices", {}, HUMANS);
+    const topology = getBoardTopology(game.board.tiles);
+    const pips = (vertexKey: string) =>
+      topology.vertexTileIds[vertexKey]!.reduce((total, tileId) => {
+        const token = game.board.tiles.find((tile) => tile.id === tileId)!.numberToken;
+        return total + (token === null ? 0 : NUMBER_TOKEN_PIPS[token]);
+      }, 0);
+    const settlement = chooseAutomatedCommand(game, game.activePlayerId);
+    if (settlement.kind !== "place_settlement") throw new Error("Expected a settlement");
+
+    expect(pips(settlement.vertexKey)).toBe(
+      Math.max(...getLegalActions(game, game.activePlayerId).settlementVertexKeys.map(pips)),
+    );
+
+    const played: GameState = {
+      ...createPlayedGame("human-timeout-robber", {}, HUMANS),
+      phase: { kind: "move_robber", resumePhase: "build_and_trade" },
+    };
+    const robber = chooseAutomatedCommand(played, played.activePlayerId);
+    if (robber.kind !== "move_robber") throw new Error("Expected a robber move");
+    expect(
+      tileAdjacentBuildings(played, topology, robber.tileId).filter(
+        (building) => building.playerId === played.activePlayerId,
+      ),
+    ).toEqual([]);
+  });
+
+  test("the fallback takes only required actions, choosing the first legal option", () => {
+    const game = createGame("fallback-command");
+    const played = createPlayedGame("fallback-command");
+    const bot = played.activePlayerId;
+    const rolling: GameState = {
+      ...withDevelopmentCard(played, bot, "knight"),
+      phase: { kind: "roll" },
+    };
+    const building = withHand(played, bot, BUILD_COSTS.city);
+    const recipient = opponentsOf(building, bot)[0]!;
+    const offered = applyCommand(withHand(building, recipient, { wheat: 1 }), bot, {
+      give: { ...emptyInventory(), stone: 1 },
+      kind: "propose_trade",
+      recipientPlayerIds: [recipient],
+      want: { ...emptyInventory(), wheat: 1 },
+    });
+
+    expect(chooseFallbackCommand(game, game.activePlayerId)).toEqual({
+      kind: "place_settlement",
+      vertexKey: getLegalActions(game, game.activePlayerId).settlementVertexKeys[0]!,
+    });
+    expect(chooseFallbackCommand(rolling, bot)).toEqual({ kind: "roll" });
+    expect(chooseFallbackCommand(building, bot)).toEqual({ kind: "end_turn" });
+    expect(chooseFallbackCommand(offered, recipient)).toMatchObject({
+      accept: false,
+      kind: "respond_trade",
+    });
   });
 
   test("easy and medium bots vary deterministic robber destinations", () => {
     for (const botDifficulty of ["easy", "medium"] as const) {
-      const created = createGame(`robber-destinations-${botDifficulty}`);
+      const played = createPlayedGame(`robber-destinations-${botDifficulty}`);
+      const botId = played.activePlayerId;
       let state: GameState = {
-        ...created,
-        activePlayerId: PLAYERS[0]!.id,
-        phase: {
-          kind: "move_robber",
-          resumePhase: "build_and_trade",
-          rollerPlayerId: PLAYERS[0]!.id,
-        },
-        players: created.players.map((player) =>
-          player.id === PLAYERS[0]!.id ? { ...player, botDifficulty } : player,
+        ...played,
+        phase: { kind: "move_robber", resumePhase: "build_and_trade" },
+        players: played.players.map((player) =>
+          player.id === botId ? { ...player, botDifficulty } : player,
         ),
-        settings: { ...created.settings, friendlyRobber: false },
       };
       const destinations = new Set<string>();
 
       for (let move = 0; move < 20; move += 1) {
-        const command = chooseAutomatedCommand(state, PLAYERS[0]!.id);
-        expect(command.kind).toBe("move_robber");
+        const command = chooseAutomatedCommand(state, botId);
         if (command.kind !== "move_robber") throw new Error("Bot must move the robber");
 
         destinations.add(command.tileId);
@@ -908,57 +1130,88 @@ describe("automated decisions", () => {
     }
   });
 
-  test("easy bots use targeted trades instead of cycling or starving forever", () => {
-    const players = Array.from({ length: 3 }, (_, index) => ({
-      botDifficulty: "easy" as const,
-      displayName: SUPERHERO_BOT_NAMES[index]!,
-      id: `easy-player-${index + 1}`,
-      isBot: true,
-    }));
-    let state = createDefaultGame(players, "audit:base:easy:0", {
-      map: "base",
-      maxPlayers: 3,
-      turnTimerSeconds: 0,
-      victoryPoints: 10,
-    });
+  test("bots choose Monopoly from public information, not opponents' hidden hands", () => {
+    const played = createPlayedGame("monopoly-public-information");
+    const bot = played.activePlayerId;
+    const [first, second] = opponentsOf(played, bot);
+    const base = withDevelopmentCard(withHand(played, bot, {}), bot, "monopoly");
+    const holding = (resource: "brick" | "stone") =>
+      withHand(withHand(base, first!, { [resource]: 4 }), second!, { [resource]: 2 });
 
-    for (let step = 0; step < 2_000 && state.status !== "completed"; step += 1) {
-      const actorPlayerId = getRequiredPlayerIds(state)[0];
-      if (!actorPlayerId) throw new Error("Automated game requires an actor");
-      state = applyCommand(state, actorPlayerId, chooseAutomatedCommand(state, actorPlayerId));
-    }
-
-    expect(state.status).toBe("completed");
-    expect(state.winnerPlayerId).not.toBeNull();
-    expectConservedState(state);
+    expect(chooseAutomatedCommand(holding("brick"), bot)).toEqual(
+      chooseAutomatedCommand(holding("stone"), bot),
+    );
   });
 
-  test("complete bot games preserve legality after every action", () => {
-    for (let gameIndex = 0; gameIndex < 4; gameIndex += 1) {
-      let state = createGame(`rules-audit-${gameIndex}`);
+  test("bots take the Year of Plenty cards their next build is missing", () => {
+    const played: GameState = {
+      ...createPlayedGame("year-of-plenty-need"),
+      phase: { kind: "roll" },
+    };
+    const bot = played.activePlayerId;
+    const state = withDevelopmentCard(
+      withHand(played, bot, { stone: 1, wheat: 2 }),
+      bot,
+      "year-of-plenty",
+    );
 
-      for (let step = 0; step < 5_000 && state.status !== "completed"; step += 1) {
-        const actorPlayerId = getRequiredPlayerIds(state).find(
-          (playerId) => state.players.find((player) => player.id === playerId)?.isBot,
-        );
-        expect(actorPlayerId).toBeDefined();
+    expect(chooseAutomatedCommand(state, bot)).toEqual({
+      kind: "play_year_of_plenty",
+      resources: { ...emptyInventory(), stone: 2 },
+    });
+  });
 
-        const command = chooseAutomatedCommand(state, actorPlayerId!);
-        if (command.kind === "build_city") {
-          expect(state.board.buildings).toContainEqual({
-            kind: "settlement",
-            playerId: actorPlayerId!,
-            vertexKey: command.vertexKey,
-          });
-        }
+  test("bots accept only trades that bring their next build closer, and never help a near-winner", () => {
+    const played = createPlayedGame("bot-trade-response");
+    const proposer = played.activePlayerId;
+    const bot = opponentsOf(played, proposer)[0]!;
+    const table = withHand(withHand(played, proposer, { stone: 1, tree: 1 }), bot, {
+      sheep: 1,
+      stone: 2,
+      wheat: 2,
+    });
+    const response = (
+      state: GameState,
+      give: Partial<ResourceInventory>,
+      want: Partial<ResourceInventory>,
+    ) =>
+      chooseAutomatedCommand(
+        applyCommand(state, proposer, {
+          give: { ...emptyInventory(), ...give },
+          kind: "propose_trade",
+          recipientPlayerIds: [bot],
+          want: { ...emptyInventory(), ...want },
+        }),
+        bot,
+      );
+    const nearWinner: GameState = {
+      ...table,
+      settings: { ...table.settings, victoryPoints: playerById(table, proposer).victoryPoints + 2 },
+    };
 
-        const previousActionNumber = state.actionNumber;
-        state = applyCommand(state, actorPlayerId!, command);
-        expect(state.actionNumber).toBe(previousActionNumber + 1);
-        expectConservedState(state);
-      }
+    expect(response(table, { stone: 1 }, { sheep: 1 })).toMatchObject({ accept: true });
+    expect(response(table, { tree: 1 }, { stone: 1 })).toMatchObject({ accept: false });
+    expect(response(nearWinner, { stone: 1 }, { sheep: 1 })).toMatchObject({ accept: false });
+  });
 
-      expect(state.status).toBe("completed");
-    }
+  test("easy bots use targeted trades instead of cycling or starving forever", () => {
+    const players = makePlayers(3).map((player) => ({ ...player, botDifficulty: "easy" as const }));
+    const finished = playEntireGame(createGame("audit:base:easy:0", {}, players));
+
+    expect(finished.phase.kind).toBe("finished");
+    expect(finished.winnerPlayerId).not.toBeNull();
+  });
+
+  test.each([
+    ["base", 4],
+    ["extended-6", 6],
+    ["extended-8", 8],
+  ] as const)("bots finish a %s game with every state valid", (map, playerCount) => {
+    const finished = playEntireGame(
+      createGame(`rules-audit-${map}`, { map }, makePlayers(playerCount)),
+    );
+
+    expect(finished.phase.kind).toBe("finished");
+    expect(finished.winnerPlayerId).not.toBeNull();
   });
 });

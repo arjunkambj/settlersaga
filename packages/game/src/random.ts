@@ -37,52 +37,29 @@ export function deterministicInteger(
   };
 }
 
-export function deterministicShuffle<Value>(values: readonly Value[], seed: string): Value[] {
+function shuffleFrom<Value>(values: readonly Value[], seed: string, randomIndex: number) {
   const shuffled = [...values];
-  let randomIndex = 0;
+  let nextIndex = randomIndex;
 
   for (let index = shuffled.length - 1; index > 0; index -= 1) {
-    const draw = deterministicInteger(seed, randomIndex, index + 1);
-    randomIndex = draw.nextIndex;
-    const target = draw.value;
-    const currentValue = shuffled[index];
-    const targetValue = shuffled[target];
-
-    if (currentValue === undefined || targetValue === undefined) {
-      throw new Error("Values could not be shuffled");
-    }
-
-    shuffled[index] = targetValue;
-    shuffled[target] = currentValue;
+    const draw = deterministicInteger(seed, nextIndex, index + 1);
+    nextIndex = draw.nextIndex;
+    [shuffled[index], shuffled[draw.value]] = [shuffled[draw.value]!, shuffled[index]!];
   }
 
-  return shuffled;
+  return { nextIndex, values: shuffled };
+}
+
+export function deterministicShuffle<Value>(values: readonly Value[], seed: string): Value[] {
+  return shuffleFrom(values, seed, 0).values;
 }
 
 export function createBalancedDiceBag(seed: string, randomIndex: number) {
-  const bag: DiceRoll[] = Array.from({ length: 6 }, (_, firstIndex) =>
-    Array.from({ length: 6 }, (_, secondIndex) => ({
-      first: firstIndex + 1,
-      second: secondIndex + 1,
-      sum: firstIndex + secondIndex + 2,
-    })),
-  ).flat();
-  let nextIndex = randomIndex;
-
-  for (let index = bag.length - 1; index > 0; index -= 1) {
-    const draw = deterministicInteger(seed, nextIndex, index + 1);
-    nextIndex = draw.nextIndex;
-    const target = draw.value;
-    const currentRoll = bag[index];
-    const targetRoll = bag[target];
-
-    if (!currentRoll || !targetRoll) {
-      throw new Error("Balanced dice bag could not be shuffled");
-    }
-
-    bag[index] = targetRoll;
-    bag[target] = currentRoll;
-  }
-
-  return { bag, nextIndex };
+  const rolls: DiceRoll[] = Array.from({ length: 36 }, (_, index) => {
+    const first = Math.floor(index / 6) + 1;
+    const second = (index % 6) + 1;
+    return { first, second, sum: first + second };
+  });
+  const { nextIndex, values } = shuffleFrom(rolls, seed, randomIndex);
+  return { bag: values, nextIndex };
 }

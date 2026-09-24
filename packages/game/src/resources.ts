@@ -1,10 +1,6 @@
 import { RESOURCE_TYPES } from "./types";
 import type { ResourceInventory } from "./types";
 
-export function emptyInventory(): ResourceInventory {
-  return { brick: 0, sheep: 0, stone: 0, tree: 0, wheat: 0 };
-}
-
 export function filledInventory(count: number): ResourceInventory {
   return {
     brick: count,
@@ -13,6 +9,10 @@ export function filledInventory(count: number): ResourceInventory {
     tree: count,
     wheat: count,
   };
+}
+
+export function emptyInventory(): ResourceInventory {
+  return filledInventory(0);
 }
 
 export function totalResources(resources: ResourceInventory) {
@@ -51,7 +51,6 @@ export function subtractResources(
 
 export function isValidInventory(resources: ResourceInventory) {
   return RESOURCE_TYPES.every(
-    (type) =>
-      Number.isInteger(resources[type]) && Number.isFinite(resources[type]) && resources[type] >= 0,
+    (type) => Number.isSafeInteger(resources[type]) && resources[type] >= 0,
   );
 }

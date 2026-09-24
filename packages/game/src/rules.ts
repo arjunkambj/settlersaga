@@ -3,11 +3,13 @@ import {
   BANK_TRADE_RATIO,
   BUILD_COSTS,
   DEVELOPMENT_CARD_COST,
-  RESOURCE_PORT_TRADE_RATIO,
+  FRIENDLY_ROBBER_MAX_VICTORY_POINTS,
   RESOURCE_ORDER,
+  RESOURCE_PORT_TRADE_RATIO,
   TERRAIN_RESOURCE,
-  getSetupSeatOrder,
 } from "./constants";
+import { reconcileLargestArmyAward } from "./largest-army";
+import { reconcileLongestRoadAward } from "./longest-road";
 import { createBalancedDiceBag, deterministicInteger } from "./random";
 import {
   addResources,
@@ -17,39 +19,32 @@ import {
   subtractResources,
   totalResources,
 } from "./resources";
-import { reconcileLongestRoadAward } from "./longest-road";
-import { reconcileLargestArmyAward } from "./largest-army";
-import { getBoardTopology } from "./topology";
-import { GameRuleError, RESOURCE_TYPES } from "./types";
+import { getBoardTopology, type BoardTopology } from "./topology";
+import { GameRuleError, RESOURCE_TYPES, isPlayableDevelopmentCard } from "./types";
 import type {
   GameCommand,
-  DevelopmentCardType,
   GameRuleErrorCode,
   GameState,
   LegalActions,
+  PlayableDevelopmentCardType,
   PlayerId,
-  PlayerCount,
   PlayerState,
+  PortTrade,
   ResourceInventory,
   ResourceType,
   TradeOffer,
 } from "./types";
 
+// Reshuffling while a few rolls remain keeps the end of each cycle from being countable.
+const BALANCED_DICE_RESHUFFLE_AT = 5;
+const ROAD_BUILDING_ROADS = 2;
+const YEAR_OF_PLENTY_CARDS = 2;
+
 function fail(code: GameRuleErrorCode, message: string): never {
   throw new GameRuleError(code, message);
 }
 
-function getCurrentSetupSeatOrder(state: GameState) {
-  const playerCount = state.players.length;
-
-  if (playerCount < 3 || playerCount > 8) {
-    fail("INVALID_COMMAND", "A base game requires three to eight players");
-  }
-
-  return getSetupSeatOrder(playerCount as PlayerCount);
-}
-
-function requirePlayer(state: GameState, playerId: PlayerId) {
+export function requirePlayer(state: Pick<GameState, "players">, playerId: PlayerId): PlayerState {
   const player = state.players.find((candidate) => candidate.id === playerId);
 
   if (!player) {
@@ -59,63 +54,63 @@ function requirePlayer(state: GameState, playerId: PlayerId) {
   return player;
 }
 
+export function boardTopology(state: Pick<GameState, "board">): BoardTopology {
+  return getBoardTopology(state.board.tiles);
+}
+
+/** Seat positions in turn order for the snake draft: 0..n-1, then n-1..0. */
+export function getSetupSeatOrder(playerCount: number): number[] {
+  const ascending = Array.from({ length: playerCount }, (_, index) => index);
+  return [...ascending, ...[...ascending].reverse()];
+}
+
 function updatePlayer(
   state: GameState,
   playerId: PlayerId,
   update: (player: PlayerState) => PlayerState,
-) {
+): GameState {
   return {
     ...state,
     players: state.players.map((player) => (player.id === playerId ? update(player) : player)),
   };
 }
 
+function updateResources(
+  state: GameState,
+  playerId: PlayerId,
+  update: (resources: ResourceInventory) => ResourceInventory,
+): GameState {
+  return updatePlayer(state, playerId, (player) => ({
+    ...player,
+    resources: update(player.resources),
+  }));
+}
+
 function buildingAt(state: Pick<GameState, "board">, vertexKey: string) {
   return state.board.buildings.find((building) => building.vertexKey === vertexKey);
 }
 
-function roadAt(state: GameState, edgeKey: string) {
+function roadAt(state: Pick<GameState, "board">, edgeKey: string) {
   return state.board.roads.find((road) => road.edgeKey === edgeKey);
 }
 
-function hasCompletedSetupPlacements(state: GameState) {
-  return state.players.every((player) => {
-    const buildingCount = state.board.buildings.filter(
-      (building) => building.playerId === player.id,
-    ).length;
-    const roadCount = state.board.roads.filter((road) => road.playerId === player.id).length;
-    return buildingCount >= 2 && roadCount >= 2;
-  });
+function playerOwnsPort(state: Pick<GameState, "board">, playerId: PlayerId, trade: PortTrade) {
+  const topology = boardTopology(state);
+
+  return state.board.ports.some(
+    (port) =>
+      port.trade === trade &&
+      topology.edgeVertices[port.edgeKey]!.some(
+        (vertexKey) => buildingAt(state, vertexKey)?.playerId === playerId,
+      ),
+  );
 }
 
-function boardTopology(state: Pick<GameState, "board">) {
-  return getBoardTopology(state.board.tiles);
-}
-
-function playerOwnsPort(
+function getBankTradeRatio(
   state: Pick<GameState, "board">,
-  playerId: PlayerId,
-  trade: "any" | ResourceType,
-) {
-  return state.board.ports.some((port) => {
-    if (port.trade !== trade) {
-      return false;
-    }
-
-    const portVertices = boardTopology(state).edgeVertices[port.edgeKey] ?? [];
-    return portVertices.some((vertexKey) => buildingAt(state, vertexKey)?.playerId === playerId);
-  });
-}
-
-export function getBankTradeRatio(
-  state: Pick<GameState, "board"> & { players: readonly Pick<PlayerState, "id">[] },
   playerId: PlayerId,
   give: ResourceType,
 ) {
-  if (!state.players.some((player) => player.id === playerId)) {
-    fail("UNKNOWN_PLAYER", `Unknown player: ${playerId}`);
-  }
-
   if (playerOwnsPort(state, playerId, give)) {
     return RESOURCE_PORT_TRADE_RATIO;
   }
@@ -123,39 +118,35 @@ export function getBankTradeRatio(
   return playerOwnsPort(state, playerId, "any") ? ANY_PORT_TRADE_RATIO : BANK_TRADE_RATIO;
 }
 
-function isKnownVertex(state: GameState, vertexKey: string) {
-  return boardTopology(state).vertexPositions[vertexKey] !== undefined;
+function followsDistanceRule(state: GameState, topology: BoardTopology, vertexKey: string) {
+  return topology.vertexNeighbors[vertexKey]!.every((neighbor) => !buildingAt(state, neighbor));
 }
 
-function isKnownEdge(state: GameState, edgeKey: string) {
-  return boardTopology(state).edgeVertices[edgeKey] !== undefined;
-}
-
-function followsDistanceRule(state: GameState, vertexKey: string) {
-  return (boardTopology(state).vertexNeighbors[vertexKey] ?? []).every(
-    (neighbor) => !buildingAt(state, neighbor),
-  );
-}
-
-function hasPlayerRoadAtVertex(state: GameState, playerId: PlayerId, vertexKey: string) {
-  return (boardTopology(state).vertexEdges[vertexKey] ?? []).some(
+function hasPlayerRoadAtVertex(
+  state: GameState,
+  topology: BoardTopology,
+  playerId: PlayerId,
+  vertexKey: string,
+) {
+  return topology.vertexEdges[vertexKey]!.some(
     (edgeKey) => roadAt(state, edgeKey)?.playerId === playerId,
   );
 }
 
-function roadConnectsToPlayer(state: GameState, playerId: PlayerId, edgeKey: string) {
-  return (boardTopology(state).edgeVertices[edgeKey] ?? []).some((vertexKey) => {
+function roadConnectsToPlayer(
+  state: GameState,
+  topology: BoardTopology,
+  playerId: PlayerId,
+  edgeKey: string,
+) {
+  return topology.edgeVertices[edgeKey]!.some((vertexKey) => {
     const building = buildingAt(state, vertexKey);
 
-    if (building?.playerId === playerId) {
-      return true;
-    }
-
     if (building) {
-      return false;
+      return building.playerId === playerId;
     }
 
-    return hasPlayerRoadAtVertex(state, playerId, vertexKey);
+    return hasPlayerRoadAtVertex(state, topology, playerId, vertexKey);
   });
 }
 
@@ -164,115 +155,108 @@ export function getSettlementVertexKeys(
   playerId: PlayerId,
   requiresRoad: boolean,
 ) {
-  requirePlayer(state, playerId);
+  const topology = boardTopology(state);
 
-  return boardTopology(state).vertexKeys.filter(
+  return topology.vertexKeys.filter(
     (vertexKey) =>
       !buildingAt(state, vertexKey) &&
-      followsDistanceRule(state, vertexKey) &&
-      (!requiresRoad || hasPlayerRoadAtVertex(state, playerId, vertexKey)),
+      followsDistanceRule(state, topology, vertexKey) &&
+      (!requiresRoad || hasPlayerRoadAtVertex(state, topology, playerId, vertexKey)),
   );
 }
 
 export function getRoadEdgeKeys(state: GameState, playerId: PlayerId) {
-  requirePlayer(state, playerId);
+  const topology = boardTopology(state);
 
-  return boardTopology(state).edgeKeys.filter(
-    (edgeKey) => !roadAt(state, edgeKey) && roadConnectsToPlayer(state, playerId, edgeKey),
+  return topology.edgeKeys.filter(
+    (edgeKey) =>
+      !roadAt(state, edgeKey) && roadConnectsToPlayer(state, topology, playerId, edgeKey),
   );
 }
 
 export function getCityVertexKeys(state: GameState, playerId: PlayerId) {
-  requirePlayer(state, playerId);
-
   return state.board.buildings
     .filter((building) => building.playerId === playerId && building.kind === "settlement")
     .map((building) => building.vertexKey)
     .sort();
 }
 
-function payCost(state: GameState, playerId: PlayerId, cost: Readonly<ResourceInventory>) {
-  const player = requirePlayer(state, playerId);
-
-  if (!hasResources(player.resources, cost)) {
+function payCost(
+  state: GameState,
+  playerId: PlayerId,
+  cost: Readonly<ResourceInventory>,
+): GameState {
+  if (!hasResources(requirePlayer(state, playerId).resources, cost)) {
     fail("INSUFFICIENT_RESOURCES", "Player cannot afford this action");
   }
 
-  const withPaidPlayer = updatePlayer(state, playerId, (current) => ({
-    ...current,
-    resources: subtractResources(current.resources, cost),
-  }));
-
   return {
-    ...withPaidPlayer,
-    bank: addResources(withPaidPlayer.bank, cost),
+    ...updateResources(state, playerId, (resources) => subtractResources(resources, cost)),
+    bank: addResources(state.bank, cost),
   };
 }
 
-function addBuilding(state: GameState, playerId: PlayerId, vertexKey: string) {
-  const withBuilding: GameState = {
-    ...state,
+function addBuilding(state: GameState, playerId: PlayerId, vertexKey: string): GameState {
+  const withBuilding = updatePlayer(state, playerId, (player) => ({
+    ...player,
+    piecesRemaining: {
+      ...player.piecesRemaining,
+      settlements: player.piecesRemaining.settlements - 1,
+    },
+    victoryPoints: player.victoryPoints + 1,
+  }));
+
+  return reconcileLongestRoadAward({
+    ...withBuilding,
     board: {
       ...state.board,
       buildings: [...state.board.buildings, { kind: "settlement", playerId, vertexKey }],
     },
-  };
-
-  return reconcileLongestRoadAward(
-    updatePlayer(withBuilding, playerId, (player) => ({
-      ...player,
-      piecesRemaining: {
-        ...player.piecesRemaining,
-        settlements: player.piecesRemaining.settlements - 1,
-      },
-      victoryPoints: player.victoryPoints + 1,
-    })),
-  );
+  });
 }
 
-function addRoad(state: GameState, playerId: PlayerId, edgeKey: string) {
-  const withRoad: GameState = {
-    ...state,
+function addRoad(state: GameState, playerId: PlayerId, edgeKey: string): GameState {
+  const withRoad = updatePlayer(state, playerId, (player) => ({
+    ...player,
+    piecesRemaining: {
+      ...player.piecesRemaining,
+      roads: player.piecesRemaining.roads - 1,
+    },
+  }));
+
+  return reconcileLongestRoadAward({
+    ...withRoad,
     board: {
       ...state.board,
       roads: [...state.board.roads, { edgeKey, playerId }],
     },
-  };
-
-  return reconcileLongestRoadAward(
-    updatePlayer(withRoad, playerId, (player) => ({
-      ...player,
-      piecesRemaining: {
-        ...player.piecesRemaining,
-        roads: player.piecesRemaining.roads - 1,
-      },
-    })),
-  );
+  });
 }
 
-function grantSecondSettlementResources(state: GameState, playerId: PlayerId, vertexKey: string) {
+function grantSecondSettlementResources(
+  state: GameState,
+  playerId: PlayerId,
+  vertexKey: string,
+): GameState {
   const granted = emptyInventory();
-  const bank = { ...state.bank };
 
-  for (const tileId of boardTopology(state).vertexTileIds[vertexKey] ?? []) {
-    const tile = state.board.tiles.find((candidate) => candidate.id === tileId);
-    const resource = tile ? TERRAIN_RESOURCE[tile.terrain] : null;
+  for (const tileId of boardTopology(state).vertexTileIds[vertexKey]!) {
+    const tile = state.board.tiles.find((candidate) => candidate.id === tileId)!;
+    const resource = TERRAIN_RESOURCE[tile.terrain];
 
-    if (resource && bank[resource] > 0) {
+    if (resource && state.bank[resource] > granted[resource]) {
       granted[resource] += 1;
-      bank[resource] -= 1;
     }
   }
 
-  const withResources = updatePlayer(state, playerId, (player) => ({
-    ...player,
-    resources: addResources(player.resources, granted),
-  }));
-
-  return { ...withResources, bank };
+  return {
+    ...updateResources(state, playerId, (resources) => addResources(resources, granted)),
+    bank: subtractResources(state.bank, granted),
+  };
 }
 
-function finishIfWinner(state: GameState, playerId: PlayerId) {
+/** A player wins only on their own turn, counting their unrevealed victory-point cards. */
+function finishIfWinner(state: GameState, playerId: PlayerId): GameState {
   const player = requirePlayer(state, playerId);
   const hiddenVictoryPoints = player.developmentCards.filter(
     (card) => card === "victory-point",
@@ -284,251 +268,206 @@ function finishIfWinner(state: GameState, playerId: PlayerId) {
 
   return {
     ...state,
-    phase: { kind: "finished" } as const,
-    status: "completed" as const,
+    phase: { kind: "finished" },
     tradeOffer: null,
     winnerPlayerId: playerId,
   };
 }
 
-function placeSettlement(state: GameState, playerId: PlayerId, vertexKey: string) {
-  if (!isKnownVertex(state, vertexKey)) {
-    fail("INVALID_LOCATION", `Unknown vertex: ${vertexKey}`);
+function requirePlaceablePiece(player: PlayerState, piece: keyof PlayerState["piecesRemaining"]) {
+  if (player.piecesRemaining[piece] <= 0) {
+    fail("NO_PIECE_AVAILABLE", `Player has no ${piece} remaining`);
   }
+}
 
-  if (buildingAt(state, vertexKey)) {
-    fail("LOCATION_OCCUPIED", "The vertex already contains a building");
-  }
-
-  if (!followsDistanceRule(state, vertexKey)) {
-    fail("DISTANCE_RULE", "Adjacent vertices must remain empty");
-  }
-
-  const player = requirePlayer(state, playerId);
-
-  if (player.piecesRemaining.settlements <= 0) {
-    fail("NO_PIECE_AVAILABLE", "Player has no settlements remaining");
-  }
-
-  if (state.phase.kind === "setup_settlement") {
-    const setupIndex = state.phase.setupIndex;
-    let next = addBuilding(state, playerId, vertexKey);
-
-    if (setupIndex >= state.players.length) {
-      next = grantSecondSettlementResources(next, playerId, vertexKey);
-    }
-
-    return {
-      ...next,
-      phase: { kind: "setup_road" as const, settlementVertexKey: vertexKey, setupIndex },
-    };
-  }
-
-  if (state.phase.kind !== "build_and_trade") {
+function placeSettlement(state: GameState, playerId: PlayerId, vertexKey: string): GameState {
+  const { phase } = state;
+  if (phase.kind !== "setup_settlement" && phase.kind !== "build_and_trade") {
     fail("INVALID_PHASE", "Settlements cannot be placed in this phase");
   }
 
-  if (!hasPlayerRoadAtVertex(state, playerId, vertexKey)) {
+  const topology = boardTopology(state);
+  if (!Object.hasOwn(topology.vertexNeighbors, vertexKey)) {
+    fail("INVALID_LOCATION", `Unknown vertex: ${vertexKey}`);
+  }
+  if (buildingAt(state, vertexKey)) {
+    fail("LOCATION_OCCUPIED", "The vertex already contains a building");
+  }
+  if (!followsDistanceRule(state, topology, vertexKey)) {
+    fail("DISTANCE_RULE", "Adjacent vertices must remain empty");
+  }
+  requirePlaceablePiece(requirePlayer(state, playerId), "settlements");
+
+  if (phase.kind === "setup_settlement") {
+    const withSettlement = addBuilding(state, playerId, vertexKey);
+    const isSecondSettlement = phase.setupIndex >= state.players.length;
+
+    return {
+      ...(isSecondSettlement
+        ? grantSecondSettlementResources(withSettlement, playerId, vertexKey)
+        : withSettlement),
+      phase: { kind: "setup_road", settlementVertexKey: vertexKey, setupIndex: phase.setupIndex },
+    };
+  }
+
+  if (!hasPlayerRoadAtVertex(state, topology, playerId, vertexKey)) {
     fail("ROAD_NOT_CONNECTED", "Settlement must connect to the player's road");
   }
 
-  return finishIfWinner(
-    addBuilding(payCost(state, playerId, BUILD_COSTS.settlement), playerId, vertexKey),
-    playerId,
-  );
+  return addBuilding(payCost(state, playerId, BUILD_COSTS.settlement), playerId, vertexKey);
 }
 
-function placeRoad(state: GameState, playerId: PlayerId, edgeKey: string) {
-  if (!isKnownEdge(state, edgeKey)) {
-    fail("INVALID_LOCATION", `Unknown edge: ${edgeKey}`);
-  }
+function finishSetupRoad(state: GameState, setupIndex: number): GameState {
+  const setupSeatOrder = getSetupSeatOrder(state.players.length);
+  const nextSetupIndex = setupIndex + 1;
 
-  if (roadAt(state, edgeKey)) {
-    fail("LOCATION_OCCUPIED", "The edge already contains a road");
-  }
-
-  const player = requirePlayer(state, playerId);
-
-  if (player.piecesRemaining.roads <= 0) {
-    fail("NO_PIECE_AVAILABLE", "Player has no roads remaining");
-  }
-
-  if (state.phase.kind === "setup_road") {
-    const { settlementVertexKey, setupIndex } = state.phase;
-    const setupEdgeVertices = boardTopology(state).edgeVertices[edgeKey];
-
-    if (!setupEdgeVertices?.includes(settlementVertexKey)) {
-      fail("ROAD_NOT_CONNECTED", "Setup road must touch the new settlement");
-    }
-
-    const withRoad = addRoad(state, playerId, edgeKey);
-    const nextSetupIndex = setupIndex + 1;
-    const setupSeatOrder = getCurrentSetupSeatOrder(state);
-
-    if (nextSetupIndex >= setupSeatOrder.length) {
-      const firstPlayerId = state.turnOrder[0];
-
-      if (!firstPlayerId) {
-        fail("INVALID_COMMAND", "Game has no first player");
-      }
-      if (!hasCompletedSetupPlacements(withRoad)) {
-        fail(
-          "INVALID_COMMAND",
-          "Setup cannot finish before every player places two settlements and two roads",
-        );
-      }
-
-      return {
-        ...withRoad,
-        activePlayerId: firstPlayerId,
-        phase: { kind: "roll" as const },
-        turnNumber: 1,
-      };
-    }
-
-    const nextSeat = setupSeatOrder[nextSetupIndex];
-    const nextPlayerId = nextSeat === undefined ? undefined : state.turnOrder[nextSeat];
-
-    if (!nextPlayerId) {
-      fail("INVALID_COMMAND", "Setup order references a missing player");
-    }
-
+  if (nextSetupIndex < setupSeatOrder.length) {
     return {
-      ...withRoad,
-      activePlayerId: nextPlayerId,
-      phase: {
-        kind: "setup_settlement" as const,
-        setupIndex: nextSetupIndex,
-      },
+      ...state,
+      activePlayerId: state.turnOrder[setupSeatOrder[nextSetupIndex]!]!,
+      phase: { kind: "setup_settlement", setupIndex: nextSetupIndex },
     };
   }
 
-  if (state.phase.kind === "road_building") {
-    if (!roadConnectsToPlayer(state, playerId, edgeKey)) {
-      fail("ROAD_NOT_CONNECTED", "Road must connect to the player's network");
-    }
+  return {
+    ...state,
+    activePlayerId: state.turnOrder[0]!,
+    phase: { kind: "roll" },
+    turnNumber: 1,
+  };
+}
 
-    const resumePhase = state.phase.resumePhase;
-    const remainingRoads = state.phase.remainingRoads - 1;
-    const withRoad = addRoad(state, playerId, edgeKey);
-    const playerAfterRoad = requirePlayer(withRoad, playerId);
-    const shouldResume =
-      remainingRoads <= 0 ||
-      playerAfterRoad.piecesRemaining.roads <= 0 ||
-      getRoadEdgeKeys(withRoad, playerId).length === 0;
-    const next = {
-      ...withRoad,
-      phase: shouldResume
-        ? ({ kind: resumePhase } as const)
-        : ({ kind: "road_building", remainingRoads, resumePhase } as const),
-    };
-
-    return finishIfWinner(next, playerId);
-  }
-
-  if (state.phase.kind !== "build_and_trade") {
+function placeRoad(state: GameState, playerId: PlayerId, edgeKey: string): GameState {
+  const { phase } = state;
+  if (
+    phase.kind !== "setup_road" &&
+    phase.kind !== "road_building" &&
+    phase.kind !== "build_and_trade"
+  ) {
     fail("INVALID_PHASE", "Roads cannot be placed in this phase");
   }
 
-  if (!roadConnectsToPlayer(state, playerId, edgeKey)) {
+  const topology = boardTopology(state);
+  if (!Object.hasOwn(topology.edgeVertices, edgeKey)) {
+    fail("INVALID_LOCATION", `Unknown edge: ${edgeKey}`);
+  }
+  if (roadAt(state, edgeKey)) {
+    fail("LOCATION_OCCUPIED", "The edge already contains a road");
+  }
+  requirePlaceablePiece(requirePlayer(state, playerId), "roads");
+
+  if (phase.kind === "setup_road") {
+    if (!topology.edgeVertices[edgeKey]!.includes(phase.settlementVertexKey)) {
+      fail("ROAD_NOT_CONNECTED", "Setup road must touch the new settlement");
+    }
+
+    return finishSetupRoad(addRoad(state, playerId, edgeKey), phase.setupIndex);
+  }
+
+  if (!roadConnectsToPlayer(state, topology, playerId, edgeKey)) {
     fail("ROAD_NOT_CONNECTED", "Road must connect to the player's network");
   }
 
-  return finishIfWinner(
-    addRoad(payCost(state, playerId, BUILD_COSTS.road), playerId, edgeKey),
-    playerId,
-  );
+  if (phase.kind === "build_and_trade") {
+    return addRoad(payCost(state, playerId, BUILD_COSTS.road), playerId, edgeKey);
+  }
+
+  const withRoad = addRoad(state, playerId, edgeKey);
+  const remainingRoads = phase.remainingRoads - 1;
+  const canContinue =
+    remainingRoads > 0 &&
+    requirePlayer(withRoad, playerId).piecesRemaining.roads > 0 &&
+    getRoadEdgeKeys(withRoad, playerId).length > 0;
+
+  return {
+    ...withRoad,
+    phase: canContinue
+      ? { kind: "road_building", remainingRoads, resumePhase: phase.resumePhase }
+      : { kind: phase.resumePhase },
+  };
 }
 
-function buildCity(state: GameState, playerId: PlayerId, vertexKey: string) {
+function buildCity(state: GameState, playerId: PlayerId, vertexKey: string): GameState {
   if (state.phase.kind !== "build_and_trade") {
     fail("INVALID_PHASE", "Cities cannot be built in this phase");
   }
 
   const building = buildingAt(state, vertexKey);
-
-  if (!building || building.playerId !== playerId || building.kind !== "settlement") {
+  if (building?.playerId !== playerId || building.kind !== "settlement") {
     fail("INVALID_LOCATION", "City must replace the player's settlement");
   }
-
-  const player = requirePlayer(state, playerId);
-
-  if (player.piecesRemaining.cities <= 0) {
-    fail("NO_PIECE_AVAILABLE", "Player has no cities remaining");
-  }
+  requirePlaceablePiece(requirePlayer(state, playerId), "cities");
 
   const paid = payCost(state, playerId, BUILD_COSTS.city);
-  const withCity: GameState = {
-    ...paid,
-    board: {
-      ...paid.board,
-      buildings: paid.board.buildings.map((candidate) =>
-        candidate.vertexKey === vertexKey ? { ...candidate, kind: "city" as const } : candidate,
-      ),
+  return updatePlayer(
+    {
+      ...paid,
+      board: {
+        ...paid.board,
+        buildings: paid.board.buildings.map((candidate) =>
+          candidate.vertexKey === vertexKey ? { ...candidate, kind: "city" } : candidate,
+        ),
+      },
     },
-  };
-  const withPieces = updatePlayer(withCity, playerId, (current) => ({
-    ...current,
-    piecesRemaining: {
-      ...current.piecesRemaining,
-      cities: current.piecesRemaining.cities - 1,
-      settlements: current.piecesRemaining.settlements + 1,
-    },
-    victoryPoints: current.victoryPoints + 1,
-  }));
-
-  return finishIfWinner(withPieces, playerId);
+    playerId,
+    (player) => ({
+      ...player,
+      piecesRemaining: {
+        ...player.piecesRemaining,
+        cities: player.piecesRemaining.cities - 1,
+        settlements: player.piecesRemaining.settlements + 1,
+      },
+      victoryPoints: player.victoryPoints + 1,
+    }),
+  );
 }
 
-function buyDevelopmentCard(state: GameState, playerId: PlayerId) {
+function buyDevelopmentCard(state: GameState, playerId: PlayerId): GameState {
   if (state.phase.kind !== "build_and_trade") {
     fail("INVALID_PHASE", "Development cards cannot be bought in this phase");
   }
 
-  const card = state.developmentDeck[0];
+  const [card, ...developmentDeck] = state.developmentDeck;
   if (!card) {
     fail("NO_DEVELOPMENT_CARD_AVAILABLE", "No development cards remain");
   }
 
   const paid = payCost(state, playerId, DEVELOPMENT_CARD_COST);
-  const withCard = updatePlayer(
+  return updatePlayer(
     {
       ...paid,
       developmentCardsBoughtThisTurn: paid.developmentCardsBoughtThisTurn + 1,
-      developmentDeck: paid.developmentDeck.slice(1),
+      developmentDeck,
     },
     playerId,
-    (player) => ({
-      ...player,
-      developmentCards: [...player.developmentCards, card],
-    }),
+    (player) => ({ ...player, developmentCards: [...player.developmentCards, card] }),
   );
-
-  return finishIfWinner(withCard, playerId);
 }
 
-function playableDevelopmentCards(state: GameState, playerId: PlayerId) {
+function playableDevelopmentCards(
+  state: GameState,
+  player: PlayerState,
+  hideBankStock: boolean,
+): PlayableDevelopmentCardType[] {
   if (
     state.developmentCardPlayedThisTurn ||
     (state.phase.kind !== "roll" && state.phase.kind !== "build_and_trade") ||
-    state.activePlayerId !== playerId
+    state.activePlayerId !== player.id
   ) {
     return [];
   }
 
-  const player = requirePlayer(state, playerId);
-  const playableCardCount = Math.max(
+  // Cards bought this turn sit at the end of the hand and cannot be played yet.
+  const playableHand = player.developmentCards.slice(
     0,
     player.developmentCards.length - state.developmentCardsBoughtThisTurn,
   );
-  const cards = new Set(
-    player.developmentCards.slice(0, playableCardCount).filter((card) => card !== "victory-point"),
-  );
+  const cards = new Set(playableHand.filter(isPlayableDevelopmentCard));
 
-  if (player.piecesRemaining.roads <= 0 || getRoadEdgeKeys(state, playerId).length === 0) {
+  if (player.piecesRemaining.roads === 0 || getRoadEdgeKeys(state, player.id).length === 0) {
     cards.delete("road-building");
   }
-  if (totalResources(state.bank) < 2) {
+  if (!hideBankStock && totalResources(state.bank) < YEAR_OF_PLENTY_CARDS) {
     cards.delete("year-of-plenty");
   }
 
@@ -538,28 +477,17 @@ function playableDevelopmentCards(state: GameState, playerId: PlayerId) {
 function consumeDevelopmentCard(
   state: GameState,
   playerId: PlayerId,
-  card: Exclude<DevelopmentCardType, "victory-point">,
-) {
-  const playableCards = playableDevelopmentCards(state, playerId);
-  if (!playableCards.includes(card)) {
+  card: PlayableDevelopmentCardType,
+): GameState {
+  const player = requirePlayer(state, playerId);
+  if (!playableDevelopmentCards(state, player, false).includes(card)) {
     fail("DEVELOPMENT_CARD_NOT_PLAYABLE", "This development card cannot be played right now");
   }
 
-  const player = requirePlayer(state, playerId);
-  const playableCardCount = player.developmentCards.length - state.developmentCardsBoughtThisTurn;
-  const cardIndex = player.developmentCards
-    .slice(0, playableCardCount)
-    .findIndex((candidate) => candidate === card);
-  if (cardIndex < 0) {
-    fail("DEVELOPMENT_CARD_NOT_PLAYABLE", "Player does not have this development card");
-  }
-
+  // Playable cards form a prefix of the hand, so the first copy is always one of them.
+  const cardIndex = player.developmentCards.indexOf(card);
   return updatePlayer(
-    {
-      ...state,
-      developmentCardPlayedThisTurn: true,
-      tradeOffer: null,
-    },
+    { ...state, developmentCardPlayedThisTurn: true, tradeOffer: null },
     playerId,
     (current) => ({
       ...current,
@@ -569,27 +497,24 @@ function consumeDevelopmentCard(
   );
 }
 
-function playKnight(state: GameState, playerId: PlayerId) {
+function requireResumablePhase(state: GameState) {
   const resumePhase = state.phase.kind;
   if (resumePhase !== "roll" && resumePhase !== "build_and_trade") {
-    fail("INVALID_PHASE", "Knight cannot be played in this phase");
+    fail("INVALID_PHASE", "Development cards can only be played before or after rolling");
   }
-
-  const withKnight = reconcileLargestArmyAward(consumeDevelopmentCard(state, playerId, "knight"));
-  return finishIfWinner(
-    {
-      ...withKnight,
-      phase: { kind: "move_robber", resumePhase, rollerPlayerId: playerId },
-    },
-    playerId,
-  );
+  return resumePhase;
 }
 
-function playMonopoly(state: GameState, playerId: PlayerId, resource: unknown) {
-  if (!isResourceType(resource)) {
-    fail("INVALID_COMMAND", "Monopoly requires a known resource");
-  }
+function playKnight(state: GameState, playerId: PlayerId): GameState {
+  const resumePhase = requireResumablePhase(state);
 
+  return {
+    ...reconcileLargestArmyAward(consumeDevelopmentCard(state, playerId, "knight")),
+    phase: { kind: "move_robber", resumePhase },
+  };
+}
+
+function playMonopoly(state: GameState, playerId: PlayerId, resource: ResourceType): GameState {
   const consumed = consumeDevelopmentCard(state, playerId, "monopoly");
   const collected = consumed.players.reduce(
     (total, player) => total + (player.id === playerId ? 0 : player.resources[resource]),
@@ -600,33 +525,37 @@ function playMonopoly(state: GameState, playerId: PlayerId, resource: unknown) {
     ...consumed,
     players: consumed.players.map((player) => ({
       ...player,
-      resources:
-        player.id === playerId
-          ? { ...player.resources, [resource]: player.resources[resource] + collected }
-          : { ...player.resources, [resource]: 0 },
+      resources: {
+        ...player.resources,
+        [resource]: player.id === playerId ? player.resources[resource] + collected : 0,
+      },
     })),
   };
 }
 
 function playRoadBuilding(state: GameState, playerId: PlayerId): GameState {
-  const resumePhase = state.phase.kind;
-  if (resumePhase !== "roll" && resumePhase !== "build_and_trade") {
-    fail("INVALID_PHASE", "Road Building cannot be played in this phase");
-  }
-
+  const resumePhase = requireResumablePhase(state);
   const consumed = consumeDevelopmentCard(state, playerId, "road-building");
+
   return {
     ...consumed,
     phase: {
-      kind: "road_building" as const,
-      remainingRoads: Math.min(2, requirePlayer(consumed, playerId).piecesRemaining.roads),
+      kind: "road_building",
+      remainingRoads: Math.min(
+        ROAD_BUILDING_ROADS,
+        requirePlayer(consumed, playerId).piecesRemaining.roads,
+      ),
       resumePhase,
     },
   };
 }
 
-function playYearOfPlenty(state: GameState, playerId: PlayerId, resources: ResourceInventory) {
-  if (!isValidInventory(resources) || totalResources(resources) !== 2) {
+function playYearOfPlenty(
+  state: GameState,
+  playerId: PlayerId,
+  resources: ResourceInventory,
+): GameState {
+  if (!isValidInventory(resources) || totalResources(resources) !== YEAR_OF_PLENTY_CARDS) {
     fail("INVALID_COMMAND", "Year of Plenty must select exactly two resource cards");
   }
   if (!hasResources(state.bank, resources)) {
@@ -634,94 +563,54 @@ function playYearOfPlenty(state: GameState, playerId: PlayerId, resources: Resou
   }
 
   const consumed = consumeDevelopmentCard(state, playerId, "year-of-plenty");
-  const withResources = updatePlayer(consumed, playerId, (player) => ({
-    ...player,
-    resources: addResources(player.resources, resources),
-  }));
   return {
-    ...withResources,
-    bank: subtractResources(withResources.bank, resources),
+    ...updateResources(consumed, playerId, (current) => addResources(current, resources)),
+    bank: subtractResources(consumed.bank, resources),
   };
 }
 
-export function distributeResourcesForRoll(state: GameState, rollTotal: number) {
-  const claims = state.players.map((player) => ({
-    playerId: player.id,
-    resources: emptyInventory(),
-  }));
+function distributeResourcesForRoll(state: GameState, rollTotal: number): GameState {
+  const topology = boardTopology(state);
   const buildingByVertex = new Map(
     state.board.buildings.map((building) => [building.vertexKey, building]),
   );
+  const claims = new Map(state.players.map((player) => [player.id, emptyInventory()]));
 
   for (const tile of state.board.tiles) {
-    if (tile.id === state.board.robberTileId || tile.numberToken !== rollTotal) {
-      continue;
-    }
-
     const resource = TERRAIN_RESOURCE[tile.terrain];
-
-    if (!resource) {
+    if (!resource || tile.numberToken !== rollTotal || tile.id === state.board.robberTileId) {
       continue;
     }
 
-    for (const vertexKey of boardTopology(state).tileById[tile.id]?.vertexKeys ?? []) {
+    for (const vertexKey of topology.tileById[tile.id]!.vertexKeys) {
       const building = buildingByVertex.get(vertexKey);
-      const claim = building
-        ? claims.find((candidate) => candidate.playerId === building.playerId)
-        : undefined;
-
-      if (building && claim) {
-        claim.resources[resource] += building.kind === "city" ? 2 : 1;
+      if (building) {
+        claims.get(building.playerId)![resource] += building.kind === "city" ? 2 : 1;
       }
     }
   }
 
-  const allocations = claims.map((claim) => ({
-    playerId: claim.playerId,
-    resources: emptyInventory(),
-  }));
-
+  // When the bank cannot cover every claim for a resource, nobody receives it,
+  // unless a single player is owed it: they take whatever the bank has left.
   for (const resource of RESOURCE_TYPES) {
-    const claimants = claims.filter((claim) => claim.resources[resource] > 0);
-    const requested = claimants.reduce((total, claim) => total + claim.resources[resource], 0);
+    const claimants = [...claims.values()].filter((claim) => claim[resource] > 0);
+    const requested = claimants.reduce((total, claim) => total + claim[resource], 0);
 
-    if (requested <= state.bank[resource]) {
-      for (const claimant of claimants) {
-        const allocation = allocations.find(
-          (candidate) => candidate.playerId === claimant.playerId,
-        );
-
-        if (allocation) {
-          allocation.resources[resource] = claimant.resources[resource];
-        }
-      }
-    } else if (claimants.length === 1) {
-      const [claimant] = claimants;
-      const allocation = allocations.find((candidate) => candidate.playerId === claimant?.playerId);
-
-      if (allocation) {
-        allocation.resources[resource] = state.bank[resource];
+    if (requested > state.bank[resource]) {
+      for (const claim of claimants) {
+        claim[resource] = claimants.length === 1 ? state.bank[resource] : 0;
       }
     }
   }
 
-  const distributed = RESOURCE_TYPES.reduce((totals, resource) => {
-    totals[resource] = allocations.reduce(
-      (total, allocation) => total + allocation.resources[resource],
-      0,
-    );
-    return totals;
-  }, emptyInventory());
-
+  const paidOut = [...claims.values()].reduce(addResources, emptyInventory());
   return {
     ...state,
-    bank: subtractResources(state.bank, distributed),
-    players: state.players.map((player) => {
-      const allocation = allocations.find((candidate) => candidate.playerId === player.id);
-      return allocation
-        ? { ...player, resources: addResources(player.resources, allocation.resources) }
-        : player;
-    }),
+    bank: subtractResources(state.bank, paidOut),
+    players: state.players.map((player) => ({
+      ...player,
+      resources: addResources(player.resources, claims.get(player.id)!),
+    })),
   };
 }
 
@@ -739,112 +628,70 @@ function drawDice(state: GameState) {
     };
   }
 
-  const shuffled =
-    state.balancedDiceBag.length > 0
+  const { bag, nextIndex } =
+    state.balancedDiceBag.length > BALANCED_DICE_RESHUFFLE_AT
       ? { bag: state.balancedDiceBag, nextIndex: state.randomIndex }
       : createBalancedDiceBag(state.seed, state.randomIndex);
-  const [roll, ...balancedDiceBag] = shuffled.bag;
+  const [roll, ...balancedDiceBag] = bag;
 
-  if (!roll) {
-    fail("INVALID_COMMAND", "Balanced dice bag is empty");
-  }
-
-  return {
-    balancedDiceBag,
-    randomIndex: shuffled.nextIndex,
-    roll,
-  };
+  return { balancedDiceBag, randomIndex: nextIndex, roll: roll! };
 }
 
-function rollDice(state: GameState, playerId: PlayerId) {
+function rollDice(state: GameState): GameState {
   if (state.phase.kind !== "roll") {
     fail("INVALID_PHASE", "Dice can only be rolled at the start of a turn");
   }
-  if (!hasCompletedSetupPlacements(state)) {
-    fail(
-      "INVALID_PHASE",
-      "Dice cannot be rolled before every player places two settlements and two roads",
-    );
+
+  const { balancedDiceBag, randomIndex, roll } = drawDice(state);
+  const rolled: GameState = { ...state, balancedDiceBag, lastDiceRoll: roll, randomIndex };
+
+  if (roll.sum !== 7) {
+    return { ...distributeResourcesForRoll(rolled, roll.sum), phase: { kind: "build_and_trade" } };
   }
 
-  const draw = drawDice(state);
-  const { first, second, sum } = draw.roll;
-  const rolled: GameState = {
-    ...state,
-    balancedDiceBag: draw.balancedDiceBag,
-    lastDiceRoll: { first, second, sum },
-    randomIndex: draw.randomIndex,
-  };
-
-  if (sum !== 7) {
-    return {
-      ...distributeResourcesForRoll(rolled, sum),
-      phase: { kind: "build_and_trade" as const },
-    };
-  }
-
-  const pending = rolled.players
-    .map((player) => ({
-      count: Math.floor(totalResources(player.resources) / 2),
-      playerId: player.id,
-      total: totalResources(player.resources),
-    }))
-    .filter((requirement) => requirement.total > state.settings.discardLimit)
-    .map(({ count, playerId: pendingPlayerId }) => ({
-      count,
-      playerId: pendingPlayerId,
-    }));
+  const pending = rolled.players.flatMap((player) => {
+    const handSize = totalResources(player.resources);
+    return handSize > state.settings.discardLimit
+      ? [{ count: Math.floor(handSize / 2), playerId: player.id }]
+      : [];
+  });
 
   return {
     ...rolled,
     phase:
       pending.length > 0
-        ? { kind: "discard" as const, pending, rollerPlayerId: playerId }
-        : {
-            kind: "move_robber" as const,
-            resumePhase: "build_and_trade" as const,
-            rollerPlayerId: playerId,
-          },
+        ? { kind: "discard", pending }
+        : { kind: "move_robber", resumePhase: "build_and_trade" },
   };
 }
 
-function discardResources(state: GameState, playerId: PlayerId, discarded: ResourceInventory) {
+function discardResources(
+  state: GameState,
+  playerId: PlayerId,
+  discarded: ResourceInventory,
+): GameState {
   if (state.phase.kind !== "discard") {
     fail("INVALID_PHASE", "No discard is currently required");
   }
 
   const requirement = state.phase.pending.find((pending) => pending.playerId === playerId);
-  const player = requirePlayer(state, playerId);
-
   if (
     !requirement ||
     !isValidInventory(discarded) ||
     totalResources(discarded) !== requirement.count ||
-    !hasResources(player.resources, discarded)
+    !hasResources(requirePlayer(state, playerId).resources, discarded)
   ) {
     fail("INVALID_DISCARD", "Discard must exactly match the pending requirement");
   }
 
-  const withDiscardedPlayer = updatePlayer(state, playerId, (current) => ({
-    ...current,
-    resources: subtractResources(current.resources, discarded),
-  }));
   const pending = state.phase.pending.filter((candidate) => candidate.playerId !== playerId);
-
   return {
-    ...withDiscardedPlayer,
-    bank: addResources(withDiscardedPlayer.bank, discarded),
+    ...updateResources(state, playerId, (resources) => subtractResources(resources, discarded)),
+    bank: addResources(state.bank, discarded),
     phase:
       pending.length > 0
-        ? {
-            ...state.phase,
-            pending,
-          }
-        : {
-            kind: "move_robber" as const,
-            resumePhase: "build_and_trade" as const,
-            rollerPlayerId: state.phase.rollerPlayerId,
-          },
+        ? { kind: "discard", pending }
+        : { kind: "move_robber", resumePhase: "build_and_trade" },
   };
 }
 
@@ -854,7 +701,9 @@ function friendlyRobberProtectedPlayerIds(state: GameState) {
   }
 
   return new Set(
-    state.players.filter((player) => player.victoryPoints <= 2).map((player) => player.id),
+    state.players
+      .filter((player) => player.victoryPoints <= FRIENDLY_ROBBER_MAX_VICTORY_POINTS)
+      .map((player) => player.id),
   );
 }
 
@@ -868,43 +717,45 @@ function robberTileIds(state: GameState) {
     return available;
   }
 
+  const topology = boardTopology(state);
   const friendly = available.filter((tileId) => {
-    const adjacentVertices = new Set(boardTopology(state).tileById[tileId]?.vertexKeys ?? []);
+    const adjacentVertices = new Set(topology.tileById[tileId]!.vertexKeys);
     return !state.board.buildings.some(
       (building) =>
         protectedPlayerIds.has(building.playerId) && adjacentVertices.has(building.vertexKey),
     );
   });
 
-  const desertTileId = state.board.tiles.find(
-    (tile) => TERRAIN_RESOURCE[tile.terrain] === null,
-  )?.id;
   if (friendly.length > 0) {
     return friendly;
   }
-  return desertTileId && desertTileId !== state.board.robberTileId ? [desertTileId] : available;
+
+  // Every tile touches a protected player: park the robber on a desert when possible.
+  const desertTileIds = available.filter((tileId) =>
+    state.board.tiles.some((tile) => tile.id === tileId && TERRAIN_RESOURCE[tile.terrain] === null),
+  );
+  return desertTileIds.length > 0 ? desertTileIds : available;
 }
 
-function moveRobber(state: GameState, playerId: PlayerId, tileId: string) {
+function moveRobber(state: GameState, playerId: PlayerId, tileId: string): GameState {
   if (state.phase.kind !== "move_robber") {
     fail("INVALID_PHASE", "Robber cannot be moved in this phase");
   }
-
-  const tile = state.board.tiles.find((candidate) => candidate.id === tileId);
-
-  if (!tile) {
+  if (tileId === state.board.robberTileId) {
+    fail("ROBBER_TILE_UNCHANGED", "Robber must move to another tile");
+  }
+  if (!state.board.tiles.some((tile) => tile.id === tileId)) {
     fail("INVALID_ROBBER_TILE", `Unknown robber tile: ${tileId}`);
   }
-
-  const legalTileIds = robberTileIds(state);
-  if (!legalTileIds.includes(tileId)) {
-    if (tileId === state.board.robberTileId) {
-      fail("ROBBER_TILE_UNCHANGED", "Robber must move to another tile");
-    }
-    fail("INVALID_ROBBER_TILE", "Friendly robber protects players with two or fewer points");
+  if (!robberTileIds(state).includes(tileId)) {
+    fail(
+      "INVALID_ROBBER_TILE",
+      `Friendly robber protects players with ${FRIENDLY_ROBBER_MAX_VICTORY_POINTS} or fewer points`,
+    );
   }
 
-  const adjacentVertices = new Set(boardTopology(state).tileById[tileId]?.vertexKeys ?? []);
+  const { resumePhase } = state.phase;
+  const adjacentVertices = new Set(boardTopology(state).tileById[tileId]!.vertexKeys);
   const protectedPlayerIds = friendlyRobberProtectedPlayerIds(state);
   const eligibleVictimIds = state.players
     .filter(
@@ -917,138 +768,85 @@ function moveRobber(state: GameState, playerId: PlayerId, tileId: string) {
         ),
     )
     .map((player) => player.id);
-  const withRobber: GameState = {
-    ...state,
-    board: { ...state.board, robberTileId: tileId },
-  };
+  const withRobber: GameState = { ...state, board: { ...state.board, robberTileId: tileId } };
 
   if (eligibleVictimIds.length === 0) {
-    return {
-      ...withRobber,
-      phase: { kind: state.phase.resumePhase } as const,
-    };
+    return { ...withRobber, phase: { kind: resumePhase } };
   }
 
-  const awaitingVictimSelection: GameState = {
+  const awaitingVictim: GameState = {
     ...withRobber,
-    phase: {
-      eligibleVictimIds,
-      kind: "steal",
-      resumePhase: state.phase.resumePhase,
-      rollerPlayerId: state.phase.rollerPlayerId,
-    },
+    phase: { eligibleVictimIds, kind: "steal", resumePhase },
   };
-
   return eligibleVictimIds.length === 1
-    ? stealResource(awaitingVictimSelection, playerId, eligibleVictimIds[0]!)
-    : awaitingVictimSelection;
+    ? stealResource(awaitingVictim, playerId, eligibleVictimIds[0]!)
+    : awaitingVictim;
 }
 
-function stealResource(state: GameState, playerId: PlayerId, victimPlayerId: PlayerId) {
+function sampleResource(resources: ResourceInventory, cardIndex: number): ResourceType {
+  let remaining = cardIndex;
+
+  for (const resource of RESOURCE_ORDER) {
+    if (remaining < resources[resource]) {
+      return resource;
+    }
+    remaining -= resources[resource];
+  }
+
+  throw new Error(`Card ${cardIndex} is outside the inventory`);
+}
+
+function stealResource(state: GameState, playerId: PlayerId, victimPlayerId: PlayerId): GameState {
   if (state.phase.kind !== "steal") {
     fail("INVALID_PHASE", "No resource can be stolen in this phase");
   }
-
   if (!state.phase.eligibleVictimIds.includes(victimPlayerId)) {
     fail("INVALID_VICTIM", "Selected player is not an eligible victim");
   }
 
-  const victim = requirePlayer(state, victimPlayerId);
-  const cardCount = totalResources(victim.resources);
-
-  if (cardCount <= 0) {
-    fail("INVALID_VICTIM", "Selected player has no resource cards");
-  }
-
-  const draw = deterministicInteger(state.seed, state.randomIndex, cardCount);
-  let remaining = draw.value;
-  let stolenResource: ResourceType | null = null;
-
-  for (const resource of RESOURCE_ORDER) {
-    if (remaining < victim.resources[resource]) {
-      stolenResource = resource;
-      break;
-    }
-    remaining -= victim.resources[resource];
-  }
-
-  if (!stolenResource) {
-    fail("INVALID_VICTIM", "Victim inventory could not be sampled");
-  }
-
-  const singleCard = { ...emptyInventory(), [stolenResource]: 1 };
-  const withVictim = updatePlayer(state, victimPlayerId, (current) => ({
-    ...current,
-    resources: subtractResources(current.resources, singleCard),
-  }));
-  const withThief = updatePlayer(withVictim, playerId, (current) => ({
-    ...current,
-    resources: addResources(current.resources, singleCard),
-  }));
+  const victimResources = requirePlayer(state, victimPlayerId).resources;
+  const draw = deterministicInteger(state.seed, state.randomIndex, totalResources(victimResources));
+  const stolen = { ...emptyInventory(), [sampleResource(victimResources, draw.value)]: 1 };
+  const withVictim = updateResources(state, victimPlayerId, (resources) =>
+    subtractResources(resources, stolen),
+  );
 
   return {
-    ...withThief,
-    phase: { kind: state.phase.resumePhase } as const,
+    ...updateResources(withVictim, playerId, (resources) => addResources(resources, stolen)),
+    phase: { kind: state.phase.resumePhase },
     randomIndex: draw.nextIndex,
   };
 }
 
-function tradeWithBank(state: GameState, playerId: PlayerId, give: unknown, receive: unknown) {
-  if (!isResourceType(give) || !isResourceType(receive)) {
-    fail("INVALID_TRADE", "Bank trades require known resources");
-  }
-
+function tradeWithBank(
+  state: GameState,
+  playerId: PlayerId,
+  give: ResourceType,
+  receive: ResourceType,
+): GameState {
   if (state.phase.kind !== "build_and_trade") {
     fail("INVALID_PHASE", "Bank trades are only allowed after rolling");
   }
-
   if (give === receive) {
     fail("INVALID_TRADE", "Trade resources must be different");
   }
 
-  const player = requirePlayer(state, playerId);
   const ratio = getBankTradeRatio(state, playerId, give);
-
-  if (player.resources[give] < ratio) {
+  if (requirePlayer(state, playerId).resources[give] < ratio) {
     fail("INVALID_TRADE", `This bank trade requires ${ratio} cards`);
   }
-
   if (state.bank[receive] < 1) {
     fail("BANK_OUT_OF_RESOURCE", "Bank has none of the requested resource");
   }
 
   const given = { ...emptyInventory(), [give]: ratio };
   const received = { ...emptyInventory(), [receive]: 1 };
-  const withPlayer = updatePlayer(state, playerId, (current) => ({
-    ...current,
-    resources: addResources(subtractResources(current.resources, given), received),
-  }));
-
   return {
-    ...withPlayer,
+    ...updateResources(state, playerId, (resources) =>
+      addResources(subtractResources(resources, given), received),
+    ),
     bank: addResources(subtractResources(state.bank, received), given),
   };
-}
-
-function requireOfferActionNumber(offerActionNumber: number) {
-  if (!Number.isSafeInteger(offerActionNumber) || offerActionNumber < 1) {
-    fail("INVALID_TRADE", "Trade offer action number is invalid");
-  }
-}
-
-function validateDomesticTradeInventories(give: ResourceInventory, want: ResourceInventory): void {
-  if (
-    !isValidInventory(give) ||
-    !isValidInventory(want) ||
-    totalResources(give) === 0 ||
-    totalResources(want) === 0
-  ) {
-    fail("INVALID_TRADE", "A trade must give and request at least one resource");
-  }
-
-  if (RESOURCE_TYPES.some((resource) => give[resource] > 0 && want[resource] > 0)) {
-    fail("INVALID_TRADE", "A trade cannot give and request the same resource");
-  }
 }
 
 function proposeTrade(
@@ -1057,18 +855,25 @@ function proposeTrade(
   give: ResourceInventory,
   want: ResourceInventory,
   recipientPlayerIds: readonly PlayerId[],
-) {
-  if (state.phase.kind !== "build_and_trade" || state.activePlayerId !== playerId) {
-    fail("INVALID_PHASE", "Only the active player may propose a trade after rolling");
+): GameState {
+  if (state.phase.kind !== "build_and_trade") {
+    fail("INVALID_PHASE", "Trades can only be proposed after rolling");
   }
-
   if (state.tradeOffer) {
     fail("INVALID_TRADE", "Cancel the current trade offer before proposing another");
   }
-
-  validateDomesticTradeInventories(give, want);
-  const proposer = requirePlayer(state, playerId);
-  if (!hasResources(proposer.resources, give)) {
+  if (
+    !isValidInventory(give) ||
+    !isValidInventory(want) ||
+    totalResources(give) === 0 ||
+    totalResources(want) === 0
+  ) {
+    fail("INVALID_TRADE", "A trade must give and request at least one resource");
+  }
+  if (RESOURCE_TYPES.some((resource) => give[resource] > 0 && want[resource] > 0)) {
+    fail("INVALID_TRADE", "A trade cannot give and request the same resource");
+  }
+  if (!hasResources(requirePlayer(state, playerId).resources, give)) {
     fail("INSUFFICIENT_RESOURCES", "Player cannot afford the proposed trade");
   }
 
@@ -1080,21 +885,39 @@ function proposeTrade(
   ) {
     fail("INVALID_TRADE", "Trade recipients must be unique opponents");
   }
-
   for (const recipientPlayerId of uniqueRecipients) {
     requirePlayer(state, recipientPlayerId);
   }
 
-  const tradeOffer: TradeOffer = {
-    give: { ...give },
-    offerActionNumber: state.actionNumber + 1,
-    proposerPlayerId: playerId,
-    recipientPlayerIds: uniqueRecipients,
-    rejectedPlayerIds: [],
-    want: { ...want },
+  return {
+    ...state,
+    tradeOffer: {
+      acceptedPlayerIds: [],
+      give: { ...give },
+      offerActionNumber: state.actionNumber + 1,
+      proposerPlayerId: playerId,
+      recipientPlayerIds: uniqueRecipients,
+      rejectedPlayerIds: [],
+      want: { ...want },
+    },
   };
+}
 
-  return { ...state, tradeOffer };
+function requireTradeOffer(state: GameState, offerActionNumber: number): TradeOffer {
+  const offer = state.tradeOffer;
+
+  if (!offer) {
+    fail("INVALID_TRADE", "There is no active trade offer");
+  }
+  if (offer.offerActionNumber !== offerActionNumber) {
+    fail("INVALID_TRADE", "Trade offer is stale");
+  }
+
+  return offer;
+}
+
+function hasResponded(offer: TradeOffer, playerId: PlayerId) {
+  return offer.acceptedPlayerIds.includes(playerId) || offer.rejectedPlayerIds.includes(playerId);
 }
 
 function respondToTrade(
@@ -1102,111 +925,92 @@ function respondToTrade(
   playerId: PlayerId,
   offerActionNumber: number,
   accept: boolean,
-) {
-  requireOfferActionNumber(offerActionNumber);
-  const offer = state.tradeOffer;
+): GameState {
+  const offer = requireTradeOffer(state, offerActionNumber);
 
-  if (state.phase.kind !== "build_and_trade" || !offer) {
-    fail("INVALID_TRADE", "There is no active trade offer");
-  }
-
-  if (offer.offerActionNumber !== offerActionNumber) {
-    fail("INVALID_TRADE", "Trade offer is stale");
-  }
-
-  if (!offer.recipientPlayerIds.includes(playerId) || offer.rejectedPlayerIds.includes(playerId)) {
+  if (!offer.recipientPlayerIds.includes(playerId) || hasResponded(offer, playerId)) {
     fail("INVALID_TRADE", "Player cannot respond to this trade offer");
   }
 
-  if (!accept) {
-    const rejectedPlayerIds = [...offer.rejectedPlayerIds, playerId];
-    const allRejected = offer.recipientPlayerIds.every((recipientPlayerId) =>
-      rejectedPlayerIds.includes(recipientPlayerId),
-    );
+  if (accept) {
+    if (!hasResources(requirePlayer(state, playerId).resources, offer.want)) {
+      fail("INSUFFICIENT_RESOURCES", "Player cannot afford this trade offer");
+    }
     return {
       ...state,
-      tradeOffer: allRejected ? null : { ...offer, rejectedPlayerIds },
+      tradeOffer: { ...offer, acceptedPlayerIds: [...offer.acceptedPlayerIds, playerId] },
     };
   }
 
-  const proposer = requirePlayer(state, offer.proposerPlayerId);
-  const recipient = requirePlayer(state, playerId);
+  const rejectedPlayerIds = [...offer.rejectedPlayerIds, playerId];
+  const everyoneRejected = rejectedPlayerIds.length === offer.recipientPlayerIds.length;
+  return { ...state, tradeOffer: everyoneRejected ? null : { ...offer, rejectedPlayerIds } };
+}
+
+function confirmTrade(
+  state: GameState,
+  playerId: PlayerId,
+  offerActionNumber: number,
+  partnerPlayerId: PlayerId,
+): GameState {
+  const offer = requireTradeOffer(state, offerActionNumber);
+
+  if (!offer.acceptedPlayerIds.includes(partnerPlayerId)) {
+    fail("INVALID_TRADE", "The trade partner has not accepted this offer");
+  }
   if (
-    !hasResources(proposer.resources, offer.give) ||
-    !hasResources(recipient.resources, offer.want)
+    !hasResources(requirePlayer(state, playerId).resources, offer.give) ||
+    !hasResources(requirePlayer(state, partnerPlayerId).resources, offer.want)
   ) {
     fail("INSUFFICIENT_RESOURCES", "Trade participants can no longer afford this offer");
   }
 
-  const withProposer = updatePlayer(state, proposer.id, (current) => ({
-    ...current,
-    resources: addResources(subtractResources(current.resources, offer.give), offer.want),
-  }));
-  const withRecipient = updatePlayer(withProposer, recipient.id, (current) => ({
-    ...current,
-    resources: addResources(subtractResources(current.resources, offer.want), offer.give),
-  }));
-
-  return { ...withRecipient, tradeOffer: null };
+  const withProposer = updateResources(state, playerId, (resources) =>
+    addResources(subtractResources(resources, offer.give), offer.want),
+  );
+  return {
+    ...updateResources(withProposer, partnerPlayerId, (resources) =>
+      addResources(subtractResources(resources, offer.want), offer.give),
+    ),
+    tradeOffer: null,
+  };
 }
 
-function cancelTrade(state: GameState, playerId: PlayerId, offerActionNumber: number) {
-  requireOfferActionNumber(offerActionNumber);
-  const offer = state.tradeOffer;
-
-  if (
-    state.phase.kind !== "build_and_trade" ||
-    !offer ||
-    offer.offerActionNumber !== offerActionNumber ||
-    offer.proposerPlayerId !== playerId
-  ) {
-    fail("INVALID_TRADE", "Player cannot cancel this trade offer");
-  }
-
+function cancelTrade(state: GameState, offerActionNumber: number): GameState {
+  requireTradeOffer(state, offerActionNumber);
   return { ...state, tradeOffer: null };
 }
 
-function endTurn(state: GameState) {
+function endTurn(state: GameState): GameState {
   if (state.phase.kind !== "build_and_trade") {
     fail("INVALID_PHASE", "Turn cannot end before rolling and resolving actions");
   }
 
   const activeIndex = state.turnOrder.indexOf(state.activePlayerId);
-  const nextPlayerId = state.turnOrder[(activeIndex + 1) % state.turnOrder.length];
-
-  if (activeIndex < 0 || !nextPlayerId) {
-    fail("INVALID_COMMAND", "Turn order is invalid");
-  }
-
   return {
     ...state,
-    activePlayerId: nextPlayerId,
+    activePlayerId: state.turnOrder[(activeIndex + 1) % state.turnOrder.length]!,
     developmentCardPlayedThisTurn: false,
     developmentCardsBoughtThisTurn: 0,
     lastDiceRoll: null,
-    phase: { kind: "roll" as const },
+    phase: { kind: "roll" },
     tradeOffer: null,
     turnNumber: state.turnNumber + 1,
   };
 }
 
-function cancelUnaffordableTradeOffer(state: GameState) {
+function withdrawUnaffordableTradeOffer(state: GameState): GameState {
   const offer = state.tradeOffer;
 
-  if (!offer) {
+  if (!offer || hasResources(requirePlayer(state, offer.proposerPlayerId).resources, offer.give)) {
     return state;
   }
 
-  const proposer = requirePlayer(state, offer.proposerPlayerId);
-  return hasResources(proposer.resources, offer.give) ? state : { ...state, tradeOffer: null };
+  return { ...state, tradeOffer: null };
 }
 
-function isResourceType(resource: unknown): resource is ResourceType {
-  return RESOURCE_TYPES.some((knownResource) => knownResource === resource);
-}
-
-export function getRequiredPlayerIds(state: GameState) {
-  if (state.status === "completed") {
+export function getRequiredPlayerIds(state: GameState): PlayerId[] {
+  if (state.phase.kind === "finished") {
     return [];
   }
 
@@ -1214,18 +1018,18 @@ export function getRequiredPlayerIds(state: GameState) {
     return state.phase.pending.map((pending) => pending.playerId);
   }
 
-  if (state.phase.kind === "build_and_trade" && state.tradeOffer) {
-    const offer = state.tradeOffer;
-    const outstandingRecipients = offer.recipientPlayerIds.filter(
-      (playerId) => !offer.rejectedPlayerIds.includes(playerId),
-    );
-    return [state.activePlayerId, ...outstandingRecipients];
+  const offer = state.tradeOffer;
+  if (offer) {
+    return [
+      state.activePlayerId,
+      ...offer.recipientPlayerIds.filter((playerId) => !hasResponded(offer, playerId)),
+    ];
   }
 
   return [state.activePlayerId];
 }
 
-function emptyLegalActions(state: GameState): LegalActions {
+function emptyLegalActions(): LegalActions {
   return {
     bankTrades: [],
     canBuyDevelopmentCard: false,
@@ -1237,18 +1041,27 @@ function emptyLegalActions(state: GameState): LegalActions {
     cityVertexKeys: [],
     discardCount: null,
     isRequiredActor: false,
-    phase: state.phase.kind,
     playableDevelopmentCards: [],
     roadEdgeKeys: [],
     robberTileIds: [],
     settlementVertexKeys: [],
+    tradePartnerPlayerIds: [],
     victimPlayerIds: [],
   };
 }
 
-export function getLegalActions(state: GameState, actorPlayerId: PlayerId): LegalActions {
+interface LegalActionOptions {
+  /** Compute the actions as a player who cannot see the bank, so they do not reveal its stock. */
+  hideBankStock?: boolean;
+}
+
+export function getLegalActions(
+  state: GameState,
+  actorPlayerId: PlayerId,
+  { hideBankStock = false }: LegalActionOptions = {},
+): LegalActions {
   const player = requirePlayer(state, actorPlayerId);
-  const actions = emptyLegalActions(state);
+  const actions = emptyLegalActions();
 
   if (!getRequiredPlayerIds(state).includes(actorPlayerId)) {
     return actions;
@@ -1258,26 +1071,19 @@ export function getLegalActions(state: GameState, actorPlayerId: PlayerId): Lega
 
   switch (state.phase.kind) {
     case "setup_settlement":
-      actions.settlementVertexKeys =
-        player.piecesRemaining.settlements > 0
-          ? getSettlementVertexKeys(state, actorPlayerId, false)
-          : [];
+      actions.settlementVertexKeys = getSettlementVertexKeys(state, actorPlayerId, false);
       return actions;
     case "setup_road":
-      actions.roadEdgeKeys =
-        player.piecesRemaining.roads > 0
-          ? (boardTopology(state).vertexEdges[state.phase.settlementVertexKey] ?? []).filter(
-              (edgeKey) => !roadAt(state, edgeKey),
-            )
-          : [];
+      actions.roadEdgeKeys = boardTopology(state).vertexEdges[
+        state.phase.settlementVertexKey
+      ]!.filter((edgeKey) => !roadAt(state, edgeKey));
       return actions;
     case "road_building":
-      actions.roadEdgeKeys =
-        player.piecesRemaining.roads > 0 ? getRoadEdgeKeys(state, actorPlayerId) : [];
+      actions.roadEdgeKeys = getRoadEdgeKeys(state, actorPlayerId);
       return actions;
     case "roll":
-      actions.canRoll = hasCompletedSetupPlacements(state);
-      actions.playableDevelopmentCards = playableDevelopmentCards(state, actorPlayerId);
+      actions.canRoll = true;
+      actions.playableDevelopmentCards = playableDevelopmentCards(state, player, hideBankStock);
       return actions;
     case "discard":
       actions.discardCount =
@@ -1292,19 +1098,17 @@ export function getLegalActions(state: GameState, actorPlayerId: PlayerId): Lega
       return actions;
     case "build_and_trade":
       if (actorPlayerId !== state.activePlayerId) {
-        actions.canRespondToTrade = Boolean(
-          state.tradeOffer?.recipientPlayerIds.includes(actorPlayerId) &&
-          !state.tradeOffer.rejectedPlayerIds.includes(actorPlayerId),
-        );
+        actions.canRespondToTrade = true;
         return actions;
       }
 
       actions.canEndTurn = true;
-      actions.playableDevelopmentCards = playableDevelopmentCards(state, actorPlayerId);
+      actions.playableDevelopmentCards = playableDevelopmentCards(state, player, hideBankStock);
       actions.canBuyDevelopmentCard =
         state.developmentDeck.length > 0 && hasResources(player.resources, DEVELOPMENT_CARD_COST);
-      actions.canCancelTrade = state.tradeOffer?.proposerPlayerId === actorPlayerId;
+      actions.canCancelTrade = state.tradeOffer !== null;
       actions.canProposeTrade = state.tradeOffer === null;
+      actions.tradePartnerPlayerIds = [...(state.tradeOffer?.acceptedPlayerIds ?? [])];
       actions.cityVertexKeys =
         player.piecesRemaining.cities > 0 && hasResources(player.resources, BUILD_COSTS.city)
           ? getCityVertexKeys(state, actorPlayerId)
@@ -1322,9 +1126,9 @@ export function getLegalActions(state: GameState, actorPlayerId: PlayerId): Lega
         const ratio = getBankTradeRatio(state, actorPlayerId, give);
 
         return player.resources[give] >= ratio
-          ? RESOURCE_TYPES.filter((receive) => receive !== give && state.bank[receive] > 0).map(
-              (receive) => ({ give, ratio, receive }),
-            )
+          ? RESOURCE_TYPES.filter(
+              (receive) => receive !== give && (hideBankStock || state.bank[receive] > 0),
+            ).map((receive) => ({ give, ratio, receive }))
           : [];
       });
       return actions;
@@ -1333,12 +1137,59 @@ export function getLegalActions(state: GameState, actorPlayerId: PlayerId): Lega
   }
 }
 
+function reduceCommand(state: GameState, actorPlayerId: PlayerId, command: GameCommand): GameState {
+  switch (command.kind) {
+    case "place_settlement":
+      return placeSettlement(state, actorPlayerId, command.vertexKey);
+    case "place_road":
+      return placeRoad(state, actorPlayerId, command.edgeKey);
+    case "roll":
+      return rollDice(state);
+    case "discard":
+      return discardResources(state, actorPlayerId, command.resources);
+    case "move_robber":
+      return moveRobber(state, actorPlayerId, command.tileId);
+    case "steal":
+      return stealResource(state, actorPlayerId, command.victimPlayerId);
+    case "build_city":
+      return buildCity(state, actorPlayerId, command.vertexKey);
+    case "buy_development_card":
+      return buyDevelopmentCard(state, actorPlayerId);
+    case "play_knight":
+      return playKnight(state, actorPlayerId);
+    case "play_monopoly":
+      return playMonopoly(state, actorPlayerId, command.resource);
+    case "play_road_building":
+      return playRoadBuilding(state, actorPlayerId);
+    case "play_year_of_plenty":
+      return playYearOfPlenty(state, actorPlayerId, command.resources);
+    case "trade_bank":
+      return tradeWithBank(state, actorPlayerId, command.give, command.receive);
+    case "propose_trade":
+      return proposeTrade(
+        state,
+        actorPlayerId,
+        command.give,
+        command.want,
+        command.recipientPlayerIds,
+      );
+    case "respond_trade":
+      return respondToTrade(state, actorPlayerId, command.offerActionNumber, command.accept);
+    case "confirm_trade":
+      return confirmTrade(state, actorPlayerId, command.offerActionNumber, command.partnerPlayerId);
+    case "cancel_trade":
+      return cancelTrade(state, command.offerActionNumber);
+    case "end_turn":
+      return endTurn(state);
+  }
+}
+
 export function applyCommand(
   state: GameState,
   actorPlayerId: PlayerId,
   command: GameCommand,
 ): GameState {
-  if (state.status === "completed") {
+  if (state.phase.kind === "finished") {
     fail("GAME_FINISHED", "Game is already complete");
   }
 
@@ -1356,72 +1207,12 @@ export function applyCommand(
     fail("NOT_REQUIRED_ACTOR", "Player may only respond to the active trade offer");
   }
 
-  let next: GameState;
+  const next = withdrawUnaffordableTradeOffer(reduceCommand(state, actorPlayerId, command));
 
-  switch (command.kind) {
-    case "place_settlement":
-      next = placeSettlement(state, actorPlayerId, command.vertexKey);
-      break;
-    case "place_road":
-      next = placeRoad(state, actorPlayerId, command.edgeKey);
-      break;
-    case "roll":
-      next = rollDice(state, actorPlayerId);
-      break;
-    case "discard":
-      next = discardResources(state, actorPlayerId, command.resources);
-      break;
-    case "move_robber":
-      next = moveRobber(state, actorPlayerId, command.tileId);
-      break;
-    case "steal":
-      next = stealResource(state, actorPlayerId, command.victimPlayerId);
-      break;
-    case "build_city":
-      next = buildCity(state, actorPlayerId, command.vertexKey);
-      break;
-    case "buy_development_card":
-      next = buyDevelopmentCard(state, actorPlayerId);
-      break;
-    case "play_knight":
-      next = playKnight(state, actorPlayerId);
-      break;
-    case "play_monopoly":
-      next = playMonopoly(state, actorPlayerId, command.resource);
-      break;
-    case "play_road_building":
-      next = playRoadBuilding(state, actorPlayerId);
-      break;
-    case "play_year_of_plenty":
-      next = playYearOfPlenty(state, actorPlayerId, command.resources);
-      break;
-    case "trade_bank":
-      next = tradeWithBank(state, actorPlayerId, command.give, command.receive);
-      break;
-    case "propose_trade":
-      next = proposeTrade(
-        state,
-        actorPlayerId,
-        command.give,
-        command.want,
-        command.recipientPlayerIds,
-      );
-      break;
-    case "respond_trade":
-      next = respondToTrade(state, actorPlayerId, command.offerActionNumber, command.accept);
-      break;
-    case "cancel_trade":
-      next = cancelTrade(state, actorPlayerId, command.offerActionNumber);
-      break;
-    case "end_turn":
-      next = endTurn(state);
-      break;
-    default:
-      return fail("INVALID_COMMAND", "Unknown game command");
-  }
-
+  // Checking the active player after every command also covers a turn that starts at the target,
+  // such as after a Longest Road passed to this player during an opponent's turn.
   return {
-    ...cancelUnaffordableTradeOffer(next),
+    ...finishIfWinner(next, next.activePlayerId),
     actionNumber: state.actionNumber + 1,
   };
 }

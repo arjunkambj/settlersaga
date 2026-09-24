@@ -1,6 +1,19 @@
 import { deterministicInteger } from "./random";
 
-export const SUPERHERO_BOT_NAMES = Object.freeze([
+export const PLAYER_COLORS = [
+  "red",
+  "blue",
+  "orange",
+  "green",
+  "purple",
+  "teal",
+  "yellow",
+  "pink",
+] as const;
+
+export type PlayerColor = (typeof PLAYER_COLORS)[number];
+
+const SUPERHERO_BOT_NAMES = [
   "Arthur Bot",
   "Barry Bot",
   "Bruce Bot",
@@ -21,7 +34,7 @@ export const SUPERHERO_BOT_NAMES = Object.freeze([
   "Victor Bot",
   "Wade Bot",
   "Wanda Bot",
-] as const);
+] as const;
 
 export function chooseBotName(
   seed: string,

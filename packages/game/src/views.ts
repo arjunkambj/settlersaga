@@ -1,11 +1,9 @@
-import { getLegalActions } from "./rules";
 import { totalResources } from "./resources";
+import { getLegalActions, requirePlayer } from "./rules";
 import type { GameState, PlayerGameView, PlayerId, PlayerViewState } from "./types";
 
 export function toPlayerView(state: GameState, viewerPlayerId: PlayerId): PlayerGameView {
-  if (!state.players.some((player) => player.id === viewerPlayerId)) {
-    throw new Error(`Unknown viewer: ${viewerPlayerId}`);
-  }
+  requirePlayer(state, viewerPlayerId);
 
   const {
     balancedDiceBag: _balancedDiceBag,
@@ -16,6 +14,7 @@ export function toPlayerView(state: GameState, viewerPlayerId: PlayerId): Player
     players,
     ...publicState
   } = state;
+  const isFinished = state.phase.kind === "finished";
   const playerViews: PlayerViewState[] = players.map((player) => {
     const resourceCount = totalResources(player.resources);
 
@@ -29,10 +28,9 @@ export function toPlayerView(state: GameState, viewerPlayerId: PlayerId): Player
           isViewer: false,
           piecesRemaining: { ...player.piecesRemaining },
           playedDevelopmentCards: [...player.playedDevelopmentCards],
-          revealedVictoryPointCards:
-            state.status === "completed"
-              ? player.developmentCards.filter((card) => card === "victory-point").length
-              : null,
+          revealedVictoryPointCards: isFinished
+            ? player.developmentCards.filter((card) => card === "victory-point").length
+            : null,
           resourceCount,
           seatIndex: player.seatIndex,
           victoryPoints: player.victoryPoints,
@@ -43,7 +41,9 @@ export function toPlayerView(state: GameState, viewerPlayerId: PlayerId): Player
     ...publicState,
     bank: state.settings.hideBankCards ? null : { ...bank },
     developmentCardSupply: developmentDeck.length,
-    legalActions: getLegalActions(state, viewerPlayerId),
+    legalActions: getLegalActions(state, viewerPlayerId, {
+      hideBankStock: state.settings.hideBankCards,
+    }),
     players: playerViews,
     viewerPlayerId,
   };

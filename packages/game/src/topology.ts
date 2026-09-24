@@ -1,14 +1,20 @@
 import type { AxialCoordinate, PixelCoordinate } from "./types";
 
-const CORNER_X = [2, 1, -1, -2, -1, 1] as const;
-const CORNER_Y = [0, 1, 1, 0, -1, -1] as const;
+const CORNER_OFFSETS = [
+  [2, 0],
+  [1, 1],
+  [-1, 1],
+  [-2, 0],
+  [-1, -1],
+  [1, -1],
+] as const;
 
-export interface VertexPosition {
+interface VertexPosition {
   x: number;
   y: number;
 }
 
-export interface TileTopology extends AxialCoordinate {
+interface TileTopology extends AxialCoordinate {
   edgeKeys: string[];
   id: string;
   vertexKeys: string[];
@@ -32,11 +38,11 @@ export function getTileId({ q, r }: AxialCoordinate) {
   return `tile:${q}:${r}`;
 }
 
-export function getVertexKey({ x, y }: VertexPosition) {
+function getVertexKey({ x, y }: VertexPosition) {
   return `vertex:${x}:${y}`;
 }
 
-export function getEdgeKey(firstVertexKey: string, secondVertexKey: string) {
+function getEdgeKey(firstVertexKey: string, secondVertexKey: string) {
   const [first, second] = [firstVertexKey, secondVertexKey].sort();
   return `edge:${first}|${second}`;
 }
@@ -66,20 +72,14 @@ function addRecordValue(record: Record<string, string[]>, key: string, value: st
   record[key] = [...(record[key] ?? []), value];
 }
 
-export function createBoardTopology(coordinates: readonly AxialCoordinate[]): BoardTopology {
+function createBoardTopology(coordinates: readonly AxialCoordinate[]): BoardTopology {
   const vertexPositions: Record<string, VertexPosition> = {};
   const vertexTileIds: Record<string, string[]> = {};
   const edgeTileIds: Record<string, string[]> = {};
   const edgeVertices: Record<string, readonly [string, string]> = {};
   const tiles = coordinates.map(({ q, r }) => {
     const id = getTileId({ q, r });
-    const vertexKeys = CORNER_X.map((xOffset, corner) => {
-      const yOffset = CORNER_Y[corner];
-
-      if (yOffset === undefined) {
-        throw new Error(`Missing Y offset for corner ${corner}`);
-      }
-
+    const vertexKeys = CORNER_OFFSETS.map(([xOffset, yOffset]) => {
       const position = {
         x: 3 * q + xOffset,
         y: 2 * r + q + yOffset,
@@ -90,12 +90,7 @@ export function createBoardTopology(coordinates: readonly AxialCoordinate[]): Bo
       return key;
     });
     const edgeKeys = vertexKeys.map((vertexKey, corner) => {
-      const nextVertexKey = vertexKeys[(corner + 1) % vertexKeys.length];
-
-      if (!nextVertexKey) {
-        throw new Error("A tile must contain six vertices");
-      }
-
+      const nextVertexKey = vertexKeys[(corner + 1) % vertexKeys.length]!;
       const key = getEdgeKey(vertexKey, nextVertexKey);
       edgeVertices[key] = [vertexKey, nextVertexKey];
       addRecordValue(edgeTileIds, key, id);
@@ -114,12 +109,7 @@ export function createBoardTopology(coordinates: readonly AxialCoordinate[]): Bo
   );
 
   for (const edgeKey of edgeKeys) {
-    const [first, second] = edgeVertices[edgeKey] ?? [];
-
-    if (!first || !second) {
-      throw new Error(`Topology is missing vertices for ${edgeKey}`);
-    }
-
+    const [first, second] = edgeVertices[edgeKey]!;
     addRecordValue(vertexEdges, first, edgeKey);
     addRecordValue(vertexEdges, second, edgeKey);
     addRecordValue(vertexNeighbors, first, second);
@@ -141,17 +131,18 @@ export function createBoardTopology(coordinates: readonly AxialCoordinate[]): Bo
   };
 }
 
-const topologyCache = new Map<string, BoardTopology>();
+const topologyByLayout = new Map<string, BoardTopology>();
+const topologyByTiles = new WeakMap<readonly AxialCoordinate[], BoardTopology>();
 
 export function getBoardTopology(coordinates: readonly AxialCoordinate[]): BoardTopology {
-  const key = coordinates.map(getTileId).sort().join("|");
-  const cached = topologyCache.get(key);
-
+  const cached = topologyByTiles.get(coordinates);
   if (cached) {
     return cached;
   }
 
-  const topology = createBoardTopology(coordinates);
-  topologyCache.set(key, topology);
+  const layoutKey = coordinates.map(getTileId).sort().join("|");
+  const topology = topologyByLayout.get(layoutKey) ?? createBoardTopology(coordinates);
+  topologyByLayout.set(layoutKey, topology);
+  topologyByTiles.set(coordinates, topology);
   return topology;
 }

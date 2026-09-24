@@ -1,19 +1,14 @@
-import type { GameState, PlayerId } from "./types";
+import type { GameState, PlayerId, PlayerState } from "./types";
 
 export const LARGEST_ARMY_MINIMUM_KNIGHTS = 3;
 export const LARGEST_ARMY_VICTORY_POINTS = 2;
 
-export function getPlayedKnightCount(
-  player: Pick<GameState["players"][number], "playedDevelopmentCards">,
-) {
+export function getPlayedKnightCount(player: Pick<PlayerState, "playedDevelopmentCards">) {
   return player.playedDevelopmentCards.filter((card) => card === "knight").length;
 }
 
 export function getLargestArmyPlayerId(
-  players: readonly Pick<
-    GameState["players"][number],
-    "id" | "playedDevelopmentCards" | "seatIndex"
-  >[],
+  players: readonly Pick<PlayerState, "id" | "playedDevelopmentCards" | "seatIndex">[],
   currentHolderId: PlayerId | null,
 ): PlayerId | null {
   const currentHolder = players.find((player) => player.id === currentHolderId);
