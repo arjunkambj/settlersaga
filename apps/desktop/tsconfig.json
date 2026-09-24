@@ -5,10 +5,7 @@
     "target": "ESNext",
     "module": "ESNext",
     "moduleResolution": "bundler",
-    "noEmit": true,
-    "paths": {
-      "@/*": ["./src/*"]
-    }
+    "noEmit": true
   },
-  "include": ["src/**/*.ts", "electrobun.config.ts"]
+  "include": ["src/**/*.ts", "scripts/**/*.ts", "electrobun.config.ts"]
 }

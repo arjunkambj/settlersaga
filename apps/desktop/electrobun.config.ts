@@ -1,24 +1,20 @@
 import type { ElectrobunConfig } from "electrobun";
 
-const webBuildDir = "../web/out";
-
 export default {
   app: {
     name: "SetterSaga",
-    identifier: "dev.bettertstack.settersaga.desktop",
+    identifier: "com.settersaga.desktop",
     version: "0.0.1",
   },
   runtime: {
     exitOnLastWindowClosed: true,
+    // The web app needs its Next.js server, so the shell loads it by URL instead of bundling files.
+    webUrl: process.env.SETTERSAGA_WEB_URL || "http://localhost:3000",
   },
   build: {
     bun: {
       entrypoint: "src/bun/index.ts",
     },
-    copy: {
-      [webBuildDir]: "views/mainview",
-    },
-    watchIgnore: [`${webBuildDir}/**`],
     mac: {
       bundleCEF: true,
       defaultRenderer: "cef",
@@ -31,5 +27,8 @@ export default {
       bundleCEF: true,
       defaultRenderer: "cef",
     },
+  },
+  scripts: {
+    preBuild: "scripts/require-web-url.ts",
   },
 } satisfies ElectrobunConfig;

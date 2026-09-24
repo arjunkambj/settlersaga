@@ -1,14 +1,11 @@
 {
-  "$schema": "https://turbo.build/schema.json",
+  "$schema": "https://turborepo.com/schema.json",
   "ui": "tui",
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
-      "outputs": ["dist/**", "artifacts/**", ".next/**", "out/**"]
-    },
-    "lint": {
-      "dependsOn": ["^lint"]
+      "outputs": [".next/**", "!.next/cache/**"]
     },
     "check-types": {
       "dependsOn": ["^check-types"]
@@ -17,23 +14,9 @@
       "cache": false,
       "persistent": true
     },
-    "dev:hmr": {
-      "cache": false,
-      "persistent": true
-    },
-    "build:stable": {
-      "dependsOn": ["^build"],
-      "inputs": ["$TURBO_DEFAULT$", ".env*"],
-      "outputs": ["artifacts/**", "build/**"]
-    },
-    "build:canary": {
-      "dependsOn": ["^build"],
-      "inputs": ["$TURBO_DEFAULT$", ".env*"],
-      "outputs": ["artifacts/**", "build/**"]
-    },
     "dev:setup": {
       "cache": false,
-      "persistent": true
+      "interactive": true
     }
   }
 }

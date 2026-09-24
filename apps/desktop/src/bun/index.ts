@@ -1,28 +1,20 @@
-import { BrowserWindow, Updater } from "electrobun/bun";
+import { BrowserWindow, BuildConfig, Updater } from "electrobun/bun";
 
-const DEV_SERVER_PORT = 3000;
-const DEV_SERVER_URL = `http://localhost:${DEV_SERVER_PORT}`;
-
-async function getMainViewUrl(): Promise<string> {
-  const channel = await Updater.localInfo.channel();
-  if (channel === "dev") {
-    try {
-      await fetch(DEV_SERVER_URL, { method: "HEAD" });
-      console.log(`HMR enabled: Using web dev server at ${DEV_SERVER_URL}`);
-      return DEV_SERVER_URL;
-    } catch {
-      console.log("Web dev server not running. Run dev:hmr for live reload.");
-    }
-  }
-
-  return "views://mainview/index.html";
+const { runtime } = await BuildConfig.get();
+const webUrl = runtime?.webUrl;
+if (typeof webUrl !== "string") {
+  throw new Error("build.json has no runtime.webUrl. Build the shell with the Electrobun CLI.");
 }
 
-const url = await getMainViewUrl();
+// `pnpm dev:desktop` starts Next.js alongside the shell, and the window never retries a
+// refused connection, so dev builds wait for the server to answer first.
+if ((await Updater.localInfo.channel()) === "dev") {
+  await waitForServer(webUrl);
+}
 
 new BrowserWindow({
   title: "SetterSaga",
-  url,
+  url: webUrl,
   frame: {
     width: 1280,
     height: 820,
@@ -31,4 +23,14 @@ new BrowserWindow({
   },
 });
 
-console.log("Electrobun desktop shell started.");
+async function waitForServer(url: string): Promise<void> {
+  console.log(`Waiting for the web app at ${url}`);
+  for (;;) {
+    try {
+      await fetch(url, { method: "HEAD" });
+      return;
+    } catch {
+      await Bun.sleep(500);
+    }
+  }
+}

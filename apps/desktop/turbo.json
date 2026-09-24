@@ -1,0 +1,25 @@
+{
+  "$schema": "https://turborepo.com/schema.json",
+  "extends": ["//"],
+  "tasks": {
+    "build": {
+      "env": ["SETTERSAGA_WEB_URL"],
+      "outputs": ["build/**", "artifacts/**"]
+    },
+    "build:stable": {
+      "env": ["SETTERSAGA_WEB_URL"],
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "outputs": ["build/**", "artifacts/**"]
+    },
+    "build:canary": {
+      "env": ["SETTERSAGA_WEB_URL"],
+      "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "outputs": ["build/**", "artifacts/**"]
+    },
+    "dev:desktop": {
+      "cache": false,
+      "env": ["SETTERSAGA_WEB_URL"],
+      "persistent": true
+    }
+  }
+}
