@@ -1,10 +1,16 @@
 "use client";
 
+import {
+  RESOURCE_ORDER,
+  type GamePhase,
+  type ResourceInventory,
+  type TradeOffer,
+} from "@settersaga/game";
 import { useCallback, useEffect, useRef } from "react";
 
 import {
+  getTradeOfferSound,
   getViewerEventSound,
-  getTurnSound,
   shouldPlayVictory,
   SOUND_EFFECT_PATHS,
   type SoundEffect,
@@ -14,24 +20,34 @@ import type { RoomEventView } from "@/lib/game/types";
 const TURN_REMINDER_DELAY_MS = 25_000;
 
 export function GameAudio({
+  actionNumber,
   activePlayerId,
   events,
   phaseKind,
   soundEffectsVolume,
+  tradeOffer,
   viewerPlayerId,
+  viewerResources,
   winnerPlayerId,
 }: {
+  actionNumber: number;
   activePlayerId: string;
   events: readonly RoomEventView[];
-  phaseKind: string;
+  phaseKind: GamePhase["kind"];
   soundEffectsVolume: number;
+  tradeOffer: TradeOffer | null;
   viewerPlayerId: string;
+  /** Tells a confirmed trade's partner from the other players who accepted it. */
+  viewerResources: Readonly<ResourceInventory>;
   winnerPlayerId: string | null;
 }) {
   const audioElementsRef = useRef(new Map<SoundEffect, HTMLAudioElement>());
-  const lastEventSequenceRef = useRef(events.at(-1)?.sequence ?? 0);
-  const previousActivePlayerIdRef = useRef<string | null>(null);
+  const lastEventIdRef = useRef(events.at(-1)?.id);
+  // A fresh game announces its opening turn; rejoining a game in progress stays quiet.
+  const previousActivePlayerIdRef = useRef(actionNumber === 0 ? null : activePlayerId);
   const previousWinnerPlayerIdRef = useRef(winnerPlayerId);
+  const previousTradeOfferRef = useRef(tradeOffer);
+  const previousViewerResourcesRef = useRef(viewerResources);
   const soundEffectsVolumeRef = useRef(soundEffectsVolume);
 
   useEffect(() => {
@@ -57,41 +73,56 @@ export function GameAudio({
   }, []);
 
   useEffect(() => {
+    const previousViewerResources = previousViewerResourcesRef.current;
+    previousViewerResourcesRef.current = viewerResources;
     const newestEvent = events.at(-1);
-    if (!newestEvent || newestEvent.sequence <= lastEventSequenceRef.current) {
+    if (!newestEvent || newestEvent.id === lastEventIdRef.current) {
       return;
     }
 
-    lastEventSequenceRef.current = newestEvent.sequence;
-    if (shouldPlayVictory(previousWinnerPlayerIdRef.current, winnerPlayerId)) {
+    lastEventIdRef.current = newestEvent.id;
+    // The winning move is covered by the end-of-game cue.
+    if (winnerPlayerId !== null) {
       return;
     }
 
     const sound = getViewerEventSound(
-      newestEvent.kind,
-      newestEvent.sequence,
+      newestEvent,
       phaseKind,
-      newestEvent.actorPlayerId,
       viewerPlayerId,
+      previousTradeOfferRef.current,
+      RESOURCE_ORDER.some(
+        (resource) => previousViewerResources[resource] !== viewerResources[resource],
+      ),
     );
     if (sound) {
       playSound(sound);
     }
-  }, [events, phaseKind, playSound, viewerPlayerId, winnerPlayerId]);
+  }, [events, phaseKind, playSound, viewerPlayerId, viewerResources, winnerPlayerId]);
+
+  // Runs after the event cue above, which reads the offer as it was before this update.
+  useEffect(() => {
+    const previousTradeOffer = previousTradeOfferRef.current;
+    previousTradeOfferRef.current = tradeOffer;
+    const sound = getTradeOfferSound(previousTradeOffer, tradeOffer, viewerPlayerId);
+    if (sound) {
+      playSound(sound);
+    }
+  }, [playSound, tradeOffer, viewerPlayerId]);
 
   useEffect(() => {
     const previousWinnerPlayerId = previousWinnerPlayerIdRef.current;
     previousWinnerPlayerIdRef.current = winnerPlayerId;
-    if (shouldPlayVictory(previousWinnerPlayerId, winnerPlayerId)) {
+    if (shouldPlayVictory(previousWinnerPlayerId, winnerPlayerId, viewerPlayerId)) {
       playSound("victory");
     }
-  }, [playSound, winnerPlayerId]);
+  }, [playSound, viewerPlayerId, winnerPlayerId]);
 
   useEffect(() => {
     const previousActivePlayerId = previousActivePlayerIdRef.current;
     previousActivePlayerIdRef.current = activePlayerId;
     if (previousActivePlayerId !== activePlayerId) {
-      playSound(getTurnSound(activePlayerId, viewerPlayerId));
+      playSound(activePlayerId === viewerPlayerId ? "turn" : "nextTurn");
     }
   }, [activePlayerId, playSound, viewerPlayerId]);
 

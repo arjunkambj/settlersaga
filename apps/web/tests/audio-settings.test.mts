@@ -32,12 +32,12 @@ describe("audio settings", () => {
     let stored = "";
     writeAudioSettings(
       { setItem: (_key, value) => (stored = value) },
-      { lobbyMusicVolume: 35, soundEffectsVolume: 70 },
+      { lobbyMusicVolume: 150, soundEffectsVolume: -3.2 },
     );
 
     expect(JSON.parse(stored)).toEqual({
-      lobbyMusicVolume: 35,
-      soundEffectsVolume: 70,
+      lobbyMusicVolume: 100,
+      soundEffectsVolume: 0,
     });
   });
 });

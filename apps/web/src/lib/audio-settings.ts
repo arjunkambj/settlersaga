@@ -18,7 +18,9 @@ function normalizeVolume(value: unknown, fallback: number): number {
   return Math.round(Math.min(100, Math.max(0, value)));
 }
 
-export function normalizeAudioSettings(value: Partial<AudioSettings>): AudioSettings {
+export function normalizeAudioSettings(
+  value: Partial<Record<keyof AudioSettings, unknown>>,
+): AudioSettings {
   return {
     lobbyMusicVolume: normalizeVolume(
       value.lobbyMusicVolume,
@@ -43,7 +45,10 @@ export function readAudioSettings(storage: Pick<Storage, "getItem">): AudioSetti
       return DEFAULT_AUDIO_SETTINGS;
     }
 
-    return normalizeAudioSettings(parsed as Partial<AudioSettings>);
+    return normalizeAudioSettings({
+      lobbyMusicVolume: "lobbyMusicVolume" in parsed ? parsed.lobbyMusicVolume : undefined,
+      soundEffectsVolume: "soundEffectsVolume" in parsed ? parsed.soundEffectsVolume : undefined,
+    });
   } catch {
     return DEFAULT_AUDIO_SETTINGS;
   }
