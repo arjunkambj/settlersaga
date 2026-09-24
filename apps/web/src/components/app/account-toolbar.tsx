@@ -1,102 +1,97 @@
 "use client";
 
-import { Tooltip as TooltipPrimitive } from "@base-ui/react/tooltip";
 import logoutIcon from "@iconify-icons/solar/logout-2-bold";
-import settingsIcon from "@iconify-icons/solar/settings-minimalistic-bold";
-import { Icon } from "@iconify/react";
+import settingsIcon from "@iconify-icons/solar/settings-bold";
+import { Icon } from "@iconify/react/offline";
 import Image from "next/image";
 import { useState } from "react";
 
-import { useOptionalAppSession } from "@/components/app/app-session-context";
+import { useAppSession } from "@/components/app/app-session-context";
 import { PlayerSettingsDialog } from "@/components/app/player-settings-dialog";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { DEFAULT_AUDIO_SETTINGS } from "@/lib/audio-settings";
+import { Tooltip } from "@/components/ui/tooltip";
+import { getPlayerPortraitPath } from "@/constants/game/player-assets";
 import { cn } from "@/lib/utils";
 
-export function AccountToolbar({
-  className,
-  tone = "solid",
-}: {
-  className?: string;
-  tone?: "glass" | "solid";
-}) {
-  const session = useOptionalAppSession();
-  const accountLabel = session?.accountLabel ?? "";
-  const audioSettings = session?.audioSettings ?? DEFAULT_AUDIO_SETTINGS;
-  const displayName = session?.displayName ?? "";
-  const onAudioSettingsChange = session?.onAudioSettingsChange;
-  const onDisplayNameChange = session?.onDisplayNameChange;
-  const pendingAction = session?.pendingAction ?? null;
-  const profileImageUrl = session?.profileImageUrl ?? null;
-  const signOut = session?.signOut;
+/** Settings and account buttons for the top-right corner of menu screens. */
+export function AccountToolbar() {
+  const {
+    accountLabel,
+    audioSettings,
+    displayName,
+    isGuest,
+    onAudioSettingsChange,
+    onDisplayNameChange,
+    pendingAction,
+    profileImageUrl,
+    signOut,
+  } = useAppSession();
   const [showPlayerSettings, setShowPlayerSettings] = useState(false);
+  // Guests confirm first; anyone else sees the same dialog only if signing out fails.
+  const [showSignOutDialog, setShowSignOutDialog] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
+  const [signOutError, setSignOutError] = useState("");
   const isPending = pendingAction !== null;
-  const chipClass =
-    tone === "glass"
-      ? "bg-card/50 shadow-lg shadow-background/40 backdrop-blur-md hover:bg-card/80"
-      : "bg-card hover:bg-card/80";
 
-  if (!session) {
-    return null;
-  }
+  const handleSignOut = () => {
+    setSignOutError("");
+    setSigningOut(true);
+    signOut().catch(() => {
+      setSignOutError("We couldn't sign you out. Check your connection and try again.");
+      setShowSignOutDialog(true);
+      setSigningOut(false);
+    });
+  };
 
   return (
-    <div className={cn("flex items-center gap-2", className)}>
-      <TooltipPrimitive.Root>
-        <TooltipPrimitive.Trigger
+    <div className="flex items-center gap-2 sm:gap-3">
+      <Tooltip label="Settings">
+        <Button
           aria-label="Settings"
-          className={cn(
-            "inline-flex size-10 items-center justify-center rounded-full text-foreground focus-visible:ring-3 focus-visible:ring-ring/30 focus-visible:outline-none disabled:opacity-50",
-            chipClass,
-          )}
-          delay={200}
           disabled={isPending}
           onClick={() => setShowPlayerSettings(true)}
-          type="button"
+          size="game-md"
+          variant="game-icon"
         >
           <Icon icon={settingsIcon} />
-        </TooltipPrimitive.Trigger>
-        <TooltipPrimitive.Portal>
-          <TooltipPrimitive.Positioner align="center" side="bottom" sideOffset={8}>
-            <TooltipPrimitive.Popup className="z-50 rounded-xl bg-popover px-3 py-1.5 text-xs text-popover-foreground shadow-md outline-none">
-              Settings
-            </TooltipPrimitive.Popup>
-          </TooltipPrimitive.Positioner>
-        </TooltipPrimitive.Portal>
-      </TooltipPrimitive.Root>
+        </Button>
+      </Tooltip>
       <DropdownMenu>
         <DropdownMenuTrigger
-          aria-label="Account"
+          aria-label={`Account: ${displayName}`}
           className={cn(
-            "inline-flex max-w-48 items-center gap-2 rounded-full py-1 pr-3 pl-1 focus-visible:ring-3 focus-visible:ring-ring/30 focus-visible:outline-none disabled:opacity-50",
-            chipClass,
+            buttonVariants({ size: "game-md", variant: "game-icon" }),
+            "w-auto max-w-52 gap-2 p-1 sm:pr-4",
           )}
-          disabled={isPending}
+          disabled={isPending || signingOut}
         >
           <Image
             alt=""
-            height={32}
-            width={32}
             className="size-8 shrink-0 rounded-full object-cover"
-            src={profileImageUrl ?? "/game-assets/players/red-navigator.png"}
+            height={32}
+            src={profileImageUrl ?? getPlayerPortraitPath("red")}
+            width={32}
           />
-          <span className="min-w-0 truncate text-sm font-semibold">{displayName}</span>
+          <span className="hidden min-w-0 truncate text-sm sm:inline">{displayName}</span>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="min-w-44" side="bottom" sideOffset={12}>
-          {accountLabel && accountLabel !== displayName ? (
-            <p className="px-2 py-1.5 text-xs text-muted-foreground">{accountLabel}</p>
-          ) : null}
+        <DropdownMenuContent align="end" side="bottom" sideOffset={10}>
+          <div className="flex max-w-64 flex-col gap-0.5 px-2.5 py-2">
+            <p className="truncate font-display text-lg tracking-wide">{displayName}</p>
+            <p className="truncate text-sm font-semibold text-muted-foreground">{accountLabel}</p>
+          </div>
           <DropdownMenuItem
-            disabled={isPending && pendingAction !== "signout"}
-            onClick={() => void signOut?.()}
+            onClick={() => (isGuest ? setShowSignOutDialog(true) : handleSignOut())}
+            variant="destructive"
           >
             <Icon icon={logoutIcon} />
-            Log out
+            Sign out
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -110,6 +105,25 @@ export function AccountToolbar({
         onOpenChange={setShowPlayerSettings}
         open={showPlayerSettings}
       />
+
+      {showSignOutDialog ? (
+        <ConfirmationDialog
+          busy={signingOut}
+          confirmLabel="Sign out"
+          description={
+            isGuest
+              ? "You can't sign back in to a guest profile. You'll lose this name and any seat you hold on an Island."
+              : "Sign back in with the same account any time to pick up where you left off."
+          }
+          error={signOutError}
+          onCancel={() => {
+            setSignOutError("");
+            setShowSignOutDialog(false);
+          }}
+          onConfirm={handleSignOut}
+          title={isGuest ? "Sign out as guest?" : "Sign out?"}
+        />
+      ) : null}
     </div>
   );
 }

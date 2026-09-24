@@ -1,25 +1,26 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { MenuScreen, MenuScreenText } from "@/components/app/menu-screen";
+import { buttonVariants } from "@/components/ui/button";
+
+export const metadata: Metadata = {
+  title: "Lost at sea",
+};
 
 export default function NotFound() {
   return (
-    <main
-      className="flex min-h-dvh items-center justify-center bg-background p-6"
-      id="main-content"
+    <MenuScreen
+      actions={
+        <Link className={buttonVariants({ size: "game-md", variant: "game-gold" })} href="/">
+          Sail home
+        </Link>
+      }
+      title="Lost at sea"
     >
-      <Card className="w-full max-w-lg text-center">
-        <CardHeader className="items-center">
-          <CardTitle>Island not found</CardTitle>
-          <CardDescription>The page you are looking for does not exist.</CardDescription>
-        </CardHeader>
-        <CardContent className="flex justify-center">
-          <Link href="/">
-            <Button>Return home</Button>
-          </Link>
-        </CardContent>
-      </Card>
-    </main>
+      <MenuScreenText>
+        There&apos;s no Island at this address. Check the link, or sail home to start a new voyage.
+      </MenuScreenText>
+    </MenuScreen>
   );
 }

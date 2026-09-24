@@ -1,0 +1,196 @@
+/* ============================================================================
+   Home menu: header, rejoin strip and the three voyage cards.
+
+   Phones stack the cards as compact rows and portrait tablets as big rows;
+   landscape screens stand them side by side. On a landscape phone the art
+   gives way, so every button stays above the fold.
+   ========================================================================= */
+
+.home-screen {
+  --home-gutter: 0.75rem;
+  display: flex;
+  min-height: 100dvh;
+  flex-direction: column;
+  /* Clears the notch and home indicator; the gutters add the usual margin. */
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
+    env(safe-area-inset-left);
+}
+
+.home-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: var(--home-gutter);
+}
+
+.home-body {
+  display: flex;
+  width: 100%;
+  max-width: 64rem;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-inline: auto;
+  padding: 0 var(--home-gutter) 1.5rem;
+}
+
+.home-modes {
+  display: grid;
+  width: 100%;
+  gap: 0.75rem;
+}
+
+/* Phone: art, title and button in one compact row. */
+.home-mode-card {
+  display: grid;
+  grid-template-columns: 4.5rem minmax(0, 1fr) 4.5rem;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  text-align: left;
+}
+.home-mode-art {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 1;
+  border-radius: 1.25rem;
+}
+.home-mode-title {
+  font-size: 1.125rem;
+}
+.home-mode-description {
+  font-size: 0.875rem;
+}
+.home-mode-button {
+  width: 100%;
+  padding-inline: 0.75rem;
+}
+
+/* The smallest phones: slimmer side columns keep the titles whole. */
+@media (width < 22.5rem) {
+  .home-mode-card {
+    grid-template-columns: 4rem minmax(0, 1fr) 4rem;
+    gap: 0.5rem;
+  }
+}
+
+@media (min-width: 24rem) {
+  .home-mode-title {
+    font-size: 1.25rem;
+  }
+}
+
+/* Portrait tablet: the same rows, big enough to fill the screen. */
+@media (min-width: 40rem) {
+  .home-screen {
+    --home-gutter: 1.25rem;
+  }
+  .home-body {
+    gap: 1.5rem;
+    padding-bottom: 2.5rem;
+  }
+  .home-modes {
+    gap: 1rem;
+  }
+  .home-mode-card {
+    grid-template-columns: auto minmax(0, 1fr) clamp(8rem, 20vw, 11rem);
+    gap: 1.25rem;
+    padding: 1.25rem;
+  }
+  .home-mode-art {
+    width: clamp(8rem, 16dvh, 14rem);
+  }
+  .home-mode-title {
+    font-size: clamp(1.5rem, 3.5vw, 1.875rem);
+  }
+  .home-mode-description {
+    font-size: 1.125rem;
+  }
+  .home-mode-button {
+    height: 3.5rem;
+    font-size: 1.25rem;
+  }
+}
+
+/* Landscape: three cards side by side, buttons on one line. */
+@media (min-width: 40rem) and (orientation: landscape) {
+  .home-modes {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .home-mode-card {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+    text-align: center;
+  }
+  .home-mode-art {
+    width: auto;
+    /* 30rem is the rest of the screen (header, rejoin strip, ribbon, card chrome), so the
+       buttons stay above the fold on short laptop windows. */
+    height: clamp(8rem, min(24vw, 100dvh - 30rem), 17rem);
+    aspect-ratio: auto;
+  }
+  .home-mode-title {
+    font-size: 1.5rem;
+  }
+  .home-mode-description {
+    font-size: 0.875rem;
+  }
+  .home-mode-button {
+    height: 3.25rem;
+    margin-top: auto;
+    font-size: 1.125rem;
+  }
+}
+
+@media (min-width: 64rem) and (orientation: landscape) {
+  .home-modes {
+    gap: 1.5rem;
+  }
+  .home-mode-description {
+    font-size: 1rem;
+  }
+}
+
+@media (min-width: 96rem) {
+  .home-body {
+    max-width: 72rem;
+  }
+}
+
+/* Landscape phone: the cards take the height that is left and the art shrinks. */
+@media (min-width: 40rem) and (orientation: landscape) and (max-height: 32rem) {
+  .home-screen {
+    --home-gutter: 0.75rem;
+    height: 100dvh;
+  }
+  .home-body {
+    min-height: 0;
+    gap: 0.75rem;
+    padding-bottom: 0.75rem;
+  }
+  .home-modes {
+    min-height: 0;
+    flex: 1;
+  }
+  .home-mode-card {
+    gap: 0.5rem;
+    padding: 0.75rem;
+  }
+  .home-mode-art {
+    height: auto;
+    min-height: 3.5rem;
+    flex: 1;
+  }
+  .home-mode-description {
+    display: none;
+  }
+  .home-mode-button {
+    height: 2.75rem;
+    font-size: 1rem;
+  }
+}

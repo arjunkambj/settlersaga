@@ -7,7 +7,7 @@ export function SceneBackdrop() {
         alt=""
         className="scene-backdrop-art"
         fill
-        priority
+        preload
         sizes="100vw"
         src="/shared-assets/coastal-island-kingdom-supercell.png"
       />

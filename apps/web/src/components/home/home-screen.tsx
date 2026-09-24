@@ -1,10 +1,19 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-
+import bookIcon from "@iconify-icons/solar/book-bookmark-bold";
+import { Icon } from "@iconify/react/offline";
+import { ROOM_CODE_LENGTH } from "@settersaga/backend/convex/model/constants";
 import { DEFAULT_BASE_GAME_SETTINGS, type BotDifficulty } from "@settersaga/game";
-import { Button } from "@/components/ui/button";
-import { Spinner } from "@/components/ui/spinner";
+import Image, { type StaticImageData } from "next/image";
+import Link from "next/link";
+import { useState } from "react";
+
+import { AccountToolbar } from "@/components/app/account-toolbar";
+import { BrandWordmark } from "@/components/app/brand-logo";
+import { SceneBackdrop } from "@/components/app/scene-backdrop";
+import { GameHelpDialog } from "@/components/game/game-help-dialog";
+import { QuickMatchDialog } from "@/components/quick-match/quick-match-dialog";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -15,352 +24,310 @@ import {
 } from "@/components/ui/dialog";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Tooltip as TooltipPrimitive } from "@base-ui/react/tooltip";
-import { Icon } from "@iconify/react";
-import Image from "next/image";
-import { useState } from "react";
-import arrowRightIcon from "@iconify-icons/solar/arrow-right-bold";
-import logoutIcon from "@iconify-icons/solar/logout-2-bold";
-import playIcon from "@iconify-icons/solar/play-bold";
-import settingsIcon from "@iconify-icons/solar/settings-minimalistic-bold";
-
-import { BrandWordmark } from "@/components/app/brand-logo";
-import { PlayerSettingsDialog } from "@/components/app/player-settings-dialog";
-import { SceneBackdrop } from "@/components/app/scene-backdrop";
-import type { LobbySettingsValue } from "@/components/lobby/lobby-settings";
-import { QuickMatchDialog } from "@/components/quick-match/quick-match-dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { LiveMessage } from "@/components/ui/live-message";
+import { Spinner } from "@/components/ui/spinner";
 import type { PendingAction } from "@/lib/app/pending-action";
-import type { AudioSettings } from "@/lib/audio-settings";
 import { isRoomCode, normalizeRoomCode } from "@/lib/session";
 import { cn } from "@/lib/utils";
 
+// Imported rather than referenced by URL so each card gets a blurred placeholder while it loads.
+import hostIslandArt from "../../../public/home-assets/menu/host-island.png";
+import joinCrewArt from "../../../public/home-assets/menu/join-crew.png";
+import quickMatchArt from "../../../public/home-assets/menu/quick-match.png";
+
+/** A room this player is still seated in, offered as a one-tap rejoin. */
+export interface RejoinRoom {
+  code: string;
+  status: "active" | "waiting";
+}
+
 export interface HomeScreenProps {
-  accountLabel: string;
-  activeCode?: string;
-  audioSettings: AudioSettings;
-  displayName: string;
   error: string;
   initialJoinCode?: string;
   initialJoinOpen?: boolean;
   onCreateRoom(): Promise<void>;
-  onAudioSettingsChange(settings: AudioSettings): void;
-  onDisplayNameChange(value: string): void;
-  onJoinRoom?(code: string): Promise<void>;
-  onQuickPlay?(value: LobbySettingsValue): Promise<void>;
-  onSignOut(): Promise<void | null>;
+  onDismissError(): void;
+  onJoinRoom(code: string): Promise<void>;
+  onQuickPlay(botDifficulty: BotDifficulty): Promise<void>;
   pendingAction: PendingAction;
-  profileImageUrl: string | null;
+  rejoinRoom: RejoinRoom | null;
 }
 
 export function HomeScreen({
-  accountLabel,
-  activeCode,
-  audioSettings,
-  displayName,
   error,
-  initialJoinCode,
-  initialJoinOpen,
+  initialJoinCode = "",
+  initialJoinOpen = false,
   onCreateRoom,
-  onAudioSettingsChange,
-  onDisplayNameChange,
+  onDismissError,
   onJoinRoom,
   onQuickPlay,
-  onSignOut,
   pendingAction,
-  profileImageUrl,
+  rejoinRoom,
 }: HomeScreenProps) {
-  const router = useRouter();
-  const [joinCode, setJoinCode] = useState(initialJoinCode ?? "");
-  const [showJoinRoom, setShowJoinRoom] = useState(initialJoinOpen ?? false);
+  const [joinCode, setJoinCode] = useState(initialJoinCode);
+  const [showJoinRoom, setShowJoinRoom] = useState(initialJoinOpen);
   const [showBotSetup, setShowBotSetup] = useState(false);
-  const [showPlayerSettings, setShowPlayerSettings] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
   const [botDifficulty, setBotDifficulty] = useState<BotDifficulty>("medium");
   const isPending = pendingAction !== null;
 
+  // Each dialog shows only its own action's error, so opening or closing one clears it.
+  const setDialogOpen = (setOpen: (value: boolean) => void, open: boolean) => {
+    onDismissError();
+    setOpen(open);
+  };
+
   return (
-    <main className="relative flex min-h-dvh flex-col overflow-x-hidden" id="main-content">
+    <main className="home-screen relative" id="main-content">
       <SceneBackdrop />
 
-      <div className="relative z-20 flex items-center justify-between gap-3 p-4">
-        <BrandWordmark className="w-44 sm:w-52" priority />
-        <div className="flex items-center gap-2">
-          <TooltipPrimitive.Root>
-            <TooltipPrimitive.Trigger
-              aria-label="Settings"
-              className="inline-flex size-10 items-center justify-center rounded-full bg-card/50 text-foreground shadow-lg shadow-background/40 backdrop-blur-md hover:bg-card/80 focus-visible:ring-3 focus-visible:ring-ring/30 focus-visible:outline-none disabled:opacity-50"
-              delay={200}
-              disabled={isPending}
-              onClick={() => setShowPlayerSettings(true)}
-              type="button"
-            >
-              <Icon icon={settingsIcon} />
-            </TooltipPrimitive.Trigger>
-            <TooltipPrimitive.Portal>
-              <TooltipPrimitive.Positioner align="center" side="bottom" sideOffset={8}>
-                <TooltipPrimitive.Popup className="z-50 rounded-xl bg-popover px-3 py-1.5 text-xs text-popover-foreground shadow-md outline-none">
-                  Settings
-                </TooltipPrimitive.Popup>
-              </TooltipPrimitive.Positioner>
-            </TooltipPrimitive.Portal>
-          </TooltipPrimitive.Root>
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              aria-label="Account"
-              className="inline-flex max-w-48 items-center gap-2 rounded-full bg-card/50 py-1 pr-3 pl-1 shadow-lg shadow-background/40 backdrop-blur-md hover:bg-card/80 focus-visible:ring-3 focus-visible:ring-ring/30 focus-visible:outline-none disabled:opacity-50"
-              disabled={isPending}
-            >
-              <Image
-                alt=""
-                height={32}
-                width={32}
-                className="size-8 shrink-0 rounded-full object-cover"
-                src={profileImageUrl ?? "/game-assets/players/red-navigator.png"}
-              />
-              <span className="min-w-0 truncate text-sm font-semibold">{displayName}</span>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="min-w-44" side="bottom" sideOffset={12}>
-              {accountLabel && accountLabel !== displayName ? (
-                <p className="px-2 py-1.5 text-xs text-muted-foreground">{accountLabel}</p>
-              ) : null}
-              <DropdownMenuItem
-                disabled={isPending && pendingAction !== "signout"}
-                onClick={() => void onSignOut()}
-              >
-                <Icon icon={logoutIcon} />
-                Log out
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+      <header className="home-header relative z-20">
+        <BrandWordmark className="w-32 shrink-0 sm:w-48 lg:w-56" priority />
+        <div className="flex items-center gap-2 sm:gap-3">
+          <Button
+            className="sm:w-auto sm:px-4"
+            onClick={() => setShowHelp(true)}
+            size="game-md"
+            variant="game-icon"
+          >
+            <Icon icon={bookIcon} />
+            <span className="sr-only sm:not-sr-only">How to play</span>
+          </Button>
+          <AccountToolbar />
         </div>
-      </div>
+      </header>
 
-      <div className="relative grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_auto_minmax(0,1fr)] px-4 pb-8 sm:px-6">
-        <div className="flex flex-col items-center justify-end pb-5">
-          <div className="relative">
-            {activeCode ? (
-              <button
-                aria-label={`Rejoin room ${activeCode}`}
-                className={cn(
-                  voyageCardClassName,
-                  "absolute bottom-full left-1/2 mb-3 flex w-[min(calc(100vw-2rem),28rem)] -translate-x-1/2 flex-row items-center justify-between gap-3 px-4 py-2.5 text-left",
-                )}
-                onClick={() => router.push(`/room/${encodeURIComponent(activeCode)}`)}
-                type="button"
-              >
-                <div className="min-w-0">
-                  <p className="font-heading text-sm font-bold tracking-wide uppercase">
-                    Game in progress
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    Room{" "}
-                    <span className="font-mono font-semibold text-foreground">{activeCode}</span> is
-                    still active
-                  </p>
-                </div>
-                <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                  <Icon className="size-5" icon={playIcon} />
-                </span>
-              </button>
-            ) : null}
-            <div className="space-y-1 text-center">
-              <h1 className="font-heading text-3xl font-bold drop-shadow-md sm:text-4xl">
-                Choose your voyage
-              </h1>
-              <p className="text-sm font-medium text-foreground/90 drop-shadow-md">
-                Play now, host a table, or join a crew.
-              </p>
-            </div>
-          </div>
-        </div>
+      <div className="home-body relative z-10">
+        {rejoinRoom ? <RejoinStrip room={rejoinRoom} /> : null}
 
-        <div className="mx-auto grid w-full max-w-5xl grid-cols-1 items-stretch gap-5 sm:grid-cols-3">
-          <PlayModeButton
-            actionLabel={
-              pendingAction === "quick" ? "Starting..." : "Play instantly with bots or players"
-            }
-            artSrc="/home-assets/menu/quick-match.png"
-            className="sm:col-start-2 sm:row-start-1"
-            disabled={isPending || !displayName.trim()}
-            onClick={() => setShowBotSetup(true)}
-            pending={pendingAction === "quick"}
-            title="Quick Match"
-          />
-          <PlayModeButton
-            actionLabel={pendingAction === "create" ? "Creating..." : "Create a private room"}
-            artSrc="/home-assets/menu/host-island.png"
-            className="sm:col-start-1 sm:row-start-1"
-            disabled={isPending || !displayName.trim()}
+        <h1 className="game-ribbon">Choose your voyage</h1>
+
+        <div className="home-modes">
+          <PlayModeCard
+            art={hostIslandArt}
+            buttonLabel="Host"
+            description="Invite your crew"
+            disabled={isPending}
             onClick={() => void onCreateRoom()}
             pending={pendingAction === "create"}
             title="Host Island"
           />
-          <PlayModeButton
-            actionLabel={pendingAction === "join" ? "Joining..." : "Enter a friend code"}
-            artSrc="/home-assets/menu/join-crew.png"
-            className="sm:col-start-3 sm:row-start-1"
-            disabled={isPending || !displayName.trim()}
-            onClick={() => setShowJoinRoom(true)}
+          <PlayModeCard
+            art={quickMatchArt}
+            buttonLabel="Play"
+            description="Sail now against bots"
+            disabled={isPending}
+            featured={!rejoinRoom}
+            onClick={() => setDialogOpen(setShowBotSetup, true)}
+            pending={pendingAction === "quick"}
+            title="Quick Match"
+          />
+          <PlayModeCard
+            art={joinCrewArt}
+            buttonLabel="Join"
+            description="Got a code? Hop aboard"
+            disabled={isPending}
+            onClick={() => setDialogOpen(setShowJoinRoom, true)}
             pending={pendingAction === "join"}
             title="Join Crew"
           />
         </div>
 
-        <div className="flex justify-center pt-4">
-          {error && !showBotSetup ? <LiveMessage message={error} /> : null}
-        </div>
+        <LiveMessage message={showJoinRoom || showBotSetup ? "" : error} />
       </div>
 
       <Dialog
         open={showJoinRoom}
         onOpenChange={(open) => {
-          if (!open && !isPending) setShowJoinRoom(false);
+          if (!open && !isPending) setDialogOpen(setShowJoinRoom, false);
         }}
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Enter Room Code</DialogTitle>
-            <DialogDescription>Enter the 6-character code from your host.</DialogDescription>
+            <DialogTitle>Join Crew</DialogTitle>
+            <DialogDescription>Type the Island code your host shared.</DialogDescription>
           </DialogHeader>
           <form
+            className="flex flex-col gap-3"
             id="join-room-form"
             onSubmit={(event) => {
               event.preventDefault();
-              if (onJoinRoom) {
-                void onJoinRoom(joinCode);
-              }
+              void onJoinRoom(joinCode);
             }}
-            className="space-y-4"
           >
-            <Field>
-              <FieldLabel htmlFor="room-code">Room code</FieldLabel>
+            <Field className="gap-2">
+              <FieldLabel className="justify-center" htmlFor="room-code">
+                Island code
+              </FieldLabel>
               <Input
-                id="room-code"
-                autoComplete="off"
                 autoCapitalize="characters"
+                autoComplete="off"
                 autoFocus
-                maxLength={6}
+                // The indent balances the letter spacing that trails the last character.
+                className="h-14 indent-[0.3em] text-center font-display text-3xl tracking-[0.3em] uppercase placeholder:font-display"
+                id="room-code"
+                maxLength={ROOM_CODE_LENGTH}
+                onChange={(event) => {
+                  onDismissError();
+                  setJoinCode(normalizeRoomCode(event.target.value));
+                }}
                 placeholder="ABC123"
                 spellCheck={false}
                 value={joinCode}
-                onChange={(e) => setJoinCode(normalizeRoomCode(e.target.value))}
               />
-              <p className="text-xs text-muted-foreground">
+              <p className="text-center text-sm font-semibold">
                 {joinCode.length === 0
-                  ? "6 letters or numbers."
+                  ? `${ROOM_CODE_LENGTH} letters or numbers`
                   : isRoomCode(joinCode)
-                    ? "Ready to join."
-                    : `${6 - joinCode.length} left.`}
+                    ? "Ready to board!"
+                    : `${ROOM_CODE_LENGTH - joinCode.length} more to go`}
               </p>
             </Field>
+            <LiveMessage message={error} />
           </form>
           <DialogFooter>
-            <Button variant="ghost" disabled={isPending} onClick={() => setShowJoinRoom(false)}>
+            <Button
+              disabled={isPending}
+              onClick={() => setDialogOpen(setShowJoinRoom, false)}
+              size="game-md"
+              variant="game-secondary"
+            >
               Cancel
             </Button>
             <Button
+              disabled={isPending || !isRoomCode(joinCode)}
               form="join-room-form"
+              size="game-md"
               type="submit"
-              disabled={isPending || !isRoomCode(joinCode) || !displayName.trim()}
+              variant="game-gold"
             >
               {pendingAction === "join" ? (
                 <>
-                  <Spinner data-icon="inline-start" /> Joining...
+                  <Spinner data-icon="inline-start" /> Boarding…
                 </>
               ) : (
-                "Join Crew"
+                "Join"
               )}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <PlayerSettingsDialog
-        audioSettings={audioSettings}
-        displayName={displayName}
-        isPending={isPending}
-        onAudioSettingsChange={onAudioSettingsChange}
-        onDisplayNameChange={onDisplayNameChange}
-        onOpenChange={setShowPlayerSettings}
-        open={showPlayerSettings}
-      />
-
       <QuickMatchDialog
         botDifficulty={botDifficulty}
         disabled={isPending}
         error={error}
         onBotDifficultyChange={setBotDifficulty}
-        onOpenChange={setShowBotSetup}
-        onStart={() => {
-          if (!onQuickPlay) {
-            return;
-          }
-          void onQuickPlay({
-            botCount: 3,
-            botDifficulty,
-            settings: { ...DEFAULT_BASE_GAME_SETTINGS },
-          });
-        }}
+        onOpenChange={(open) => setDialogOpen(setShowBotSetup, open)}
+        onStart={() => void onQuickPlay(botDifficulty)}
         open={showBotSetup}
         pending={pendingAction === "quick"}
       />
+
+      {showHelp ? (
+        <GameHelpDialog onClose={() => setShowHelp(false)} settings={DEFAULT_BASE_GAME_SETTINGS} />
+      ) : null}
     </main>
   );
 }
 
-const voyageCardClassName = cn(
-  "group flex w-full overflow-hidden rounded-4xl",
-  "border border-white/10 bg-gradient-to-b from-card/35 to-card/60",
-  "focus-visible:ring-3 focus-visible:ring-ring/30 focus-visible:outline-none",
-  "disabled:pointer-events-none disabled:opacity-50",
-);
+function RejoinStrip({ room }: { room: RejoinRoom }) {
+  return (
+    <Link
+      className="game-menu-panel game-card-button flex w-full max-w-xl items-center gap-3 p-2 text-left motion-safe:animate-game-rise"
+      href={`/room/${encodeURIComponent(room.code)}`}
+    >
+      <span className="game-art-stage relative grid size-12 shrink-0 place-items-center rounded-full max-[22.5rem]:hidden">
+        <Image
+          alt=""
+          className="size-10 object-contain"
+          placeholder="blur"
+          sizes="40px"
+          src={hostIslandArt}
+        />
+        <span
+          aria-hidden="true"
+          className="absolute -top-0.5 -right-0.5 flex size-3.5 rounded-full border-2 border-panel bg-gold"
+        >
+          <span className="size-full rounded-full bg-gold motion-safe:animate-ping" />
+        </span>
+      </span>
+      <span className="flex min-w-0 flex-1 flex-col">
+        <span className="game-title truncate text-sm min-[24rem]:text-base sm:text-lg">
+          {room.status === "waiting" ? "Your crew is waiting" : "Your game is still on"}
+        </span>
+        <span className="truncate text-sm font-semibold text-muted-foreground">
+          Island <span className="font-display tracking-wider text-foreground">{room.code}</span>
+        </span>
+      </span>
+      <span
+        className={cn(buttonVariants({ size: "game-md", variant: "game-gold" }), "px-3 sm:px-5")}
+      >
+        Rejoin
+      </span>
+    </Link>
+  );
+}
 
-function PlayModeButton({
-  actionLabel,
-  artSrc,
-  className,
+function PlayModeCard({
+  art,
+  buttonLabel,
+  description,
   disabled,
+  featured = false,
   onClick,
   pending,
   title,
 }: {
-  actionLabel: string;
-  artSrc: string;
-  className?: string;
+  art: StaticImageData;
+  buttonLabel: string;
+  description: string;
   disabled: boolean;
+  featured?: boolean;
   onClick(): void;
   pending: boolean;
   title: string;
 }) {
   return (
     <button
-      className={cn(voyageCardClassName, "flex-col text-center", className)}
+      className="game-menu-panel game-card-button home-mode-card group w-full"
       disabled={disabled}
       onClick={onClick}
       type="button"
     >
-      <div className="flex items-center justify-center px-6 pt-8">
+      <span className="game-art-stage home-mode-art">
         <Image
           alt=""
-          className="h-64 w-auto object-contain drop-shadow-lg transition-transform duration-300 group-hover:scale-105 sm:h-72"
-          height={640}
-          src={artSrc}
-          width={640}
+          className="object-contain p-1 drop-shadow-lg transition-transform duration-300 motion-safe:group-hover:scale-105 sm:p-3"
+          fill
+          loading="eager"
+          placeholder="blur"
+          sizes="(min-width: 640px) 272px, 72px"
+          src={art}
         />
-      </div>
-      <div className="flex flex-col items-center px-5 pt-1 pb-6">
-        <p className="font-heading text-xl font-bold tracking-wide uppercase">{title}</p>
-        <p className="mt-1 max-w-56 text-sm text-muted-foreground">{actionLabel}</p>
-        <span className="mt-4 inline-flex size-11 items-center justify-center rounded-full bg-primary text-primary-foreground">
-          {pending ? <Spinner /> : <Icon className="size-5" icon={arrowRightIcon} />}
+      </span>
+      <span className="flex min-w-0 flex-col gap-0.5">
+        <span className="game-title home-mode-title truncate">{title}</span>
+        <span className="home-mode-description line-clamp-2 font-semibold text-balance text-muted-foreground">
+          {description}
         </span>
-      </div>
+      </span>
+      {/* A span, not a Button: the whole card is already the button. */}
+      <span
+        className={cn(
+          buttonVariants({ size: "game-md", variant: featured ? "game-gold" : "game" }),
+          "home-mode-button",
+        )}
+      >
+        {pending ? (
+          <>
+            <Spinner className="size-5" />
+            <span className="sr-only">Working…</span>
+          </>
+        ) : (
+          buttonLabel
+        )}
+      </span>
     </button>
   );
 }

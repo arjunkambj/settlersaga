@@ -1,10 +1,10 @@
 "use client";
 
+import { Radio } from "@base-ui/react/radio";
+import { RadioGroup } from "@base-ui/react/radio-group";
 import type { BotDifficulty } from "@settersaga/game";
-import { Icon } from "@iconify/react";
-import botIcon from "@iconify-icons/solar/cpu-bolt-bold";
+import Image from "next/image";
 
-import { BOT_DIFFICULTY_OPTIONS } from "@/lib/lobby/bot-difficulty";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -14,10 +14,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Field, FieldLabel } from "@/components/ui/field";
 import { LiveMessage } from "@/components/ui/live-message";
 import { Spinner } from "@/components/ui/spinner";
-import { cn } from "@/lib/utils";
+import { QUICK_MATCH_BOT_COUNT } from "@/lib/app/quick-match";
+import { BOT_DIFFICULTY_DETAILS, BOT_DIFFICULTY_OPTIONS } from "@/lib/lobby/bot-difficulty";
 
 export function QuickMatchDialog({
   botDifficulty,
@@ -29,19 +29,15 @@ export function QuickMatchDialog({
   open,
   pending,
 }: {
-  readonly botDifficulty: BotDifficulty;
-  readonly disabled: boolean;
-  readonly error?: string;
-  readonly onBotDifficultyChange: (value: BotDifficulty) => void;
-  readonly onOpenChange: (open: boolean) => void;
-  readonly onStart: () => void;
-  readonly open: boolean;
-  readonly pending: boolean;
+  botDifficulty: BotDifficulty;
+  disabled: boolean;
+  error: string;
+  onBotDifficultyChange(value: BotDifficulty): void;
+  onOpenChange(open: boolean): void;
+  onStart(): void;
+  open: boolean;
+  pending: boolean;
 }) {
-  const selectedDifficulty =
-    BOT_DIFFICULTY_OPTIONS.find((option) => option.value === botDifficulty) ??
-    BOT_DIFFICULTY_OPTIONS[1];
-
   return (
     <Dialog
       open={open}
@@ -52,49 +48,57 @@ export function QuickMatchDialog({
         onOpenChange(nextOpen);
       }}
     >
-      <DialogContent>
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Quick Match</DialogTitle>
           <DialogDescription>
-            Pick bot difficulty. The table uses the standard 4-player island and default rules.
+            No waiting: you&apos;ll set sail right away against {QUICK_MATCH_BOT_COUNT} bots. How
+            tough should they be?
           </DialogDescription>
         </DialogHeader>
-        <Field className="gap-2">
-          <FieldLabel className="text-sm font-semibold">Bot Difficulty</FieldLabel>
-          <div aria-label="Bot difficulty" className="grid grid-cols-3 gap-2" role="radiogroup">
-            {BOT_DIFFICULTY_OPTIONS.map((option) => {
-              const selected = option.value === botDifficulty;
-              return (
-                <Button
-                  key={option.value}
-                  aria-checked={selected}
-                  disabled={disabled}
-                  onClick={() => onBotDifficultyChange(option.value)}
-                  role="radio"
-                  type="button"
-                  variant={selected ? "default" : "outline"}
-                  className={cn("h-10", selected && "pointer-events-none")}
-                >
-                  {option.label}
-                </Button>
-              );
-            })}
-          </div>
-          <p className="text-xs leading-relaxed text-muted-foreground">
-            {selectedDifficulty.description}
-          </p>
-        </Field>
-        {error ? <LiveMessage message={error} /> : null}
+        <RadioGroup<BotDifficulty>
+          aria-label="Bot difficulty"
+          className="grid grid-cols-3 gap-2 sm:gap-3"
+          disabled={disabled}
+          onValueChange={onBotDifficultyChange}
+          value={botDifficulty}
+        >
+          {BOT_DIFFICULTY_OPTIONS.map((option) => (
+            <Radio.Root
+              className="game-choice-tile flex min-w-0 flex-col items-center gap-2 p-2 sm:p-3"
+              key={option.value}
+              value={option.value}
+            >
+              <Image
+                alt=""
+                className="aspect-square w-full max-w-24 object-contain drop-shadow-md"
+                height={512}
+                sizes="96px"
+                src={option.artSrc}
+                width={512}
+              />
+              <span className="font-display text-lg tracking-wide">{option.label}</span>
+            </Radio.Root>
+          ))}
+        </RadioGroup>
+        <p className="text-center text-sm font-semibold text-balance" aria-live="polite">
+          {BOT_DIFFICULTY_DETAILS[botDifficulty].description}
+        </p>
+        <LiveMessage message={error} />
         <DialogFooter>
-          <Button disabled={disabled} onClick={onStart} type="button">
+          <Button
+            disabled={disabled}
+            onClick={onStart}
+            size="game-lg"
+            type="button"
+            variant="game-gold"
+          >
             {pending ? (
               <>
-                <Spinner data-icon="inline-start" /> Starting...
+                <Spinner className="size-6" data-icon="inline-start" /> Setting sail…
               </>
             ) : (
-              <>
-                <Icon icon={botIcon} /> Start Quick Match
-              </>
+              "Start game"
             )}
           </Button>
         </DialogFooter>

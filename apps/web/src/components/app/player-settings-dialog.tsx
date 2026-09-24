@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { DISPLAY_NAME_MAX_LENGTH } from "@settersaga/backend/convex/model/constants";
+import { useState } from "react";
 
 import { AudioSettingsControls } from "@/components/audio/audio-settings-controls";
 import { Button } from "@/components/ui/button";
@@ -13,9 +14,22 @@ import {
 } from "@/components/ui/dialog";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
-import { cleanDisplayName } from "@/lib/app/display-name";
+import { LiveMessage } from "@/components/ui/live-message";
+import { Spinner } from "@/components/ui/spinner";
+import { toActionableError } from "@/lib/app/action-errors";
 import type { AudioSettings } from "@/lib/audio-settings";
+
+interface PlayerSettingsDialogProps {
+  audioSettings: AudioSettings;
+  displayName: string;
+  isPending?: boolean;
+  /** Applied live while the sliders move; Cancel restores the settings the dialog opened with. */
+  onAudioSettingsChange?(settings: AudioSettings): void;
+  /** Saves a new name; a rejection keeps the dialog open and explains why. */
+  onDisplayNameChange?(value: string): Promise<void>;
+  onOpenChange(open: boolean): void;
+  open: boolean;
+}
 
 export function PlayerSettingsDialog({
   audioSettings,
@@ -25,31 +39,35 @@ export function PlayerSettingsDialog({
   onDisplayNameChange,
   onOpenChange,
   open,
-}: {
-  audioSettings: AudioSettings;
-  displayName: string;
-  isPending?: boolean;
-  onAudioSettingsChange?(settings: AudioSettings): void;
-  onDisplayNameChange?(value: string): void;
-  onOpenChange(open: boolean): void;
-  open: boolean;
-}) {
-  const [displayNameDraft, setDisplayNameDraft] = useState(displayName);
-  const [audioSettingsDraft, setAudioSettingsDraft] = useState(audioSettings);
-  const [audioSettingsAtOpen, setAudioSettingsAtOpen] = useState(audioSettings);
-  const wasOpenRef = useRef(false);
+}: PlayerSettingsDialogProps) {
+  // Edits stay null until the player changes something, so every visit starts from the live name
+  // and sound levels. They are cleared once the closing animation ends.
+  const [nameDraft, setNameDraft] = useState<string | null>(null);
+  const [audioBeforeEdit, setAudioBeforeEdit] = useState<AudioSettings | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const name = nameDraft ?? displayName;
+  const busy = isPending || saving;
 
-  useEffect(() => {
-    if (open && !wasOpenRef.current) {
-      setDisplayNameDraft(displayName);
-      setAudioSettingsDraft(audioSettings);
-      setAudioSettingsAtOpen(audioSettings);
+  const cancel = () => {
+    if (audioBeforeEdit) onAudioSettingsChange?.(audioBeforeEdit);
+    onOpenChange(false);
+  };
+
+  const save = async () => {
+    const trimmedName = name.trim();
+    if (trimmedName !== displayName && onDisplayNameChange) {
+      setError("");
+      setSaving(true);
+      try {
+        await onDisplayNameChange(trimmedName);
+      } catch (cause) {
+        setError(toActionableError(cause));
+        return;
+      } finally {
+        setSaving(false);
+      }
     }
-    wasOpenRef.current = open;
-  }, [audioSettings, displayName, open]);
-
-  const closeAndRevertAudio = () => {
-    onAudioSettingsChange?.(audioSettingsAtOpen);
     onOpenChange(false);
   };
 
@@ -57,9 +75,13 @@ export function PlayerSettingsDialog({
     <Dialog
       open={open}
       onOpenChange={(nextOpen) => {
-        if (!nextOpen && !isPending) {
-          closeAndRevertAudio();
-        }
+        if (!nextOpen && !busy) cancel();
+      }}
+      onOpenChangeComplete={(isOpen) => {
+        if (isOpen) return;
+        setNameDraft(null);
+        setAudioBeforeEdit(null);
+        setError("");
       }}
     >
       <DialogContent>
@@ -68,44 +90,56 @@ export function PlayerSettingsDialog({
         </DialogHeader>
         <form
           id="player-settings-form"
-          className="flex flex-col gap-4"
+          className="flex flex-col gap-6"
           onSubmit={(event) => {
             event.preventDefault();
-            onDisplayNameChange?.(cleanDisplayName(displayNameDraft));
-            onOpenChange(false);
+            void save();
           }}
         >
-          <Field>
-            <FieldLabel htmlFor="display-name-input">Display name</FieldLabel>
+          <Field className="gap-2">
+            <FieldLabel
+              className="font-display text-base font-normal tracking-wide"
+              htmlFor="display-name-input"
+            >
+              Your name
+            </FieldLabel>
             <Input
-              id="display-name-input"
-              autoComplete="off"
+              autoComplete="nickname"
               autoFocus
-              maxLength={24}
-              placeholder="Your name"
-              value={displayNameDraft}
-              onChange={(event) => setDisplayNameDraft(event.target.value)}
+              className="h-11"
+              id="display-name-input"
+              maxLength={DISPLAY_NAME_MAX_LENGTH}
+              onChange={(event) => {
+                setError("");
+                setNameDraft(event.target.value);
+              }}
+              placeholder="Pick a captain's name"
+              readOnly={saving}
+              value={name}
             />
+            <LiveMessage message={error} />
           </Field>
-          <Separator />
           <AudioSettingsControls
             onChange={(settings) => {
-              setAudioSettingsDraft(settings);
+              setAudioBeforeEdit((current) => current ?? audioSettings);
               onAudioSettingsChange?.(settings);
             }}
-            settings={audioSettingsDraft}
+            settings={audioSettings}
           />
         </form>
         <DialogFooter>
-          <Button disabled={isPending} onClick={closeAndRevertAudio} variant="ghost">
+          <Button disabled={busy} onClick={cancel} size="game-md" variant="game-secondary">
             Cancel
           </Button>
           <Button
-            disabled={isPending || !displayNameDraft.trim()}
+            disabled={busy || !name.trim()}
             form="player-settings-form"
+            size="game-md"
             type="submit"
+            variant="game-gold"
           >
-            Save
+            {saving ? <Spinner data-icon="inline-start" /> : null}
+            {saving ? "Saving…" : "Save"}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { LiveMessage } from "@/components/ui/live-message";
 import { Spinner } from "@/components/ui/spinner";
 import {
   AlertDialog,
@@ -15,6 +16,8 @@ interface ConfirmationDialogProps {
   busy: boolean;
   confirmLabel: string;
   description: string;
+  /** Why the confirmed action failed, shown above the buttons so the player can retry or back out. */
+  error?: string;
   onCancel(): void;
   onConfirm(): void;
   title: string;
@@ -24,6 +27,7 @@ export function ConfirmationDialog({
   busy,
   confirmLabel,
   description,
+  error = "",
   onCancel,
   onConfirm,
   title,
@@ -37,24 +41,17 @@ export function ConfirmationDialog({
     >
       <AlertDialogContent>
         <AlertDialogHeader>
-          <div>
-            <p className="eyebrow">Please Confirm</p>
-            <AlertDialogTitle>{title}</AlertDialogTitle>
-          </div>
+          <AlertDialogTitle>{title}</AlertDialogTitle>
+          <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
-        <AlertDialogDescription>{description}</AlertDialogDescription>
+        <LiveMessage message={error} />
         <AlertDialogFooter>
-          <Button disabled={busy} onClick={onCancel} variant="secondary">
-            Go Back
+          <Button disabled={busy} onClick={onCancel} size="game-md" variant="game-secondary">
+            Go back
           </Button>
-          <Button disabled={busy} onClick={onConfirm} variant="destructive">
-            {busy ? (
-              <>
-                <Spinner data-icon="inline-start" /> Working…
-              </>
-            ) : (
-              confirmLabel
-            )}
+          <Button disabled={busy} onClick={onConfirm} size="game-md" variant="game-danger">
+            {busy ? <Spinner data-icon="inline-start" /> : null}
+            {confirmLabel}
           </Button>
         </AlertDialogFooter>
       </AlertDialogContent>

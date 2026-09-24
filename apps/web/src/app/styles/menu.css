@@ -1,0 +1,304 @@
+/* ============================================================================
+   Game UI kit: backdrop, menu panels, popovers, ribbons, titles and buttons.
+
+   These rules are unlayered on purpose, so they beat the utility classes the
+   shadcn primitives carry (border, radius, background, shadow). Height,
+   padding and font size are left to utilities, so callers still size things.
+   Colors come from the tokens in ../styles.css.
+   ========================================================================= */
+
+/* Full-screen island art behind menus. The gradient is a sky-to-sea wash
+   that stands in for the art while the large PNG is still loading. */
+.scene-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -10;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse 90% 55% at 50% 105%, var(--game-panel-top), transparent 70%),
+    linear-gradient(var(--game-button-top), var(--background) 45%, var(--game-panel-bottom));
+}
+.scene-backdrop-art {
+  object-fit: cover;
+}
+
+/* Solid ocean-blue panel with a light rim and a short lip, so it sits on the
+   island art like a game menu instead of a translucent web card. Kept flat
+   (no blurred shadow) so it doesn't fight the bright backdrop. */
+.game-menu-panel {
+  --panel-lift: 4px;
+  border: 2px solid var(--game-panel-rim);
+  border-radius: 1.75rem;
+  background: linear-gradient(
+    color-mix(in srgb, var(--game-panel-top) 94%, transparent),
+    color-mix(in srgb, var(--game-panel-bottom) 94%, transparent)
+  );
+  box-shadow:
+    0 var(--panel-lift) 0 var(--game-panel-lip),
+    inset 0 2px color-mix(in srgb, var(--foreground) 18%, transparent);
+}
+
+/* A whole panel that is one big button (the home mode cards). Like the chunky
+   buttons, it lifts on hover and sinks onto its lip when pressed. */
+.game-card-button {
+  transition:
+    translate 100ms ease-out,
+    box-shadow 100ms ease-out,
+    filter 150ms ease-out;
+}
+@media (hover: hover) {
+  .game-card-button:hover:not(:disabled) {
+    --panel-lift: 6px;
+    translate: 0 -2px;
+    filter: brightness(1.06);
+  }
+}
+.game-card-button:active:not(:disabled) {
+  --panel-lift: 1px;
+  translate: 0 3px;
+}
+.game-card-button:focus-visible {
+  outline: 3px solid var(--ring);
+  outline-offset: 3px;
+}
+.game-card-button:disabled {
+  filter: grayscale(0.6) brightness(0.85);
+}
+
+/* The lit, sunken spot an illustration stands on. It is painted before the
+   art arrives, so a card never shows an empty top while its image loads.
+   Callers set the radius, since the stage can be a rounded box or a circle. */
+.game-art-stage {
+  background:
+    radial-gradient(
+      ellipse at 50% 60%,
+      color-mix(in srgb, var(--game-button-top) 60%, transparent),
+      transparent 72%
+    ),
+    var(--game-well);
+  box-shadow: inset 0 2px 0 var(--game-panel-lip);
+}
+
+/* A pickable tile (a radio with art): a sunken well that turns gold-rimmed and
+   raised when it is the chosen one. */
+.game-choice-tile {
+  border: 2px solid var(--game-well-edge);
+  border-radius: 1.25rem;
+  background: var(--game-well);
+  box-shadow: inset 0 2px 0 var(--game-panel-lip);
+  color: var(--foreground);
+  cursor: pointer;
+  outline: none;
+  transition:
+    border-color 150ms,
+    background-color 150ms,
+    box-shadow 150ms;
+}
+.game-choice-tile:hover:not([data-disabled], [data-checked]) {
+  border-color: color-mix(in srgb, var(--accent) 60%, transparent);
+}
+.game-choice-tile:focus-visible {
+  outline: 3px solid var(--ring);
+  outline-offset: 2px;
+}
+.game-choice-tile[data-checked] {
+  border-color: var(--brand-gold-top);
+  background: color-mix(in srgb, var(--game-button-bottom) 30%, var(--game-panel-base));
+  box-shadow: 0 3px 0 var(--brand-gold-shade);
+}
+.game-choice-tile[data-disabled] {
+  cursor: not-allowed;
+  filter: grayscale(0.6);
+}
+.game-choice-tile:not([data-checked]) img {
+  filter: saturate(0.55);
+  opacity: 0.8;
+}
+
+/* The same panel, smaller and opaque, for menus, select lists and tooltips. */
+.game-popover {
+  border: 2px solid var(--game-panel-rim);
+  border-radius: 1rem;
+  background: linear-gradient(var(--game-panel-top), var(--game-panel-bottom));
+  box-shadow: 0 4px 0 var(--game-panel-lip);
+  color: var(--foreground);
+}
+
+/* Gold banner with notched ends, in the wordmark's gold and outline colors. */
+.game-ribbon {
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+  /* Narrower ends on small phones, so dialog titles stay on one line. */
+  padding: 0.45rem clamp(1.25rem, 5vw, 2.25rem) 0.5rem;
+  background: linear-gradient(var(--brand-gold-top), var(--brand-gold-bottom));
+  color: var(--brand-outline);
+  box-shadow: inset 0 -3px color-mix(in srgb, var(--brand-gold-shade) 45%, transparent);
+  clip-path: polygon(0 0, 100% 0, calc(100% - 1rem) 50%, 100% 100%, 0 100%, 1rem 50%);
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  line-height: 1.15;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+/* Display title with a flat drop in the panel's darkest blue, echoing the
+   wordmark's outline. */
+.game-title {
+  color: var(--foreground);
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: 0.03em;
+  text-shadow: 0 2px 0 var(--game-panel-base);
+  text-transform: uppercase;
+}
+
+/* ----------------------------------------------------------------------------
+   Chunky buttons (Button variants "game", "game-secondary", "game-gold",
+   "game-danger" and "game-icon"). Each variant only sets the --btn-* colors;
+   the shared rules below give every one the same lip, press and states.
+   ------------------------------------------------------------------------- */
+
+.game-button,
+.game-button-secondary,
+.game-button-gold,
+.game-button-danger,
+.game-button-icon {
+  --btn-lift: 4px;
+  border: 1px solid var(--btn-edge);
+  border-radius: 1rem;
+  background: var(--btn-face);
+  color: var(--btn-ink);
+  box-shadow:
+    0 var(--btn-lift) 0 var(--btn-lip),
+    inset 0 1px var(--btn-sheen);
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  text-shadow: 0 1px 1px var(--btn-ink-shadow);
+  transition:
+    translate 100ms ease-out,
+    box-shadow 100ms ease-out,
+    filter 150ms ease-out;
+}
+
+/* Primary: sky-blue face, like the in-game turn button. */
+.game-button {
+  --btn-edge: var(--accent);
+  --btn-face: linear-gradient(var(--game-button-top), var(--game-button-bottom));
+  --btn-ink: var(--primary-foreground);
+  --btn-ink-shadow: var(--game-button-base);
+  --btn-lip: var(--game-button-base);
+  --btn-sheen: var(--chart-1);
+}
+
+/* Secondary: the same outline and lip with a see-through face, so it reads as
+   the quieter sibling rather than a different control. */
+.game-button-secondary {
+  --btn-edge: var(--accent);
+  --btn-face: color-mix(in srgb, var(--game-button-bottom) 28%, transparent);
+  --btn-ink: var(--foreground);
+  --btn-ink-shadow: var(--game-button-base);
+  --btn-lip: var(--game-button-base);
+  --btn-sheen: color-mix(in srgb, var(--chart-1) 35%, transparent);
+}
+
+/* Gold: the one action a screen most wants pressed (play, start, rejoin). */
+.game-button-gold {
+  --btn-edge: var(--brand-gold-top);
+  --btn-face: linear-gradient(var(--brand-gold-top), var(--brand-gold-bottom));
+  --btn-ink: var(--brand-outline);
+  --btn-ink-shadow: color-mix(in srgb, var(--brand-gold-top) 50%, var(--foreground));
+  --btn-lip: var(--brand-gold-shade);
+  --btn-sheen: color-mix(in srgb, var(--brand-gold-top) 40%, var(--foreground));
+}
+
+/* Danger: leave, remove, sign out of a guest account. */
+.game-button-danger {
+  --btn-edge: var(--game-danger-top);
+  --btn-face: linear-gradient(var(--game-danger-top), var(--destructive));
+  --btn-ink: var(--destructive-foreground);
+  --btn-ink-shadow: var(--game-danger-base);
+  --btn-lip: var(--game-danger-base);
+  --btn-sheen: color-mix(in srgb, var(--game-danger-top) 50%, var(--foreground));
+}
+
+/* Round icon button with an opaque panel face, so it stays readable on the
+   bright island art (header settings, help, dialog close). */
+.game-button-icon {
+  --btn-edge: var(--game-panel-rim);
+  --btn-face: linear-gradient(var(--game-panel-top), var(--game-panel-bottom));
+  --btn-ink: var(--foreground);
+  --btn-ink-shadow: var(--game-panel-base);
+  --btn-lip: var(--game-panel-base);
+  --btn-sheen: color-mix(in srgb, var(--foreground) 22%, transparent);
+  border-width: 2px;
+  border-radius: 9999px;
+}
+
+@media (hover: hover) {
+  :is(
+    .game-button,
+    .game-button-secondary,
+    .game-button-gold,
+    .game-button-danger,
+    .game-button-icon
+  ):hover:not(:disabled, [data-disabled]) {
+    --btn-lift: 5px;
+    translate: 0 -1px;
+    filter: brightness(1.08);
+  }
+}
+
+/* The lip collapses on press so the button feels pushed in. */
+:is(
+  .game-button,
+  .game-button-secondary,
+  .game-button-gold,
+  .game-button-danger,
+  .game-button-icon
+):active:not(:disabled, [data-disabled]) {
+  --btn-lift: 1px;
+  translate: 0 3px;
+  filter: brightness(0.97);
+}
+
+:is(
+  .game-button,
+  .game-button-secondary,
+  .game-button-gold,
+  .game-button-danger,
+  .game-button-icon
+):focus-visible {
+  outline: 3px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* Disabled buttons keep their shape and lose their color, so a row of
+   buttons doesn't turn into see-through ghosts. */
+:is(
+  .game-button,
+  .game-button-secondary,
+  .game-button-gold,
+  .game-button-danger,
+  .game-button-icon
+):is(:disabled, [data-disabled]) {
+  filter: grayscale(0.75) brightness(0.8);
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :is(
+    .game-button,
+    .game-button-secondary,
+    .game-button-gold,
+    .game-button-danger,
+    .game-button-icon,
+    .game-card-button,
+    .game-choice-tile
+  ) {
+    transition: none;
+  }
+}

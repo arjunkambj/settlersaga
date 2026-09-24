@@ -1,17 +1,18 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@plugin "@tailwindcss/typography";
-
-@custom-variant dark (&:where(.dark, .dark *));
+/* Global theme tokens live in this file; area styles are split out below. */
+@import "./styles/game-board.css";
+@import "./styles/game-hud.css";
+@import "./styles/game-dock.css";
+@import "./styles/game-layout.css";
+@import "./styles/lobby.css";
+@import "./styles/menu.css";
+@import "./styles/home.css";
 
 /* Deep ocean night. Text is near-white or ice blue; bright sky blue on buttons, cyan glow lines, gold accents. */
 :root {
   color-scheme: dark;
-  --font-ui:
-    var(--font-dm-sans), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-    sans-serif;
-  font-family: var(--font-ui);
 
   --background: #1a4a94;
   --foreground: #f2f7ff;
@@ -65,17 +66,25 @@
   --game-button-top: #60c4ff;
   --game-button-bottom: #2083e6;
   --game-button-base: #1259a5;
-}
+  /* Sampled from the wordmark so menu chrome matches the logo. */
+  --brand-gold-top: #fcd80d;
+  --brand-gold-bottom: #f4ad05;
+  --brand-gold-shade: #bc5c00;
+  --brand-outline: #002a91;
+  /* Google's own logo colors, for the "Continue with Google" mark. */
+  --brand-google-blue: #4285f4;
+  --brand-google-green: #34a853;
+  --brand-google-yellow: #fbbc05;
+  --brand-google-red: #ea4335;
 
-.scene-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: -10;
-  overflow: hidden;
-  background: var(--background);
-}
-.scene-backdrop-art {
-  object-fit: cover;
+  /* Game UI kit (see styles/menu.css). */
+  --game-panel-rim: color-mix(in srgb, var(--board-foam) 55%, transparent);
+  --game-panel-lip: color-mix(in srgb, var(--game-panel-base) 70%, transparent);
+  --game-well: color-mix(in srgb, var(--game-panel-base) 55%, transparent);
+  --game-well-edge: color-mix(in srgb, var(--game-panel-base) 75%, var(--game-panel-edge));
+  --game-danger-top: color-mix(in oklch, var(--destructive) 78%, var(--foreground));
+  --game-danger-base: color-mix(in oklch, var(--destructive) 55%, var(--game-panel-base));
+  --overlay: color-mix(in oklch, var(--game-panel-base) 60%, transparent);
 }
 
 * {
@@ -89,17 +98,6 @@ body {
   width: 100%;
   min-height: 100dvh;
   margin: 0;
-}
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
 }
 .skip-link {
   position: fixed;
@@ -118,8 +116,10 @@ body {
 }
 
 @theme inline {
-  --font-heading: var(--font-sans);
-  --font-sans: var(--font-sans);
+  /* next/font sets --font-dm-sans and --font-lilita-one on <html> (components/app/fonts.ts). */
+  --font-sans: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-lilita-one), var(--font-dm-sans), ui-rounded, system-ui, sans-serif;
+  --font-heading: var(--font-display);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -152,6 +152,16 @@ body {
   --color-card: var(--card);
   --color-foreground: var(--foreground);
   --color-background: var(--background);
+  --color-overlay: var(--overlay);
+  --color-well: var(--game-well);
+  --color-well-edge: var(--game-well-edge);
+  --color-panel-top: var(--game-panel-top);
+  --color-panel: var(--game-panel-bottom);
+  --color-panel-rim: var(--game-panel-rim);
+  --color-panel-base: var(--game-panel-base);
+  --color-gold: var(--brand-gold-top);
+  --color-gold-deep: var(--brand-gold-bottom);
+  --color-gold-ink: var(--brand-outline);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -159,6 +169,48 @@ body {
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+  /* A short flat drop under raised pieces: knobs, chips and panels. */
+  --shadow-knob: 0 2px 0 var(--game-panel-base);
+  --shadow-panel: 0 4px 0 var(--game-panel-lip);
+  --inset-shadow-well: inset 0 2px 0 var(--game-panel-lip);
+
+  /* Entry animations. Use them behind `motion-safe:` so reduced-motion players get none.
+     They fill backwards only: the end frame is the resting state, and holding it would
+     override the element's own hover and press `scale`/`translate`. */
+  --animate-game-pop: game-pop 320ms cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+  --animate-game-rise: game-rise 420ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  --animate-game-sway: game-sway 2.6s ease-in-out infinite;
+
+  /* `scale`/`translate` rather than `transform`, so they stack with centering utilities. */
+  @keyframes game-pop {
+    from {
+      opacity: 0;
+      scale: 0.88;
+    }
+    to {
+      opacity: 1;
+      scale: 1;
+    }
+  }
+  @keyframes game-rise {
+    from {
+      opacity: 0;
+      translate: 0 1.25rem;
+    }
+    to {
+      opacity: 1;
+      translate: 0 0;
+    }
+  }
+  @keyframes game-sway {
+    0%,
+    100% {
+      rotate: -14deg;
+    }
+    50% {
+      rotate: 14deg;
+    }
+  }
 }
 
 @layer base {
@@ -174,873 +226,7 @@ body {
   }
   html {
     @apply font-sans;
-  }
-}
-
-/* ============================================================================
-   Game Table, Board Canvas, Piece SVGs, and Animations
-   ========================================================================= */
-
-.game-shell {
-  /* Surfaces */
-  --hud-surface: color-mix(in oklch, var(--card) 82%, transparent);
-  --hud-surface-deep: color-mix(in oklch, var(--background) 78%, black 8%);
-  --hud-surface-raised: color-mix(in oklch, var(--card), var(--accent) 8%);
-
-  /* Lines, glows and shadows */
-  --hud-line: color-mix(in oklch, var(--accent) 18%, transparent);
-  --hud-line-strong: color-mix(in oklch, var(--accent) 38%, transparent);
-  --hud-glow: var(--primary);
-  --hud-shadow: 0 14px 34px color-mix(in oklch, var(--background) 70%, black);
-  --hud-shadow-sm: 0 6px 16px color-mix(in oklch, var(--background) 65%, black);
-  --hud-inset: max(0.4rem, env(safe-area-inset-top));
-  --hud-inset-x: max(0.45rem, env(safe-area-inset-right));
-  --hud-inset-bottom: max(0.4rem, env(safe-area-inset-bottom));
-  --hud-inset-left: max(0.45rem, env(safe-area-inset-left));
-
-  /* Text ramp */
-  --hud-text: var(--foreground);
-  --hud-text-muted: color-mix(in oklch, var(--foreground) 86%, transparent);
-  --hud-text-faint: color-mix(in oklch, var(--foreground) 68%, transparent);
-
-  /* Rhythm */
-  --hud-gap: 0.75rem;
-  --hud-rail: clamp(310px, 24vw, 360px);
-  --hud-radius: var(--radius-lg);
-
-  /* Dice — sky + ember pairing from the menu art, mixed from theme tokens */
-  --die-ivory-body: var(--foreground);
-  --die-ivory-base: var(--chart-3);
-  --die-ivory-well: var(--chart-1);
-  --die-ivory-shine: var(--foreground);
-  --die-ivory-pip: var(--game-panel-base);
-  --die-ivory-pip-core: var(--game-panel-base);
-  --die-ember-body: var(--chart-5);
-  --die-ember-base: color-mix(in oklch, var(--chart-5) 68%, black);
-  --die-ember-well: color-mix(in oklch, var(--chart-5) 82%, black);
-  --die-ember-shine: color-mix(in oklch, var(--chart-5) 48%, var(--primary));
-  --die-ember-pip: var(--foreground);
-  --die-ember-pip-core: var(--foreground);
-
-  position: relative;
-  isolation: isolate;
-  display: block;
-  width: 100%;
-  height: 100dvh;
-  overflow: hidden;
-  background: var(--background);
-  color: var(--hud-text);
-}
-
-/* --------------------------------------------------------------------------
-   Board scene
-   ----------------------------------------------------------------------- */
-
-.board-shell {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  display: grid;
-  width: 100%;
-  height: 100%;
-  min-width: 0;
-  min-height: 0;
-  place-items: center;
-  /* Keep the island in the open well so floating HUD does not cover ports. */
-  padding: 5.5rem calc(var(--hud-rail) + 2rem) 15.5rem 1.5rem;
-  border: 0;
-  border-radius: 0;
-  overflow: hidden;
-  background: url("/game-assets/ui/ocean-board-canvas.webp") center / cover no-repeat;
-  box-shadow: none;
-  container-type: size;
-  cursor: default;
-  touch-action: none;
-  user-select: none;
-}
-
-.board-shell.is-dragging {
-  cursor: grabbing;
-}
-
-.terrain-atlas-preview {
-  background: url("/game-assets/ui/ocean-board-canvas.webp") center / cover no-repeat;
-}
-
-.board-shell.is-placing {
-  box-shadow: none;
-}
-
-/* The stage keeps the board's 10:11 aspect ratio inside whatever space the
-   shell has, using container query units so it tracks the shell, not the
-   viewport. */
-.board-stage {
-  position: relative;
-  width: min(100cqw, calc(100cqh * 0.9091));
-  isolation: isolate;
-}
-
-.game-board {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  inset: 0;
-  isolation: isolate;
-  /* Overwritten inline by the board camera; this is the at-rest value. */
-  transform: translate3d(0, 0, 0) scale(1);
-  transform-origin: center;
-  backface-visibility: hidden;
-  will-change: transform;
-}
-
-.board-canvas-layer {
-  display: block;
-}
-
-.board-canvas-static {
-  z-index: 0;
-}
-
-.board-canvas-dynamic {
-  z-index: 1;
-}
-
-/* Invisible hover/focus targets layered over the canvas artwork. */
-.board-hit-target {
-  position: absolute;
-  z-index: 10;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  cursor: inherit;
-  outline: none;
-  transform: translate(-50%, -50%) rotate(var(--hit-rotation, 0deg));
-}
-
-.port-hit-target {
-  width: clamp(42px, 7%, 64px);
-  height: max(64px, 14%);
-}
-
-.piece-hit-target-road {
-  width: 10.6%;
-  aspect-ratio: 2 / 1;
-}
-
-.board-inspectable {
-  cursor: inherit;
-  outline: none;
-}
-
-.board-hit-target:focus-visible {
-  z-index: 30;
-  outline: 3px solid var(--hud-glow);
-  outline-offset: 3px;
-  filter: drop-shadow(0 0 8px var(--hud-glow));
-}
-
-/* Legal placement targets. */
-.build-target {
-  position: absolute;
-  z-index: 20;
-  display: grid;
-  width: max(46px, 5.8%);
-  height: max(46px, 5.8%);
-  place-items: center;
-  padding: 0;
-  border: 0;
-  border-radius: 50%;
-  background: transparent;
-  box-shadow: none;
-  cursor: pointer;
-  transform: translate(-50%, -50%) rotate(var(--target-rotation, 0deg));
-}
-
-.build-target:focus-visible {
-  outline: 2px solid var(--hud-glow);
-  outline-offset: 2px;
-}
-
-.board-shell.is-interacting .board-hit-target,
-.board-shell.is-interacting .build-target {
-  pointer-events: none;
-}
-
-/* --------------------------------------------------------------------------
-   Resource gain/spend flights
-   ----------------------------------------------------------------------- */
-
-.resource-flight-layer {
-  position: absolute;
-  z-index: 8;
-  inset: 0;
-  display: grid;
-  grid-template-columns: repeat(5, 3.9rem);
-  grid-template-rows: minmax(0, 1fr);
-  align-items: center;
-  justify-content: start;
-  justify-items: center;
-  gap: 0.4rem;
-  overflow: visible;
-  pointer-events: none;
-}
-
-.resource-flight-anchor {
-  position: relative;
-  display: block;
-  width: 100%;
-  height: 100%;
-  grid-row: 1;
-  pointer-events: none;
-}
-
-.resource-flight {
-  --resource-flight-delay: 0ms;
-  --resource-flight-tilt: 0deg;
-  --resource-flight-x: 0rem;
-  --resource-flight-y: 5rem;
-
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: min(72%, 2.65rem);
-  aspect-ratio: 2 / 3;
-  border-radius: 0.4rem;
-  box-shadow: none;
-  opacity: 0;
-  pointer-events: none;
-  transform-origin: center;
-  will-change: opacity, transform;
-}
-
-.resource-flight--receive {
-  animation: receive-resource-card 560ms cubic-bezier(0.22, 0.74, 0.2, 1)
-    var(--resource-flight-delay) both;
-}
-
-.resource-flight--spend {
-  animation: spend-resource-card 540ms cubic-bezier(0.42, 0, 0.26, 1) var(--resource-flight-delay)
-    both;
-}
-
-.resource-flight-image {
-  width: 100%;
-  height: 100%;
-  border-radius: inherit;
-  object-fit: contain;
-}
-
-.resource-flight-badge {
-  position: absolute;
-  top: -0.35rem;
-  right: -0.45rem;
-  display: grid;
-  min-width: 1.4rem;
-  min-height: 1.4rem;
-  place-items: center;
-  padding-inline: 0.25rem;
-  border: 2px solid var(--background);
-  border-radius: 999px;
-  background: var(--primary);
-  color: var(--primary-foreground);
-  font-size: 0.64rem;
-  font-variant-numeric: tabular-nums;
-  font-weight: 900;
-  line-height: 1;
-}
-
-.resource-flight--spend .resource-flight-badge {
-  background: var(--destructive);
-  color: var(--destructive-foreground);
-}
-
-@keyframes receive-resource-card {
-  0% {
-    opacity: 0;
-    transform: translate(
-        calc(-50% + var(--resource-flight-x)),
-        calc(-50% - var(--resource-flight-y))
-      )
-      rotate(var(--resource-flight-tilt)) scale(0.56);
-  }
-
-  16% {
-    opacity: 1;
-  }
-
-  88% {
-    opacity: 1;
-    transform: translate(-50%, -50%) rotate(0deg) scale(1.04);
-  }
-
-  100% {
-    opacity: 0;
-    transform: translate(-50%, -50%) rotate(0deg) scale(1);
-  }
-}
-
-@keyframes spend-resource-card {
-  0% {
-    opacity: 1;
-    transform: translate(-50%, -50%) rotate(0deg) scale(0.96);
-  }
-
-  100% {
-    opacity: 0;
-    transform: translate(
-        calc(-50% + var(--resource-flight-x)),
-        calc(-50% - var(--resource-flight-y))
-      )
-      rotate(var(--resource-flight-tilt)) scale(0.54);
-  }
-}
-
-/* --------------------------------------------------------------------------
-   Piece icons, dice, and player palettes
-   ----------------------------------------------------------------------- */
-
-/* Piece icons tint a PNG silhouette with the owning player's colour. */
-.piece-icon {
-  position: relative;
-  display: inline-grid;
-  width: 1.5rem;
-  height: 1.5rem;
-  place-items: center;
-}
-
-.piece-icon > img,
-.piece-icon > .piece-color {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  inset: 0;
-  object-fit: contain;
-}
-
-.piece-icon > .piece-color {
-  background: var(--player-color, var(--primary));
-  mask: var(--piece-mask) center / contain no-repeat;
-}
-
-.piece-icon-road > img,
-.piece-icon-road > .piece-color {
-  transform: rotate(-30deg);
-}
-
-/* Dice */
-.die-pair {
-  display: flex;
-  align-items: center;
-  gap: 0.18rem;
-}
-
-.die-face {
-  display: block;
-  flex: none;
-  width: 1.75rem;
-  height: 1.75rem;
-  overflow: visible;
-  transform-origin: center;
-}
-
-.die-face--ivory {
-  --die-body: var(--die-ivory-body);
-  --die-base: var(--die-ivory-base);
-  --die-well: var(--die-ivory-well);
-  --die-shine: var(--die-ivory-shine);
-  --die-pip: var(--die-ivory-pip);
-  --die-pip-core: var(--die-ivory-pip-core);
-}
-
-.die-face--ember {
-  --die-body: var(--die-ember-body);
-  --die-base: var(--die-ember-base);
-  --die-well: var(--die-ember-well);
-  --die-shine: var(--die-ember-shine);
-  --die-pip: var(--die-ember-pip);
-  --die-pip-core: var(--die-ember-pip-core);
-}
-
-.die-face__shadow {
-  fill: color-mix(in oklch, var(--background) 40%, black);
-  opacity: 0.42;
-}
-
-.die-face__base {
-  fill: var(--die-base);
-}
-
-.die-face__body {
-  fill: var(--die-body);
-}
-
-.die-face__well {
-  fill: var(--die-well);
-}
-
-.die-face__shine {
-  fill: var(--die-shine);
-  opacity: 0.55;
-}
-
-.die-face__pip {
-  fill: var(--die-pip);
-}
-
-.die-face__pip-core {
-  fill: var(--die-pip-core);
-  opacity: 0.55;
-}
-
-@keyframes die-idle {
-  0%,
-  100% {
-    transform: translateY(0) rotate(-5deg);
-  }
-
-  50% {
-    transform: translateY(-0.12rem) rotate(4deg);
-  }
-}
-
-/* Player palette — keep in sync with `@settersaga/game` PLAYER_COLORS. */
-.player-red {
-  --player-color: #f36159;
-}
-
-.player-blue {
-  --player-color: #4fb0ff;
-}
-
-.player-orange {
-  --player-color: #f79a3c;
-}
-
-.player-green {
-  --player-color: #3fc97c;
-}
-
-.player-purple {
-  --player-color: #9b74ea;
-}
-
-.player-teal {
-  --player-color: #2bb8b8;
-}
-
-.player-yellow {
-  --player-color: #e0b23a;
-}
-
-.player-pink {
-  --player-color: #ec6aa0;
-}
-
-/* --------------------------------------------------------------------------
-   Responsive & Accessibility
-   ----------------------------------------------------------------------- */
-
-@media (max-width: 1100px) {
-  .game-shell {
-    display: flex;
-    flex-direction: column;
-    height: auto;
-    min-height: 100dvh;
-    gap: var(--hud-gap);
-    padding: var(--hud-inset) var(--hud-inset-x) var(--hud-inset-bottom) var(--hud-inset-left);
-    overflow: visible;
-  }
-
-  .board-shell {
-    position: relative;
-    inset: auto;
-    z-index: auto;
-    width: auto;
-    height: 58vh;
-    min-height: 20rem;
-    flex: 0 0 auto;
-    order: 2;
-    padding: 0.35rem;
-    border: 0;
-    border-radius: var(--hud-radius);
-    box-shadow: none;
-    pointer-events: auto;
-  }
-}
-
-@media (max-width: 720px) {
-  .game-shell {
-    --hud-gap: 0.5rem;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .resource-flight {
-    display: none;
-    animation: none;
-  }
-
-  .target-robber::after {
-    transition: none;
-    animation: none;
-  }
-}
-
-/* Blue game HUD: raised edges, readable labels, and one clear turn action. */
-.game-header {
-  top: 1rem;
-  left: 1.25rem;
-  right: calc(var(--hud-rail) + 2rem);
-  justify-content: space-between;
-  gap: 1rem;
-}
-.game-brand {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-}
-.game-brand img {
-  width: 12rem;
-  height: auto;
-  flex: none;
-  filter: drop-shadow(0 3px 0 var(--game-panel-base));
-}
-.game-match-status {
-  display: grid;
-  gap: 0.2rem;
-  justify-items: center;
-  margin: 0;
-  padding: 0.6rem 1rem;
-  border: 1px solid var(--game-panel-edge);
-  border-radius: 0.85rem;
-  background: var(--card);
-  box-shadow: 0 3px 0 var(--game-panel-base);
-}
-.game-match-status > span {
-  font-size: 0.5rem;
-  font-weight: 900;
-  letter-spacing: 0.15em;
-  color: var(--accent);
-}
-.game-match-status > strong {
-  font-size: 0.7rem;
-}
-.game-header button {
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: 0.8rem;
-  border: 1px solid var(--game-panel-edge);
-  box-shadow:
-    0 3px 0 var(--game-panel-base),
-    inset 0 1px color-mix(in srgb, var(--foreground) 20%, transparent);
-}
-.game-sidebar {
-  top: 1.25rem;
-  right: 1.25rem;
-  bottom: 1.25rem;
-  width: var(--hud-rail);
-  gap: 0.8rem;
-}
-.game-sidebar > div {
-  order: 2;
-  gap: 0.8rem;
-}
-.game-panel,
-.game-player {
-  border: 1px solid var(--game-panel-edge);
-  border-radius: 1rem;
-  background: linear-gradient(150deg, var(--game-panel-top), var(--game-panel-bottom));
-  box-shadow:
-    0 4px 0 var(--game-panel-base),
-    0 8px 18px color-mix(in srgb, var(--game-panel-base) 22%, transparent),
-    inset 0 1px color-mix(in srgb, var(--foreground) 15%, transparent);
-}
-.game-panel-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  padding: 0.2rem 0.2rem 0.35rem;
-  font-size: 0.62rem;
-  font-weight: 900;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--foreground);
-}
-.game-panel-heading > :last-child:not(:first-child) {
-  font-size: 0.52rem;
-  letter-spacing: 0.04em;
-  color: var(--muted-foreground);
-}
-.game-player-list {
-  order: 1;
-  gap: 0.7rem;
-  max-height: 52%;
-  padding: 0.4rem 0.1rem;
-}
-.game-player {
-  min-height: 5.5rem;
-  padding: 0.75rem 0.6rem;
-  gap: 0.6rem;
-  border-left: 4px solid var(--player-color);
-}
-.game-player[aria-current="true"] {
-  border-color: var(--chart-2);
-  box-shadow:
-    0 4px 0 var(--game-panel-base),
-    0 0 0 1px var(--chart-2),
-    inset 0 1px var(--board-sand-light);
-}
-.game-player[aria-current="true"]::after {
-  content: "PLAYING";
-  position: absolute;
-  top: -0.45rem;
-  left: 0.8rem;
-  padding: 0.1rem 0.45rem;
-  border-radius: 0.25rem;
-  background: var(--chart-2);
-  color: var(--accent-foreground);
-  font-size: 0.46rem;
-  font-weight: 1000;
-  letter-spacing: 0.08em;
-}
-.game-player [aria-label="Cards and awards"] {
-  gap: 0.5rem;
-}
-.game-player [aria-label="Cards and awards"] .aspect-\[2\/3\] {
-  width: 1.5rem;
-}
-.game-player [aria-label="Cards and awards"] > div > span {
-  font-size: 0.51rem;
-}
-.game-bank {
-  order: -1;
-  padding: 0.65rem;
-}
-.game-bank ul {
-  padding-top: 0.4rem;
-}
-.game-bank li {
-  max-height: 4.3rem;
-}
-.game-event-log {
-  padding: 0.8rem;
-}
-.game-event-log > ol {
-  scrollbar-color: var(--game-panel-edge) transparent;
-}
-.game-event-log > ol > li {
-  border: 0;
-  border-bottom: 1px solid var(--border);
-  border-radius: 0;
-  padding: 0.65rem 0.1rem;
-  background: transparent;
-}
-.game-footer {
-  left: 1.25rem;
-  right: calc(var(--hud-rail) + 2rem);
-  bottom: 1.25rem;
-  gap: 0.8rem;
-}
-.game-hand {
-  padding: 0.6rem 0.65rem;
-}
-.game-hand ul > li[aria-label] {
-  width: 3.5rem;
-  min-width: 3.5rem;
-}
-.game-hand ul > li[aria-label]:has(.game-card-label) {
-  margin-bottom: 1.1rem;
-}
-.game-card-label {
-  position: absolute;
-  bottom: -1rem;
-  width: 100%;
-  text-align: center;
-  color: var(--foreground);
-  font-size: 0.59rem;
-  font-weight: 800;
-  line-height: 1;
-}
-.game-command-dock {
-  grid-template-columns: max-content 6.7rem;
-  gap: 0.6rem;
-}
-.game-phase-panel {
-  min-width: 0;
-  border-radius: 0.85rem;
-  border: 1px solid var(--game-panel-edge);
-  border-left: 3px solid var(--accent);
-  background: var(--card);
-  box-shadow: 0 3px 0 var(--game-panel-base);
-}
-.game-phase-detail {
-  display: block;
-  max-width: 17rem;
-  margin-top: 0.15rem;
-  font-size: 0.61rem;
-  line-height: 1.4;
-  color: var(--muted-foreground);
-}
-.game-action-tile {
-  width: 3.4rem;
-  min-width: 3.4rem;
-  aspect-ratio: auto;
-  gap: 0.4rem;
-  padding-bottom: 0.2rem;
-}
-.game-action-tile > span:first-child {
-  height: 4.5rem;
-}
-.game-action-label {
-  font-size: 0.56rem;
-  line-height: 1;
-  font-weight: 900;
-  color: var(--foreground);
-}
-.game-action-tile:disabled {
-  opacity: 0.65;
-}
-.game-action-tile[aria-pressed="true"] {
-  outline: 2px solid var(--chart-2);
-  outline-offset: 4px;
-}
-.game-command-dock [aria-label="Turn control"] {
-  border: 1px solid var(--game-panel-edge);
-  background: linear-gradient(var(--game-panel-top), var(--game-panel-bottom));
-  box-shadow: 0 4px 0 var(--game-panel-base);
-}
-.game-command-dock [aria-label="Turn control"] button {
-  height: 2.6rem;
-  border: 1px solid var(--accent);
-  border-radius: 0.75rem;
-  background: linear-gradient(var(--game-button-top), var(--game-button-bottom));
-  color: var(--primary-foreground);
-  box-shadow:
-    0 4px 0 var(--game-button-base),
-    inset 0 1px var(--chart-1);
-  font-size: 0.77rem;
-  font-weight: 1000;
-  text-shadow: 0 1px 1px var(--game-button-base);
-}
-.game-command-dock [aria-label="Turn control"] button:active {
-  transform: translateY(3px);
-  box-shadow: 0 1px 0 var(--game-button-base);
-}
-.game-command-dock [aria-label="Turn control"] .die-face {
-  width: 2.25rem;
-  height: 2.25rem;
-}
-.game-command-dock [role="timer"] {
-  border: 1px solid var(--game-panel-edge);
-  border-radius: 0.85rem;
-  background: var(--card);
-  box-shadow: 0 3px 0 var(--game-panel-base);
-}
-
-@media (max-width: 1100px) {
-  .game-shell {
-    gap: 0.85rem;
-    padding: 0.85rem;
-  }
-  .game-header {
-    inset: auto;
-    order: 0;
-  }
-  .board-shell {
-    order: 1;
-    height: 65svh;
-    padding: 0.5rem;
-  }
-  .game-footer {
-    inset: auto;
-    order: 2;
-    grid-template-columns: minmax(0, 1fr) auto;
-  }
-  .game-sidebar {
-    inset: auto;
-    order: 3;
-    width: 100%;
-  }
-  .game-player-list {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    max-height: none;
-    overflow: visible;
-  }
-  .game-event-log {
-    height: 18rem;
-    flex: none;
-  }
-  .game-bank li {
-    max-height: 5rem;
-  }
-}
-@media (max-width: 760px) {
-  .game-header {
-    flex-wrap: wrap;
-    gap: 0.6rem;
-  }
-  .game-brand img {
-    width: 10rem;
-    height: auto;
-  }
-  .game-match-status {
-    order: 3;
-    width: 100%;
-    display: flex;
-    justify-content: space-between;
-  }
-  .game-header button {
-    width: 2.1rem;
-    height: 2.1rem;
-  }
-  .game-footer {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 0.85rem;
-  }
-  .game-command-dock {
-    grid-row: 1;
-    grid-template-columns: minmax(0, 1fr) 5.75rem;
-    gap: 0.5rem;
-  }
-  .game-build-panel > div:last-child {
-    justify-content: space-between;
-    gap: 0.25rem;
-    padding-inline: 0;
-  }
-  .game-action-tile {
-    min-width: 0;
-    width: min(3rem, 11vw);
-  }
-  .game-action-tile > span:first-child {
-    height: 3.8rem;
-  }
-  .game-action-label {
-    font-size: 0.47rem;
-  }
-  .game-panel-heading {
-    font-size: 0.55rem;
-  }
-  .game-player-list {
-    display: flex;
-  }
-  .game-phase-panel {
-    padding-inline: 0.5rem;
-    gap: 0.35rem;
-  }
-  .game-phase-detail {
-    font-size: 0.58rem;
-  }
-}
-
-@media (min-width: 1101px) and (max-height: 800px) {
-  .game-player-list {
-    max-height: none;
-    gap: 0.5rem;
-  }
-  .game-player {
-    min-height: 4.4rem;
-    padding-block: 0.45rem;
+    /* The display face ships one weight; never let the browser fake a bold of it. */
+    font-synthesis-weight: none;
   }
 }
