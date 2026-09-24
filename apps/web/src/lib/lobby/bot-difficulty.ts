@@ -1,23 +1,29 @@
-import type { BotDifficulty } from "@settersaga/game";
+import { BOT_DIFFICULTIES, type BotDifficulty } from "@settersaga/game";
 
-export const BOT_DIFFICULTY_OPTIONS = [
-  {
-    description: "Builds legal moves quickly without planning far ahead.",
+export const BOT_DIFFICULTY_DETAILS: Readonly<
+  Record<
+    BotDifficulty,
+    { readonly artSrc: string; readonly description: string; readonly label: string }
+  >
+> = {
+  easy: {
+    artSrc: "/game-assets/bots/bot-easy.png",
+    description: "Relaxed bots, great for learning the ropes.",
     label: "Easy",
-    value: "easy",
   },
-  {
-    description: "Balances production, expansion, and bank trades.",
+  medium: {
+    artSrc: "/game-assets/bots/bot-medium.png",
+    description: "Steady bots that build and trade.",
     label: "Medium",
-    value: "medium",
   },
-  {
-    description: "Prioritizes stronger placements and longer-term upgrades.",
+  hard: {
+    artSrc: "/game-assets/bots/bot-hard.png",
+    description: "Sharp bots that plan ahead.",
     label: "Hard",
-    value: "hard",
   },
-] as const satisfies ReadonlyArray<{
-  description: string;
-  label: string;
-  value: BotDifficulty;
-}>;
+};
+
+export const BOT_DIFFICULTY_OPTIONS = BOT_DIFFICULTIES.map((value) => ({
+  ...BOT_DIFFICULTY_DETAILS[value],
+  value,
+}));

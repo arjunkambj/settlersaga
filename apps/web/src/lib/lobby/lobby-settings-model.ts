@@ -1,61 +1,70 @@
 import {
+  AVAILABLE_GAME_MAPS,
   chooseBotName,
+  getGameMapDefinition,
   PLAYER_COLORS,
   type BaseGameSettings,
+  type BotDifficulty,
   type GameMapId,
   type PlayerColor,
   type PlayerCount,
 } from "@settersaga/game";
-import { getGameMapDefinition } from "@settersaga/game/maps";
 
-export type BotCount = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
+import type { RoomView } from "@/lib/game/types";
 
-export interface LobbySeatMember {
-  readonly controller: "bot" | "player";
-  readonly displayName: string;
-  readonly id: string;
-  readonly playerColor: PlayerColor;
-  readonly ready: boolean;
-  readonly role: "host" | "player";
-  readonly seatIndex: number;
+export interface LobbySettingsValue {
+  readonly botCount: number;
+  readonly botDifficulty: BotDifficulty;
+  readonly settings: Readonly<BaseGameSettings>;
+}
+
+export type LobbySeatMember = Pick<
+  RoomView["members"][number],
+  "controller" | "displayName" | "id" | "isViewer" | "playerColor" | "role" | "seatIndex"
+>;
+
+export interface LobbyStartOption {
+  readonly kind: "start" | "shrink" | "fill";
+  readonly value: LobbySettingsValue;
+}
+
+interface TableSize {
+  readonly map: GameMapId;
+  readonly maxPlayers: PlayerCount;
 }
 
 interface LobbySeatPreviewInput {
-  readonly botCount: BotCount;
-  readonly maxPlayers: BaseGameSettings["maxPlayers"];
+  readonly botCount: number;
+  readonly maxPlayers: PlayerCount;
   readonly members: readonly LobbySeatMember[];
-  readonly savedMaxPlayers: BaseGameSettings["maxPlayers"];
+  readonly savedMaxPlayers: PlayerCount;
 }
 
-export function getBotCapacity(
-  maxPlayers: BaseGameSettings["maxPlayers"],
-  humanCount: number,
-): BotCount {
-  return toBotCount(Math.max(0, maxPlayers - humanCount));
+export function roomToLobbyValue(
+  room: Pick<RoomView, "botDifficulty" | "members" | "settings">,
+): LobbySettingsValue {
+  return {
+    botCount: room.members.filter((member) => member.controller === "bot").length,
+    botDifficulty: room.botDifficulty,
+    settings: room.settings,
+  };
 }
 
-export function getMinimumPlayerCount(
-  mapId: GameMapId,
-  humanCount: number,
-): BaseGameSettings["maxPlayers"] {
-  const playerCounts = getGameMapDefinition(mapId).playerCounts;
-  return (
-    playerCounts.find((playerCount) => playerCount >= humanCount) ??
-    playerCounts[playerCounts.length - 1]!
-  );
+export function getBotCapacity(maxPlayers: PlayerCount, humanCount: number): number {
+  return Math.max(0, maxPlayers - humanCount);
 }
 
 export function getCompatiblePlayerCount(
   mapId: GameMapId,
   humanCount: number,
-  preferredPlayerCount: BaseGameSettings["maxPlayers"],
-): BaseGameSettings["maxPlayers"] | null {
+  preferredPlayerCount: PlayerCount,
+): PlayerCount | null {
   const playerCounts = getGameMapDefinition(mapId).playerCounts.filter(
     (playerCount) => playerCount >= humanCount,
   );
 
   return (
-    [...playerCounts].sort(
+    playerCounts.sort(
       (left, right) =>
         Math.abs(left - preferredPlayerCount) - Math.abs(right - preferredPlayerCount) ||
         left - right,
@@ -63,42 +72,64 @@ export function getCompatiblePlayerCount(
   );
 }
 
-export function toBotCount(value: number): BotCount {
-  return clampInteger(value, 0, 7) as BotCount;
-}
-
-export const TABLE_SIZES = [
-  { map: "base", maxPlayers: 3 },
-  { map: "base", maxPlayers: 4 },
-  { map: "extended-6", maxPlayers: 5 },
-  { map: "extended-6", maxPlayers: 6 },
-  { map: "extended-8", maxPlayers: 7 },
-  { map: "extended-8", maxPlayers: 8 },
-] as const satisfies ReadonlyArray<{
-  map: GameMapId;
-  maxPlayers: PlayerCount;
-}>;
-
-export function tableSizeForPlayerCount(playerCount: number): (typeof TABLE_SIZES)[number] | null {
-  return TABLE_SIZES.find((size) => size.maxPlayers === playerCount) ?? null;
-}
-
-export function stepTableSize(
-  mapId: GameMapId,
-  maxPlayers: BaseGameSettings["maxPlayers"],
-  humanCount: number,
-  direction: -1 | 1,
-): (typeof TABLE_SIZES)[number] | null {
-  const currentIndex = TABLE_SIZES.findIndex(
-    (size) => size.map === mapId && size.maxPlayers === maxPlayers,
-  );
-  const startIndex =
-    currentIndex === -1 ? (direction === 1 ? -1 : TABLE_SIZES.length) : currentIndex;
-  const next = TABLE_SIZES[startIndex + direction];
-  if (!next || next.maxPlayers < humanCount) {
-    return null;
+export function tableSizeForPlayerCount(playerCount: number): TableSize | null {
+  for (const map of AVAILABLE_GAME_MAPS) {
+    const maxPlayers = map.playerCounts.find((count) => count === playerCount);
+    if (maxPlayers !== undefined) {
+      return { map: map.id, maxPlayers };
+    }
   }
-  return next;
+  return null;
+}
+
+export function withTableSize(
+  value: LobbySettingsValue,
+  size: TableSize,
+  humanCount: number,
+): LobbySettingsValue {
+  return {
+    ...value,
+    botCount: Math.min(value.botCount, getBotCapacity(size.maxPlayers, humanCount)),
+    settings: { ...value.settings, map: size.map, maxPlayers: size.maxPlayers },
+  };
+}
+
+export function withBotCount(
+  value: LobbySettingsValue,
+  botCount: number,
+  humanCount: number,
+): LobbySettingsValue {
+  const capacity = getBotCapacity(value.settings.maxPlayers, humanCount);
+  return { ...value, botCount: Math.min(Math.max(0, botCount), capacity) };
+}
+
+/** Refits an edit made for an earlier crew to the humans seated now, so a guest who joined
+ * mid-edit takes a bot's seat, or grows the table, instead of making the save fail. An island
+ * too small for the whole crew is left for the server to refuse. */
+export function fitToRoom(value: LobbySettingsValue, humanCount: number): LobbySettingsValue {
+  const { map, maxPlayers } = value.settings;
+  const fittedPlayerCount = getCompatiblePlayerCount(map, humanCount, maxPlayers);
+  return fittedPlayerCount === null
+    ? value
+    : withTableSize(value, { map, maxPlayers: fittedPlayerCount }, humanCount);
+}
+
+/** The ways the host can start: as-is when every seat is taken, otherwise by having the server
+ * fill the open seats with bots or, when the taken seats make a valid table on their own, by
+ * shrinking the table to them. */
+export function getLobbyStartOptions(
+  value: LobbySettingsValue,
+  occupiedSeatCount: number,
+  humanCount: number,
+): LobbyStartOption[] {
+  if (occupiedSeatCount >= value.settings.maxPlayers) {
+    return [{ kind: "start", value }];
+  }
+  const fill: LobbyStartOption = { kind: "fill", value };
+  const smallerTable = tableSizeForPlayerCount(occupiedSeatCount);
+  return smallerTable
+    ? [{ kind: "shrink", value: withTableSize(value, smallerTable, humanCount) }, fill]
+    : [fill];
 }
 
 export function createLobbySeatPreview({
@@ -108,13 +139,12 @@ export function createLobbySeatPreview({
   savedMaxPlayers,
 }: LobbySeatPreviewInput): ReadonlyArray<LobbySeatMember | undefined> {
   const resizedMembers =
-    maxPlayers === savedMaxPlayers ? [...members] : fitMembersToPlayerLimit(members, maxPlayers);
+    maxPlayers === savedMaxPlayers ? members : fitMembersToPlayerLimit(members, maxPlayers);
   const humans = resizedMembers.filter((member) => member.controller === "player");
-  const availableBotSeats = Math.max(0, maxPlayers - humans.length);
-  const desiredBotCount = Math.min(botCount, availableBotSeats);
+  const desiredBotCount = Math.min(botCount, getBotCapacity(maxPlayers, humans.length));
   const bots = resizedMembers
     .filter((member) => member.controller === "bot")
-    .sort((left, right) => left.seatIndex - right.seatIndex)
+    .sort(bySeatIndex)
     .slice(0, desiredBotCount);
   const occupiedSeatIndexes = new Set([...humans, ...bots].map((member) => member.seatIndex));
   const unavailableNames = new Set([...humans, ...bots].map((member) => member.displayName));
@@ -133,32 +163,35 @@ export function createLobbySeatPreview({
   return Array.from({ length: maxPlayers }, (_, seatIndex) => membersBySeat.get(seatIndex));
 }
 
+// Mirrors the server's fitWaitingSeatsToSettings: the host sits first, then the other humans,
+// then as many bots (lowest seats first) as the smaller table still has room for.
 function fitMembersToPlayerLimit(
   members: readonly LobbySeatMember[],
-  maxPlayers: BaseGameSettings["maxPlayers"],
+  maxPlayers: PlayerCount,
 ): LobbySeatMember[] {
   const humans = members
     .filter((member) => member.controller === "player")
-    .sort(compareLobbyMembers);
+    .sort((left, right) =>
+      left.role === right.role ? bySeatIndex(left, right) : left.role === "host" ? -1 : 1,
+    );
   const bots = members
     .filter((member) => member.controller === "bot")
-    .sort((left, right) => left.seatIndex - right.seatIndex)
-    .slice(0, Math.max(0, maxPlayers - humans.length));
+    .sort(bySeatIndex)
+    .slice(0, getBotCapacity(maxPlayers, humans.length));
 
-  return [...humans, ...bots].map(moveMemberToSeat);
-}
-
-function compareLobbyMembers(left: LobbySeatMember, right: LobbySeatMember): number {
-  if (left.role !== right.role) return left.role === "host" ? -1 : 1;
-  return left.seatIndex - right.seatIndex;
-}
-
-function moveMemberToSeat(member: LobbySeatMember, seatIndex: number): LobbySeatMember {
-  return {
+  return [...humans, ...bots].map((member, seatIndex) => ({
     ...member,
-    playerColor: PLAYER_COLORS[seatIndex] ?? PLAYER_COLORS[0],
+    playerColor: seatColor(seatIndex),
     seatIndex,
-  };
+  }));
+}
+
+function seatColor(seatIndex: number): PlayerColor {
+  return PLAYER_COLORS[seatIndex] ?? PLAYER_COLORS[0];
+}
+
+function bySeatIndex(left: LobbySeatMember, right: LobbySeatMember): number {
+  return left.seatIndex - right.seatIndex;
 }
 
 function createDraftBot(seatIndex: number, unavailableNames: readonly string[]): LobbySeatMember {
@@ -166,16 +199,9 @@ function createDraftBot(seatIndex: number, unavailableNames: readonly string[]):
     controller: "bot",
     displayName: chooseBotName(`draft-bot:${seatIndex}`, unavailableNames),
     id: `draft-bot-${seatIndex}`,
-    playerColor: PLAYER_COLORS[seatIndex] ?? PLAYER_COLORS[0],
-    ready: true,
+    isViewer: false,
+    playerColor: seatColor(seatIndex),
     role: "player",
     seatIndex,
   };
-}
-
-function clampInteger(value: number, minimum: number, maximum: number): number {
-  if (!Number.isFinite(value)) {
-    return minimum;
-  }
-  return Math.min(maximum, Math.max(minimum, Math.round(value)));
 }

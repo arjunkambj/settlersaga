@@ -1,70 +1,80 @@
 "use client";
 
-import { getGameMapDefinition } from "@settersaga/game/maps";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Spinner } from "@/components/ui/spinner";
-import { Icon } from "@iconify/react";
+import bookIcon from "@iconify-icons/solar/book-bookmark-bold";
+import chatIcon from "@iconify-icons/solar/chat-round-dots-bold";
+import closeIcon from "@iconify-icons/solar/close-circle-bold";
+import logoutIcon from "@iconify-icons/solar/logout-2-bold";
+import playIcon from "@iconify-icons/solar/play-bold";
+import { Icon } from "@iconify/react/offline";
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
-import checkIcon from "@iconify-icons/solar/check-circle-bold";
-import copyIcon from "@iconify-icons/solar/copy-bold";
-import botIcon from "@iconify-icons/solar/cpu-bolt-bold";
-import gamepadIcon from "@iconify-icons/solar/gamepad-bold";
-import logoutIcon from "@iconify-icons/solar/logout-bold";
-import chatIcon from "@iconify-icons/solar/chat-round-line-bold";
-import sendIcon from "@iconify-icons/solar/plain-2-bold";
-import usersIcon from "@iconify-icons/solar/users-group-two-rounded-bold";
+import {
+  useEffect,
+  useEffectEvent,
+  useId,
+  useRef,
+  useState,
+  type ComponentProps,
+  type ReactNode,
+} from "react";
+import { flushSync } from "react-dom";
 
 import { AccountToolbar } from "@/components/app/account-toolbar";
-import { BrandMark } from "@/components/app/brand-logo";
+import { SceneBackdrop } from "@/components/app/scene-backdrop";
+import { GameHelpDialog } from "@/components/game/game-help-dialog";
+import { CopyButton } from "@/components/lobby/copy-button";
+import { LobbyCrew } from "@/components/lobby/lobby-crew";
+import { LobbySettings } from "@/components/lobby/lobby-settings";
+import { ChatPanel, type RoomChat } from "@/components/room/chat-panel";
+import { Button } from "@/components/ui/button";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@/components/ui/empty";
 import { LiveMessage } from "@/components/ui/live-message";
-import { getPlayerPortraitPath } from "@/constants/game/player-assets";
+import { Spinner } from "@/components/ui/spinner";
+import { Tooltip } from "@/components/ui/tooltip";
+import { WAIT_ICON_ASSET_PATH } from "@/constants/game/ui-assets";
+import { toActionableError } from "@/lib/app/action-errors";
 import type { PendingAction } from "@/lib/app/pending-action";
 import type { RoomView } from "@/lib/game/types";
 import {
   createLobbySeatPreview,
+  fitToRoom,
   getBotCapacity,
-  getCompatiblePlayerCount,
-  getMinimumPlayerCount,
-  tableSizeForPlayerCount,
-  toBotCount,
+  getLobbyStartOptions,
+  roomToLobbyValue,
+  withBotCount,
+  type LobbySettingsValue,
+  type LobbyStartOption,
 } from "@/lib/lobby/lobby-settings-model";
-import { LobbySettings, type LobbySettingsValue } from "./lobby-settings";
+import { GAME_MAP_NAMES } from "@/lib/lobby/map-names";
+import { cn } from "@/lib/utils";
+
+// Coalesces quick taps (a stepper held down, several chips in a row) into one save.
+const SETTINGS_SAVE_DELAY_MS = 300;
 
 type LobbyConfirmation =
   | { kind: "leave" }
-  | { displayName: string; kind: "replace"; targetSeatId: string };
+  | { displayName: string; kind: "remove"; targetSeatId: string };
 
 export interface LobbyScreenProps {
+  chat: RoomChat;
   error: string;
+  /** Human seats whose players have stopped sending presence heartbeats. */
+  offlineSeatIndexes: ReadonlySet<number>;
+  /** Rejects when the server refuses, so the confirmation can say why and offer a retry. */
   onLeave(): Promise<void>;
+  /** Rejects when the server refuses, so the confirmation can say why and offer a retry. */
   onReplacePlayer(targetSeatId: string): Promise<void>;
-  onSaveSettings(value: LobbySettingsValue): Promise<void>;
-  onStart(value: LobbySettingsValue): Promise<void>;
+  /** Settles once the server has answered; a refusal is reported through `error`. */
+  onSaveSettings(value: LobbySettingsValue): Promise<unknown>;
+  /** Settles once the server has answered; a refusal is reported through `error`. */
+  onStart(option: LobbyStartOption): Promise<unknown>;
   pendingAction: PendingAction;
   room: RoomView;
 }
 
 export function LobbyScreen({
+  chat,
   error,
+  offlineSeatIndexes,
   onLeave,
   onReplacePlayer,
   onSaveSettings,
@@ -72,568 +82,409 @@ export function LobbyScreen({
   pendingAction,
   room,
 }: LobbyScreenProps) {
-  const [copied, setCopied] = useState<"code" | "link" | null>(null);
-  const [chatDraft, setChatDraft] = useState("");
-  const [chatMessages, setChatMessages] = useState<readonly { id: number; text: string }[]>([]);
+  // The host's unsaved edits. Without one the room is shown exactly as the server has it.
+  const [draft, setDraft] = useState<LobbySettingsValue | null>(null);
   const [confirmation, setConfirmation] = useState<LobbyConfirmation | null>(null);
-  const botCount = toBotCount(room.members.filter((member) => member.controller === "bot").length);
-  const [settingsDraft, setSettingsDraft] = useState<LobbySettingsValue>(() => ({
-    botCount,
-    botDifficulty: room.botDifficulty,
-    settings: room.settings,
-  }));
-  const draftRef = useRef(settingsDraft);
-  draftRef.current = settingsDraft;
-  const roomRef = useRef(room);
-  roomRef.current = room;
-  const persistTimer = useRef<number | null>(null);
-  const dirtyRef = useRef(false);
-  const humanCount = room.members.length - botCount;
-  const botCapacity = getBotCapacity(settingsDraft.settings.maxPlayers, humanCount);
+  const [confirming, setConfirming] = useState(false);
+  const [confirmError, setConfirmError] = useState("");
+  const [showHelp, setShowHelp] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
+  // Messages already in the log when the harbor opens, such as the last game's, count as read.
+  const [chatSeenAt, setChatSeenAt] = useState(() => Date.now());
+  const chatPanelId = useId();
+  const chatPanelRef = useRef<HTMLElement>(null);
+  const chatToggleRef = useRef<HTMLButtonElement>(null);
+
+  const saved = roomToLobbyValue(room);
+  const value = draft ?? saved;
+  const humanCount = room.members.length - saved.botCount;
   const seats = createLobbySeatPreview({
-    botCount: settingsDraft.botCount,
-    maxPlayers: settingsDraft.settings.maxPlayers,
+    botCount: value.botCount,
+    maxPlayers: value.settings.maxPlayers,
     members: room.members,
     savedMaxPlayers: room.settings.maxPlayers,
   });
   const occupiedSeatCount = seats.filter(Boolean).length;
-  const emptySeatCount = settingsDraft.settings.maxPlayers - occupiedSeatCount;
-  const minPlayerCount = getMinimumPlayerCount(settingsDraft.settings.map, humanCount);
-  const settingsLocked = !room.isHost || pendingAction === "start" || pendingAction === "leave";
-  const shrinkStart = tableSizeForPlayerCount(occupiedSeatCount);
-  const filledStart = withFilledBots(settingsDraft, humanCount);
-  const shrinkStartValue =
-    shrinkStart && emptySeatCount > 0
-      ? {
-          ...settingsDraft,
-          botCount: toBotCount(
-            Math.min(settingsDraft.botCount, shrinkStart.maxPlayers - humanCount),
-          ),
-          settings: {
-            ...settingsDraft.settings,
-            map: shrinkStart.map,
-            maxPlayers: shrinkStart.maxPlayers,
-          },
-        }
-      : null;
-
-  useEffect(() => {
-    const incoming = { botCount, botDifficulty: room.botDifficulty, settings: room.settings };
-    if (sameLobbySettings(incoming, draftRef.current)) {
-      dirtyRef.current = false;
-      return;
-    }
-    if (dirtyRef.current) {
-      return;
-    }
-    setSettingsDraft(incoming);
-  }, [
-    botCount,
-    room.botDifficulty,
-    room.settings.balancedDice,
-    room.settings.discardLimit,
-    room.settings.friendlyRobber,
-    room.settings.hideBankCards,
-    room.settings.map,
-    room.settings.maxPlayers,
-    room.settings.turnTimerSeconds,
-    room.settings.victoryPoints,
-  ]);
-
-  useEffect(() => {
-    return () => {
-      if (persistTimer.current !== null) {
-        window.clearTimeout(persistTimer.current);
-      }
-    };
-  }, []);
-
-  const applyDraft = (next: LobbySettingsValue, persist: "now" | "soon") => {
-    dirtyRef.current = true;
-    setSettingsDraft(next);
-    if (!room.isHost) return;
-    if (persistTimer.current !== null) {
-      window.clearTimeout(persistTimer.current);
-      persistTimer.current = null;
-    }
-    if (sameLobbySettings(next, room)) {
-      dirtyRef.current = false;
-      return;
-    }
-    if (persist === "now") {
-      void onSaveSettings(next);
-      return;
-    }
-    persistTimer.current = window.setTimeout(() => {
-      persistTimer.current = null;
-      const latest = draftRef.current;
-      const currentRoom = roomRef.current;
-      if (sameLobbySettings(latest, currentRoom)) return;
-      const currentHumanCount = currentRoom.members.filter(
-        (member) => member.controller !== "bot",
-      ).length;
-      const maxPlayers = getCompatiblePlayerCount(
-        latest.settings.map,
-        currentHumanCount,
-        latest.settings.maxPlayers,
-      );
-      if (!maxPlayers) return;
-      void onSaveSettings({
-        ...latest,
-        botCount: toBotCount(
-          Math.min(latest.botCount, getBotCapacity(maxPlayers, currentHumanCount)),
-        ),
-        settings: { ...latest.settings, maxPlayers },
-      });
-    }, 400);
-  };
-
-  const runConfirmedAction = async () => {
-    if (!confirmation) return;
-    if (confirmation.kind === "leave") await onLeave();
-    else await onReplacePlayer(confirmation.targetSeatId);
-    setConfirmation(null);
-  };
-
-  const copyValue = async (kind: "code" | "link") => {
-    const value =
-      kind === "code"
-        ? room.code
-        : `${window.location.origin}/room/${encodeURIComponent(room.code)}`;
-    try {
-      await navigator.clipboard.writeText(value);
-      setCopied(kind);
-      window.setTimeout(() => setCopied(null), 1800);
-    } catch {
-      setCopied(null);
-    }
-  };
-
-  const addBot = () => {
-    const current = draftRef.current;
-    applyDraft(
-      {
-        ...current,
-        botCount: toBotCount(Math.min(current.botCount + 1, botCapacity)),
-      },
-      "now",
-    );
-  };
-
-  const removeBot = () => {
-    const current = draftRef.current;
-    applyDraft(
-      {
-        ...current,
-        botCount: toBotCount(Math.max(0, current.botCount - 1)),
-      },
-      "now",
-    );
-  };
-
-  const fillEmptySeats = () => {
-    applyDraft(withFilledBots(draftRef.current, humanCount), "now");
-  };
-
-  const submitChatMessage = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const text = chatDraft.trim();
-    if (!text) return;
-    setChatMessages((messages) => [...messages, { id: Date.now(), text }]);
-    setChatDraft("");
-  };
-
-  const startWith = (value: LobbySettingsValue) => {
-    if (persistTimer.current !== null) {
-      window.clearTimeout(persistTimer.current);
-      persistTimer.current = null;
-    }
-    void onStart({
-      ...draftRef.current,
-      ...value,
-      settings: { ...draftRef.current.settings, ...value.settings },
-    });
-  };
-
-  const startHint = !room.isHost
-    ? "Waiting for the host to start."
-    : occupiedSeatCount < minPlayerCount
-      ? `Need ${minPlayerCount - occupiedSeatCount} more player${minPlayerCount - occupiedSeatCount === 1 ? "" : "s"} or bots to start.`
-      : emptySeatCount > 0
-        ? shrinkStart
-          ? `You can start with ${occupiedSeatCount}, or fill the open seats first.`
-          : `Fill the remaining ${emptySeatCount} seat${emptySeatCount === 1 ? "" : "s"} to start.`
-        : "";
-
-  const startActions = room.isHost ? (
-    <div className="flex items-center justify-end gap-2">
-      {emptySeatCount === 0 ? (
-        <Button
-          disabled={pendingAction !== null && pendingAction !== "settings"}
-          onClick={() => startWith(draftRef.current)}
-          size="lg"
-        >
-          <Icon data-icon="inline-start" icon={gamepadIcon} />
-          {pendingAction === "start" ? (
-            <>
-              <Spinner data-icon="inline-start" /> Building island...
-            </>
-          ) : (
-            "Start game"
-          )}
-        </Button>
-      ) : shrinkStartValue ? (
-        <>
-          <Button
-            disabled={pendingAction !== null && pendingAction !== "settings"}
-            onClick={() => startWith(shrinkStartValue)}
-            size="lg"
-          >
-            <Icon data-icon="inline-start" icon={gamepadIcon} />
-            {pendingAction === "start" ? (
-              <>
-                <Spinner data-icon="inline-start" /> Building island...
-              </>
-            ) : (
-              `Start with ${occupiedSeatCount}`
-            )}
-          </Button>
-          <Button
-            disabled={pendingAction !== null && pendingAction !== "settings"}
-            onClick={() => startWith(filledStart)}
-            size="lg"
-            variant="secondary"
-          >
-            Fill seats & start
-          </Button>
-        </>
-      ) : (
-        <Button
-          disabled={pendingAction !== null && pendingAction !== "settings"}
-          onClick={() => startWith(filledStart)}
-          size="lg"
-        >
-          <Icon data-icon="inline-start" icon={gamepadIcon} />
-          {pendingAction === "start" ? (
-            <>
-              <Spinner data-icon="inline-start" /> Building island...
-            </>
-          ) : (
-            "Fill seats & start"
-          )}
-        </Button>
-      )}
-    </div>
-  ) : (
-    <p className="text-sm text-muted-foreground">The host will start when the table is set.</p>
+  // Presence is keyed by the server's seat numbers, which a draft table size may reshuffle.
+  const awayMemberIds = new Set(
+    room.members
+      .filter((member) => offlineSeatIndexes.has(member.seatIndex))
+      .map((member) => member.id),
   );
+  const hostName = room.members.find((member) => member.role === "host")?.displayName;
+  const nextHostName = room.members.find(
+    (member) => member.controller === "player" && !member.isViewer,
+  )?.displayName;
+  const leaving = confirming && confirmation?.kind === "leave";
+  const busy = confirming || (pendingAction !== null && pendingAction !== "settings");
+  const locked = leaving || pendingAction === "start";
+  // One save at a time, and no start during one: whichever settles first would end the other's
+  // pending state.
+  const saving = pendingAction === "settings";
+  const unreadChatCount = chatOpen
+    ? 0
+    : chat.messages.filter((message) => !message.isMine && message.sentAt > chatSeenAt).length;
+
+  // The draft is fitted to the crew seated when the save goes out, since someone may have
+  // joined after the edit. Once the save settles the room props are authoritative again:
+  // they hold the saved value, or the old one if the save failed. Newer edits keep their draft.
+  const saveDraft = useEffectEvent((next: LobbySettingsValue) => {
+    void onSaveSettings(fitToRoom(next, humanCount)).then(() =>
+      setDraft((current) => (current === next ? null : current)),
+    );
+  });
+
+  useEffect(() => {
+    if (!draft || locked || saving) return;
+    const timer = window.setTimeout(() => saveDraft(draft), SETTINGS_SAVE_DELAY_MS);
+    return () => window.clearTimeout(timer);
+  }, [draft, locked, saving]);
+
+  // Until wide screens give the chat its own column, it opens from the header in the crew's place.
+  const openChat = () => {
+    flushSync(() => setChatOpen(true));
+    chatPanelRef.current?.focus();
+  };
+
+  const closeChat = () => {
+    setChatOpen(false);
+    setChatSeenAt(chat.messages.at(-1)?.sentAt ?? chatSeenAt);
+    chatToggleRef.current?.focus();
+  };
+
+  const openConfirmation = (target: LobbyConfirmation) => {
+    setConfirmError("");
+    setConfirmation(target);
+  };
+
+  const confirm = async (target: LobbyConfirmation) => {
+    setConfirming(true);
+    setConfirmError("");
+    try {
+      await (target.kind === "leave" ? onLeave() : onReplacePlayer(target.targetSeatId));
+      setConfirmation(null);
+    } catch (cause) {
+      setConfirmError(toActionableError(cause));
+    } finally {
+      setConfirming(false);
+    }
+  };
 
   return (
-    <main className="flex h-dvh flex-col overflow-hidden bg-background" id="main-content">
-      <div className="grid shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-3 px-4 py-3">
-        <div className="flex items-center gap-2">
-          <BrandMark className="size-8 drop-shadow-none" />
-          <div>
-            <p className="text-sm font-bold leading-none">Host Island</p>
-            <p className="text-xs text-muted-foreground">Private table</p>
-          </div>
-        </div>
-        <Badge variant="secondary" className="font-mono">
-          Private room {room.code}
-        </Badge>
-        <div className="flex items-center justify-end gap-2">
-          <AccountToolbar />
-          <Button
-            variant="destructive"
-            disabled={pendingAction !== null && pendingAction !== "settings"}
-            onClick={() => setConfirmation({ kind: "leave" })}
-          >
-            <Icon data-icon="inline-start" icon={logoutIcon} />
-            {pendingAction === "leave" ? (
-              <>
-                <Spinner data-icon="inline-start" /> Leaving...
-              </>
-            ) : (
-              "Leave"
-            )}
-          </Button>
-        </div>
-      </div>
+    <main className="lobby-screen" id="main-content">
+      <SceneBackdrop />
 
-      <div className="mx-auto grid min-h-0 w-full min-w-0 flex-1 gap-4 overflow-y-auto p-4 lg:grid-cols-[20rem_minmax(0,1fr)_22rem] lg:overflow-hidden">
-        <Card className="flex h-full min-h-0 min-w-0 flex-col">
-          <CardHeader className="shrink-0 border-b">
-            <CardTitle className="flex items-center justify-between gap-2">
-              <span className="flex items-center gap-2">
-                <Icon icon={usersIcon} />
-                Players
-              </span>
-              <span className="text-sm font-medium text-muted-foreground">
-                {occupiedSeatCount}/{settingsDraft.settings.maxPlayers}
-              </span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="flex min-h-0 flex-1 flex-col gap-3 pt-3">
-            <ol className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
-              {seats.map((member, index) => (
-                <li
-                  key={member?.id ?? `open-seat-${index}`}
-                  className="flex min-h-0 min-w-0 items-center gap-3 rounded-2xl bg-muted/40 px-3 py-2.5"
-                >
-                  {member ? (
-                    <>
-                      <span className="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted">
-                        <Image
-                          alt=""
-                          height={56}
-                          width={56}
-                          className="size-14 object-cover"
-                          src={getPlayerPortraitPath(member.playerColor)}
-                        />
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-base font-semibold">
-                          {member.displayName}
-                        </span>
-                        <span className="block text-sm text-muted-foreground">
-                          {member.role === "host"
-                            ? "Host"
-                            : member.controller === "bot"
-                              ? "Bot"
-                              : "Crew"}
-                        </span>
-                      </span>
-                      {room.isHost && member.controller === "bot" ? (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          disabled={settingsLocked}
-                          onClick={removeBot}
-                        >
-                          Remove
-                        </Button>
-                      ) : null}
-                      {room.isHost && member.controller === "player" && member.role !== "host" ? (
-                        <Button
-                          size="icon-xs"
-                          variant="ghost"
-                          aria-label={`Replace ${member.displayName} with a bot`}
-                          disabled={pendingAction !== null && pendingAction !== "settings"}
-                          onClick={() =>
-                            setConfirmation({
-                              displayName: member.displayName,
-                              kind: "replace",
-                              targetSeatId: member.id,
-                            })
-                          }
-                        >
-                          <Icon icon={botIcon} />
-                        </Button>
-                      ) : null}
-                    </>
-                  ) : (
-                    <>
-                      <span className="flex size-14 shrink-0 items-center justify-center rounded-full border border-dashed border-border text-sm font-semibold text-muted-foreground">
-                        {index + 1}
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block text-base font-semibold">Open seat</span>
-                      </span>
-                      {room.isHost ? (
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          disabled={settingsLocked || settingsDraft.botCount >= botCapacity}
-                          onClick={addBot}
-                        >
-                          <Icon data-icon="inline-start" icon={botIcon} />
-                          Bot
-                        </Button>
-                      ) : null}
-                    </>
-                  )}
-                </li>
-              ))}
-            </ol>
-
-            {room.isHost && emptySeatCount > 0 ? (
-              <Button
-                className="shrink-0"
-                size="sm"
-                variant="secondary"
-                disabled={settingsLocked}
-                onClick={fillEmptySeats}
-              >
-                <Icon data-icon="inline-start" icon={botIcon} />
-                Fill empty seats
-              </Button>
-            ) : null}
-          </CardContent>
-          <CardFooter className="flex shrink-0 flex-col items-stretch gap-2 border-t">
-            <div>
-              <p className="text-sm font-semibold">Invite your crew</p>
-              <p className="text-xs text-muted-foreground">
-                Share the room link to fill open seats.
-              </p>
-            </div>
-            <Button variant="secondary" onClick={() => void copyValue("link")}>
-              <Icon data-icon="inline-start" icon={copied === "link" ? checkIcon : copyIcon} />
-              {copied === "link" ? "Invite copied" : "Copy invite link"}
+      <header className="lobby-header">
+        <div className="lobby-header-start">
+          <Tooltip label="Leave Island">
+            <Button
+              aria-label="Leave Island"
+              className="max-xl:w-11 max-xl:px-0"
+              disabled={busy}
+              onClick={() => openConfirmation({ kind: "leave" })}
+              size="game-md"
+              variant="game-danger"
+            >
+              {leaving ? <Spinner className="size-5" /> : <Icon icon={logoutIcon} />}
+              <span className="max-xl:sr-only">Leave</span>
             </Button>
-          </CardFooter>
-        </Card>
+          </Tooltip>
+          <Tooltip label="How to play">
+            <Button
+              aria-label="How to play"
+              onClick={() => setShowHelp(true)}
+              size="game-md"
+              variant="game-icon"
+            >
+              <Icon icon={bookIcon} />
+            </Button>
+          </Tooltip>
+          <Tooltip label="Chat">
+            <Button
+              aria-controls={chatPanelId}
+              aria-expanded={chatOpen}
+              aria-label={unreadChatCount > 0 ? `Chat, ${unreadChatCount} new` : "Chat"}
+              className="lobby-chat-toggle relative"
+              onClick={chatOpen ? closeChat : openChat}
+              ref={chatToggleRef}
+              size="game-md"
+              variant="game-icon"
+            >
+              <Icon icon={chatIcon} />
+              {unreadChatCount > 0 ? (
+                <span aria-hidden className="lobby-unread">
+                  {Math.min(unreadChatCount, 99)}
+                </span>
+              ) : null}
+            </Button>
+          </Tooltip>
+          <CopyButton
+            className="lobby-header-code w-auto gap-2 px-3"
+            copiedMessage="Island code copied"
+            failedMessage={`Copy blocked. Share the code ${room.code}`}
+            size="game-md"
+            value={() => room.code}
+            variant="game-icon"
+          >
+            <span className="sr-only">Copy Island code </span>
+            <span className="tracking-[0.18em]">{room.code}</span>
+          </CopyButton>
+        </div>
+        <h1 className="lobby-header-title game-ribbon">
+          {room.isHost || !hostName ? (
+            "Your harbor"
+          ) : (
+            // Only the name gives way, so a long one still reads as a harbor.
+            <>
+              <span className="truncate">{hostName}</span>
+              <span className="shrink-0">&apos;s harbor</span>
+            </>
+          )}
+        </h1>
+        <div className="lobby-header-end">
+          <AccountToolbar />
+        </div>
+      </header>
 
-        <Card className="flex h-full min-h-0 min-w-0 w-full flex-col">
-          <CardHeader className="shrink-0">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                  Room ID
-                </p>
-                <CardTitle className="font-mono text-3xl tracking-[0.12em]">{room.code}</CardTitle>
-              </div>
-              <Button variant="secondary" onClick={() => void copyValue("code")}>
-                <Icon data-icon="inline-start" icon={copied === "code" ? checkIcon : copyIcon} />
-                {copied === "code" ? "Copied" : "Copy code"}
-              </Button>
-            </div>
-            <div className="grid grid-cols-3 gap-2 pt-2">
-              <div className="rounded-2xl bg-muted/40 px-3 py-2">
-                <p className="text-xs text-muted-foreground">Game mode</p>
-                <p className="text-sm font-semibold">Base Game</p>
-              </div>
-              <div className="rounded-2xl bg-muted/40 px-3 py-2">
-                <p className="text-xs text-muted-foreground">Map</p>
-                <p className="text-sm font-semibold">
-                  {getGameMapDefinition(settingsDraft.settings.map).label}
-                </p>
-              </div>
-              <div className="rounded-2xl bg-muted/40 px-3 py-2">
-                <p className="text-xs text-muted-foreground">Victory</p>
-                <p className="text-sm font-semibold">
-                  {settingsDraft.settings.victoryPoints} points
-                </p>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="flex min-h-0 flex-1 flex-col">
-            <LobbySettings
-              botCount={settingsDraft.botCount}
-              botDifficulty={settingsDraft.botDifficulty}
-              disabled={settingsLocked}
-              humanCount={humanCount}
-              onChange={(value) => applyDraft(value, "soon")}
-              settings={settingsDraft.settings}
-              variant="rules"
-            />
-          </CardContent>
-          <CardFooter className="flex shrink-0 items-center justify-between gap-3 border-t">
-            <div className="min-w-0">
-              <LiveMessage message={error} />
-              {startHint ? <p className="text-xs text-muted-foreground">{startHint}</p> : null}
-            </div>
-            {startActions}
-          </CardFooter>
-        </Card>
+      <div className="lobby-layout" data-chat-open={chatOpen || undefined}>
+        <LobbyPanel
+          aside={
+            <span className="lobby-chip">
+              <span aria-hidden>
+                {occupiedSeatCount}/{value.settings.maxPlayers}
+              </span>
+              <span className="sr-only">
+                {occupiedSeatCount} of {value.settings.maxPlayers} seats taken
+              </span>
+            </span>
+          }
+          className="lobby-area-crew"
+          title="Crew"
+        >
+          <LobbyCrew
+            awayMemberIds={awayMemberIds}
+            botCapacity={getBotCapacity(value.settings.maxPlayers, humanCount)}
+            botCount={value.botCount}
+            botDifficulty={value.botDifficulty}
+            canManage={room.isHost}
+            disabled={locked}
+            onBotCountChange={(botCount) => setDraft(withBotCount(value, botCount, humanCount))}
+            onRemoveMember={(member) =>
+              openConfirmation({
+                displayName: member.displayName,
+                kind: "remove",
+                targetSeatId: member.id,
+              })
+            }
+            roomCode={room.code}
+            seats={seats}
+          />
+        </LobbyPanel>
 
-        <Card className="flex h-full min-h-[24rem] min-w-0 flex-col lg:min-h-0">
-          <CardHeader className="flex shrink-0 flex-row items-center justify-between border-b">
-            <CardTitle>Chat</CardTitle>
-            <CardDescription>Room</CardDescription>
-          </CardHeader>
-          <CardContent className="flex min-h-0 flex-1 flex-col overflow-hidden">
-            {chatMessages.length === 0 ? (
-              <Empty className="min-h-0 overflow-hidden border p-6">
-                <EmptyHeader>
-                  <EmptyMedia
-                    variant="icon"
-                    className="size-16 rounded-2xl [&_svg:not([class*='size-'])]:size-8"
-                  >
-                    <Icon icon={chatIcon} />
-                  </EmptyMedia>
-                  <EmptyTitle>No messages yet</EmptyTitle>
-                  <EmptyDescription>Say hello while everyone gets ready.</EmptyDescription>
-                </EmptyHeader>
-              </Empty>
+        <LobbyPanel
+          aside={
+            room.isHost ? (
+              // Keeps its space while hidden so the settings do not jump on every save.
+              <span className={cn("lobby-chip", !draft && "invisible")}>Saving…</span>
             ) : (
-              <div className="flex min-h-0 flex-1 flex-col justify-end gap-3 overflow-y-auto">
-                {chatMessages.map((message) => (
-                  <div key={message.id} className="flex flex-col items-end gap-1">
-                    <span className="px-1 text-xs text-muted-foreground">You</span>
-                    <p className="max-w-[85%] rounded-2xl rounded-br-md bg-primary px-3 py-2 text-sm text-primary-foreground">
-                      {message.text}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-          <CardFooter className="shrink-0 border-t">
-            <form className="flex w-full items-center gap-2" onSubmit={submitChatMessage}>
-              <label className="sr-only" htmlFor="room-chat-message">
-                Send a message
-              </label>
-              <Input
-                id="room-chat-message"
-                maxLength={240}
-                value={chatDraft}
-                onChange={(event) => setChatDraft(event.target.value)}
-                placeholder="Send a message..."
-                className="flex-1"
+              <span className="lobby-chip">Set by host</span>
+            )
+          }
+          className="lobby-area-rules"
+          title="Rules"
+        >
+          <div className="lobby-scroll">
+            <LobbySettings
+              disabled={locked}
+              humanCount={humanCount}
+              onChange={setDraft}
+              readOnly={!room.isHost}
+              value={value}
+            />
+          </div>
+        </LobbyPanel>
+
+        <LobbyPanel
+          className="lobby-area-chat"
+          id={chatPanelId}
+          onKeyDown={(event) => {
+            if (event.key === "Escape" && chatOpen) closeChat();
+          }}
+          ref={chatPanelRef}
+          tabIndex={-1}
+          title="Chat"
+        >
+          <Button
+            aria-label="Close chat"
+            className="lobby-chat-close"
+            onClick={closeChat}
+            size="game-md"
+            variant="game-icon"
+          >
+            <Icon icon={closeIcon} />
+          </Button>
+          <ChatPanel
+            className="flex-1"
+            disabled={locked}
+            messages={chat.messages}
+            onSend={chat.onSend}
+          />
+        </LobbyPanel>
+
+        <section aria-label="Start the game" className="lobby-launch game-menu-panel">
+          {room.isHost ? (
+            <HostLaunch
+              busy={busy || saving}
+              error={error}
+              humanCount={humanCount}
+              occupiedSeatCount={occupiedSeatCount}
+              onStart={(option) => void onStart(option)}
+              starting={pendingAction === "start"}
+              value={value}
+            />
+          ) : (
+            <div className="flex items-center gap-3">
+              <Image
+                alt=""
+                className="size-12 shrink-0 object-contain motion-safe:animate-game-sway"
+                height={96}
+                src={WAIT_ICON_ASSET_PATH}
+                width={96}
               />
-              <Button
-                aria-label="Send message"
-                disabled={!chatDraft.trim()}
-                size="icon"
-                type="submit"
-              >
-                <Icon icon={sendIcon} />
-              </Button>
-            </form>
-          </CardFooter>
-        </Card>
+              <div className="flex min-w-0 flex-1 flex-col gap-1">
+                <p className="font-display text-base tracking-wide sm:text-lg">
+                  Waiting for {hostName ?? "the host"} to set sail
+                </p>
+                <p className="text-sm font-semibold text-muted-foreground">
+                  {occupiedSeatCount} of {value.settings.maxPlayers} seats taken
+                </p>
+                <LiveMessage message={error} />
+              </div>
+            </div>
+          )}
+        </section>
       </div>
+
+      {showHelp ? (
+        <GameHelpDialog onClose={() => setShowHelp(false)} settings={value.settings} />
+      ) : null}
 
       {confirmation ? (
         <ConfirmationDialog
-          busy={pendingAction !== null && pendingAction !== "settings"}
-          confirmLabel={confirmation.kind === "leave" ? "Leave Room" : "Use Bot"}
+          busy={confirming}
+          confirmLabel={confirmation.kind === "leave" ? "Leave" : "Remove"}
           description={
-            confirmation.kind === "leave"
-              ? room.isHost
-                ? "Leaving now closes this waiting room for everyone in it."
-                : "Leaving now frees your seat for another player or bot."
-              : `${confirmation.displayName} will lose control of this seat, and a bot will take over.`
+            confirmation.kind === "remove"
+              ? "They can't rejoin this Island, and a bot takes their seat."
+              : !nextHostName
+                ? "You're the last one here, so the Island closes when you leave."
+                : room.isHost
+                  ? `${nextHostName} becomes the host when you leave.`
+                  : "Your seat opens up for someone else."
           }
           onCancel={() => setConfirmation(null)}
-          onConfirm={() => void runConfirmedAction()}
-          title={confirmation.kind === "leave" ? "Leave this room?" : "Replace this player?"}
+          error={confirmError}
+          onConfirm={() => void confirm(confirmation)}
+          title={
+            confirmation.kind === "remove"
+              ? `Remove ${confirmation.displayName} from the harbor?`
+              : "Leave this Island?"
+          }
         />
       ) : null}
     </main>
   );
 }
 
-function withFilledBots(value: LobbySettingsValue, humanCount: number): LobbySettingsValue {
-  return {
-    ...value,
-    botCount: getBotCapacity(value.settings.maxPlayers, humanCount),
-  };
+function LobbyPanel({
+  aside,
+  children,
+  className,
+  title,
+  ...props
+}: ComponentProps<"section"> & { aside?: ReactNode; title: string }) {
+  const titleId = useId();
+  return (
+    <section
+      aria-labelledby={titleId}
+      className={cn("lobby-panel game-menu-panel", className)}
+      {...props}
+    >
+      <h2 className="lobby-panel-ribbon game-ribbon" id={titleId}>
+        {title}
+      </h2>
+      {aside ? <div className="lobby-panel-aside">{aside}</div> : null}
+      {children}
+    </section>
+  );
 }
 
-function sameLobbySettings(
-  left: LobbySettingsValue,
-  right: LobbySettingsValue | RoomView,
-): boolean {
-  const rightBotCount =
-    "botCount" in right
-      ? right.botCount
-      : right.members.filter((member) => member.controller === "bot").length;
+function HostLaunch({
+  busy,
+  error,
+  humanCount,
+  occupiedSeatCount,
+  onStart,
+  starting,
+  value,
+}: {
+  busy: boolean;
+  error: string;
+  humanCount: number;
+  occupiedSeatCount: number;
+  onStart: (option: LobbyStartOption) => void;
+  starting: boolean;
+  value: LobbySettingsValue;
+}) {
+  const options = getLobbyStartOptions(value, occupiedSeatCount, humanCount);
+  const openSeatCount = value.settings.maxPlayers - occupiedSeatCount;
+  const shrinkMap = options.find((option) => option.kind === "shrink")?.value.settings.map;
+  // Seating exactly this crew can mean moving islands: six players leave Grand Isle for Wide Isle.
+  const newIsland =
+    shrinkMap && shrinkMap !== value.settings.map ? ` on ${GAME_MAP_NAMES[shrinkMap]}` : "";
+  const labels: Record<LobbyStartOption["kind"], string> = {
+    fill: "Start with bots",
+    shrink: `Start with ${occupiedSeatCount}`,
+    start: "Start game",
+  };
+  const openSeats = `${openSeatCount} open seat${openSeatCount === 1 ? "" : "s"}`;
+  const hint =
+    openSeatCount === 0
+      ? "Every seat is taken. Ready to set sail!"
+      : shrinkMap
+        ? `${openSeats}. Start with ${occupiedSeatCount}${newIsland}, or let bots fill in.`
+        : `${openSeats}. Bots fill in when you start.`;
+  const buttonSize = "max-md:h-11 max-md:gap-2 max-md:px-3 max-md:text-base";
+
+  // The hint takes the spare room while everything fits on one row. Once the buttons no
+  // longer fit beside it they get a full-width row, where sibling buttons share it equally.
   return (
-    left.botCount === rightBotCount &&
-    left.botDifficulty === right.botDifficulty &&
-    Object.entries(left.settings).every(
-      ([key, setting]) => right.settings[key as keyof typeof right.settings] === setting,
-    )
+    <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
+      <div className="flex min-w-0 grow-999 basis-48 flex-col gap-1">
+        <p className="font-display text-base tracking-wide sm:text-lg">{hint}</p>
+        <LiveMessage className="text-left" message={error} />
+      </div>
+      <div className="grid grow auto-cols-fr grid-flow-col gap-2">
+        {starting ? (
+          <Button className={buttonSize} disabled size="game-lg" variant="game-gold">
+            <Spinner className="size-6" /> Setting sail…
+          </Button>
+        ) : (
+          options.map((option, index) => (
+            <Button
+              className={buttonSize}
+              disabled={busy}
+              key={option.kind}
+              onClick={() => onStart(option)}
+              size="game-lg"
+              variant={index === 0 ? "game-gold" : "game-secondary"}
+            >
+              {index === 0 ? <Icon className="size-6 max-md:size-5" icon={playIcon} /> : null}
+              {labels[option.kind]}
+            </Button>
+          ))
+        )}
+      </div>
+    </div>
   );
 }

@@ -1,0 +1,469 @@
+/* ============================================================================
+   Lobby: the harbor where the crew gathers before an Island's game starts
+   ========================================================================= */
+
+/* Phones stack the panels and scroll the page, with the start bar pinned to the bottom.
+   Tablets and small laptops put the crew beside the rules, and wide screens add the chat as a
+   third column. Until then the chat opens from the header in the crew's place. From tablets up,
+   a tall enough screen fits the viewport and each panel scrolls on its own. */
+.lobby-screen {
+  --lobby-gutter: 1rem;
+  /* Side gutters clear a notch in landscape (the viewport is viewport-fit=cover). */
+  --lobby-inset-left: max(var(--lobby-gutter), env(safe-area-inset-left));
+  --lobby-inset-right: max(var(--lobby-gutter), env(safe-area-inset-right));
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+
+/* Phones give the buttons the top row, with the title and the Island code centered below. */
+.lobby-header {
+  display: grid;
+  grid-template-columns: repeat(3, auto) minmax(0, 1fr) auto;
+  grid-template-areas:
+    ". . . . end"
+    "title title title title title"
+    "code code code code code";
+  align-items: center;
+  gap: 0.75rem 0.5rem;
+  width: 100%;
+  max-width: 100rem;
+  margin-inline: auto;
+  padding: max(1rem, env(safe-area-inset-top)) var(--lobby-inset-right) 0 var(--lobby-inset-left);
+}
+
+.lobby-header-start {
+  display: contents;
+}
+
+.game-ribbon.lobby-header-title {
+  display: flex;
+  min-width: 0;
+  grid-area: title;
+  justify-self: center;
+}
+
+.lobby-header-code {
+  grid-area: code;
+  justify-self: center;
+}
+
+.lobby-header-end {
+  display: flex;
+  grid-area: end;
+  justify-content: flex-end;
+}
+
+.lobby-layout {
+  display: grid;
+  flex: 1;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "crew" "rules" "launch";
+  /* Rows leave room for the ribbons riding the panels' top edges. */
+  gap: 2.25rem 1.25rem;
+  width: 100%;
+  max-width: 100rem;
+  margin-inline: auto;
+  padding: 2.25rem var(--lobby-inset-right) max(var(--lobby-gutter), env(safe-area-inset-bottom))
+    var(--lobby-inset-left);
+}
+
+.lobby-panel {
+  --lobby-panel-pad: 1rem;
+  position: relative;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 1rem;
+  /* The extra top room is the part of the ribbon that hangs inside the panel. */
+  padding: calc(var(--lobby-panel-pad) + 1.5rem) var(--lobby-panel-pad) var(--lobby-panel-pad);
+}
+
+.lobby-area-crew {
+  grid-area: crew;
+}
+.lobby-area-rules {
+  grid-area: rules;
+}
+.lobby-area-chat {
+  grid-area: crew;
+  /* Where the page scrolls, the chat stays short enough to keep its input above the pinned
+     start bar. */
+  height: clamp(18rem, calc(100dvh - 22rem), 34rem);
+  align-self: start;
+}
+
+/* A close knob on the chat's top edge, level with its ribbon. */
+.lobby-chat-close {
+  position: absolute;
+  top: -1.375rem;
+  right: 1rem;
+}
+
+/* The panel title rides the top edge like a banner nailed to the board. */
+.lobby-panel-ribbon {
+  position: absolute;
+  top: -1.1rem;
+  left: 50%;
+  max-width: calc(100% - 2rem);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+/* A count or status chip tucked into the panel's top-right corner, level with the ribbon. */
+.lobby-panel-aside {
+  position: absolute;
+  top: 0.625rem;
+  right: 0.75rem;
+}
+
+/* A panel's body, which scrolls on its own once the screen fits the viewport. */
+.lobby-scroll {
+  min-height: 0;
+  flex: 1 1 auto;
+}
+
+.lobby-launch {
+  position: sticky;
+  z-index: 10;
+  bottom: max(0.75rem, env(safe-area-inset-bottom));
+  grid-area: launch;
+  /* No ribbon above it, so it sits as close as the columns sit to each other. */
+  margin-top: -1rem;
+  padding: 1rem;
+}
+/* Opaque, since page content scrolls underneath it on phones. */
+.game-menu-panel.lobby-launch {
+  background: linear-gradient(var(--game-panel-top), var(--game-panel-bottom));
+}
+
+@media (width < 80rem) {
+  .lobby-layout:not([data-chat-open]) > .lobby-area-chat,
+  .lobby-layout[data-chat-open] > .lobby-area-crew {
+    display: none;
+  }
+}
+
+.lobby-unread {
+  position: absolute;
+  top: -0.375rem;
+  right: -0.375rem;
+  display: grid;
+  min-width: 1.375rem;
+  height: 1.375rem;
+  place-items: center;
+  padding-inline: 0.25rem;
+  border: 2px solid var(--brand-gold-shade);
+  border-radius: 999px;
+  background: linear-gradient(var(--brand-gold-top), var(--brand-gold-bottom));
+  box-shadow: 0 2px 0 var(--game-panel-base);
+  color: var(--brand-outline);
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  text-shadow: none;
+}
+
+@media (width >= 48rem) {
+  .lobby-screen {
+    --lobby-gutter: 1.25rem;
+  }
+
+  /* Tablets keep every button on the top row and give the title the whole row below. */
+  .lobby-header {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      "start . end"
+      "title title title";
+  }
+
+  .lobby-header-start {
+    display: flex;
+    grid-area: start;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .lobby-layout {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+    grid-template-rows: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "crew rules"
+      "launch launch";
+  }
+}
+
+@media (width >= 64rem) {
+  .lobby-screen {
+    --lobby-gutter: 1.5rem;
+  }
+
+  /* One row with the title between equal side slots. Both slots hold the wider button cluster,
+     so the title stays centered and a long one truncates instead of covering the buttons. */
+  .lobby-header {
+    grid-template-columns: 1fr minmax(0, auto) 1fr;
+    grid-template-areas: "start title end";
+  }
+
+  .lobby-header-start,
+  .lobby-header-end {
+    min-width: 19rem;
+  }
+
+  .lobby-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  }
+}
+
+@media (width >= 80rem) {
+  .lobby-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr);
+    grid-template-areas:
+      "crew rules chat"
+      "launch launch launch";
+  }
+
+  .lobby-area-chat {
+    grid-area: chat;
+  }
+
+  .lobby-chat-toggle,
+  .lobby-chat-close {
+    display: none;
+  }
+}
+
+@media (width >= 48rem) and (height >= 40rem) {
+  .lobby-screen {
+    height: 100dvh;
+    overflow: hidden;
+  }
+
+  .lobby-layout,
+  .lobby-panel {
+    min-height: 0;
+  }
+
+  .lobby-launch {
+    position: static;
+  }
+
+  .lobby-area-chat {
+    height: auto;
+    align-self: stretch;
+  }
+
+  /* Gutters on both sides, so a classic scrollbar never pushes the content off center, and a
+     small bleed so focus rings and lips are not clipped. */
+  .lobby-scroll {
+    margin: -0.25rem -0.5rem;
+    padding: 0.25rem 0.5rem;
+    overflow-y: auto;
+    scrollbar-color: var(--game-panel-rim) transparent;
+    scrollbar-gutter: stable both-edges;
+    scrollbar-width: thin;
+  }
+}
+
+/* The room chat's message list (lobby and game): a slim scrollbar with a gutter on both
+   sides, so the bubbles stay centered in their well. */
+.chat-log {
+  scrollbar-color: var(--game-panel-rim) transparent;
+  scrollbar-gutter: stable both-edges;
+  scrollbar-width: thin;
+}
+
+/* ---------------------------------------------------------------------------
+   Chips, wells and counters
+   ------------------------------------------------------------------------ */
+
+.lobby-chip {
+  display: inline-flex;
+  height: 1.5rem;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.25rem;
+  padding-inline: 0.625rem;
+  border: 2px solid var(--game-panel-rim);
+  border-radius: 999px;
+  background: var(--game-panel-base);
+  box-shadow: 0 2px 0 var(--game-panel-lip);
+  color: var(--foreground);
+  font-family: var(--font-display);
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  white-space: nowrap;
+}
+.lobby-chip-gold {
+  border-color: var(--brand-gold-shade);
+  background: linear-gradient(var(--brand-gold-top), var(--brand-gold-bottom));
+  color: var(--brand-outline);
+}
+
+/* A sunken tray for a row of controls (steppers, the bot count). */
+.lobby-well {
+  border: 2px solid var(--game-well-edge);
+  border-radius: 1rem;
+  background: var(--game-well);
+  box-shadow: inset 0 2px 0 var(--game-panel-lip);
+}
+
+.lobby-counter {
+  display: grid;
+  min-width: 3rem;
+  height: 2.75rem;
+  place-items: center;
+  color: var(--foreground);
+  font-family: var(--font-display);
+  font-size: 1.625rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  text-shadow: 0 2px 0 var(--game-panel-base);
+}
+.lobby-counter-small {
+  min-width: 2.5rem;
+  height: 2.25rem;
+  font-size: 1.375rem;
+}
+
+.lobby-section-title {
+  color: var(--brand-gold-top);
+  font-family: var(--font-display);
+  font-size: 0.9375rem;
+  letter-spacing: 0.1em;
+  text-shadow: 0 2px 0 var(--game-panel-base);
+  text-transform: uppercase;
+}
+
+.lobby-hint {
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+/* ---------------------------------------------------------------------------
+   Seats
+   ------------------------------------------------------------------------ */
+
+/* A plaque per seat, rimmed and tinted all over in the seat's player color. Every plaque has
+   the same height, whatever it holds. */
+.lobby-seat {
+  display: flex;
+  height: 4.5rem;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem;
+  border: 2px solid var(--player-color);
+  border-radius: 1.25rem;
+  background: linear-gradient(
+    color-mix(in srgb, var(--player-color) 34%, var(--game-panel-top)),
+    color-mix(in srgb, var(--player-color) 20%, var(--game-panel-bottom))
+  );
+  box-shadow:
+    0 3px 0 color-mix(in srgb, var(--player-color) 40%, var(--game-panel-base)),
+    inset 0 1px color-mix(in srgb, var(--foreground) 18%, transparent);
+}
+
+/* Someone whose heartbeat went quiet: the plaque fades, the Away chip says why. */
+.lobby-seat-away {
+  border-color: color-mix(in srgb, var(--player-color) 40%, var(--game-panel-base));
+  background: color-mix(in srgb, var(--player-color) 12%, var(--game-panel-bottom));
+}
+.lobby-seat-away .lobby-seat-portrait > img {
+  filter: grayscale(0.85) brightness(0.75);
+}
+
+.lobby-away-badge {
+  position: absolute;
+  bottom: -0.4rem;
+  left: 50%;
+  padding: 0.125rem 0.375rem;
+  border: 2px solid var(--game-panel-rim);
+  border-radius: 999px;
+  background: var(--game-panel-base);
+  color: var(--foreground);
+  font-family: var(--font-display);
+  font-size: 0.6875rem;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  text-transform: uppercase;
+  transform: translateX(-50%);
+}
+
+.lobby-seat-open {
+  border: 2px dashed color-mix(in srgb, var(--board-foam) 40%, transparent);
+  background: var(--game-well);
+  box-shadow: none;
+}
+
+.lobby-seat-portrait {
+  position: relative;
+  display: grid;
+  width: 3.5rem;
+  height: 3.5rem;
+  flex-shrink: 0;
+  place-items: center;
+  border: 3px solid var(--player-color, transparent);
+  border-radius: 1rem;
+  background: color-mix(
+    in srgb,
+    var(--player-color, var(--game-panel-top)) 45%,
+    var(--game-panel-base)
+  );
+}
+.lobby-seat-portrait > img {
+  border-radius: calc(1rem - 3px);
+}
+.lobby-seat-open .lobby-seat-portrait {
+  background: transparent;
+  opacity: 0.75;
+}
+
+/* ---------------------------------------------------------------------------
+   Rule tiles: islands, bot difficulty, house rules
+   ------------------------------------------------------------------------ */
+
+/* The kit's .game-choice-tile, minus the hover hint where the viewer can only look. */
+.game-choice-tile[data-readonly] {
+  cursor: default;
+}
+.game-choice-tile[data-readonly]:hover:not([data-checked]) {
+  border-color: var(--game-well-edge);
+}
+
+/* Island previews sit in a patch of shallow water. */
+.lobby-map-tile > svg {
+  border-radius: 0.875rem;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--board-shallows) 80%, transparent),
+    transparent 72%
+  );
+}
+
+.lobby-rule-state {
+  flex-shrink: 0;
+  padding: 0.125rem 0.5rem;
+  border: 2px solid var(--game-well-edge);
+  border-radius: 999px;
+  background: var(--game-panel-base);
+  color: var(--muted-foreground);
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+.lobby-rule-tile[data-checked] .lobby-rule-state {
+  border-color: var(--brand-gold-shade);
+  background: linear-gradient(var(--brand-gold-top), var(--brand-gold-bottom));
+  color: var(--brand-outline);
+}

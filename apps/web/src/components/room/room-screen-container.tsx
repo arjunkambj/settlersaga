@@ -1,26 +1,21 @@
 "use client";
 
 import { api } from "@settersaga/backend/convex/_generated/api";
-import type { GameCommand } from "@settersaga/game";
 import { useMutation, useQuery } from "convex/react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { useAppSession } from "@/components/app/app-session-context";
 import { BackgroundMusic } from "@/components/audio/background-music";
 import { GameScreen } from "@/components/game/game-screen";
-import type { LobbySettingsValue } from "@/components/lobby/lobby-settings";
 import { LobbyScreen } from "@/components/lobby/lobby-screen";
+import { ConnectionBanner } from "@/components/room/connection-banner";
+import { useRoomPresence } from "@/components/room/use-room-presence";
 import { FullPageStatus } from "@/components/ui/full-page-status";
 import { NoticeScreen } from "@/components/ui/notice-screen";
 import { toActionableError } from "@/lib/app/action-errors";
-import { createCachedValue } from "@/lib/app/cached-value";
 import { parsePlayerView } from "@/lib/game/types";
-import { isRoomCode, normalizeRoomCode } from "@/lib/session";
-
-const getParsedPlayerView = createCachedValue(
-  (current: string | undefined, next) => current === next,
-  parsePlayerView,
-);
+import type { LobbySettingsValue } from "@/lib/lobby/lobby-settings-model";
+import { isRoomCode, normalizeRoomCode, type PlayerSession } from "@/lib/session";
 
 export function RoomScreenContainer({ roomCode }: { roomCode: string }) {
   const {
@@ -30,8 +25,7 @@ export function RoomScreenContainer({ roomCode }: { roomCode: string }) {
     exitRoomLocally,
     pendingAction,
     profileImageUrl,
-    setError,
-    setPendingAction,
+    runAction,
     updateSession,
   } = useAppSession();
   const normalizedCode = normalizeRoomCode(roomCode);
@@ -40,27 +34,31 @@ export function RoomScreenContainer({ roomCode }: { roomCode: string }) {
   const joinRoomMutation = useMutation(api.rooms.joinRoom);
   const leaveRoomMutation = useMutation(api.rooms.leaveRoom);
   const pauseGame = useMutation(api.games.pauseGame);
+  const rematch = useMutation(api.rooms.rematch);
   const replacePlayerWithBot = useMutation(api.rooms.replacePlayerWithBot);
   const resumeGame = useMutation(api.games.resumeGame);
+  const sendChatMessage = useMutation(api.rooms.sendChatMessage);
   const updateLobbyConfiguration = useMutation(api.rooms.updateLobbyConfiguration);
-  const startGame = useMutation(api.games.startGame);
-
-  useEffect(() => {
-    if (isRoomCode(normalizedCode)) {
-      updateSession((current) => ({ ...current, activeCode: normalizedCode }));
-    }
-  }, [normalizedCode, updateSession]);
+  const startGame = useMutation(api.rooms.startGame);
 
   const room = useQuery(
     api.rooms.getRoom,
     isRoomCode(normalizedCode) ? { code: normalizedCode } : "skip",
   );
+  const chatMessages = useQuery(
+    api.rooms.listChatMessages,
+    room ? { code: normalizedCode } : "skip",
+  );
+  const offlineSeatIndexes = useRoomPresence(room);
+  const gameJson = room?.gameJson;
+  const game = useMemo(() => parsePlayerView(gameJson), [gameJson]);
 
   // getRoom only returns a view to seated human members, so a null room means the
   // visitor has not joined yet (or the room does not exist). Attempt the join; the
   // server rejects with a specific error when the room is missing, full, or started.
   const [joinError, setJoinError] = useState<string | null>(null);
   const [roomClosed, setRoomClosed] = useState(false);
+  const [leaving, setLeaving] = useState(false);
   const hadRoomRef = useRef(false);
   const joinAttemptedRef = useRef<string | null>(null);
 
@@ -71,23 +69,34 @@ export function RoomScreenContainer({ roomCode }: { roomCode: string }) {
     setRoomClosed(false);
   }, [normalizedCode]);
 
-  // Once the room view has loaded, a later null means the room was deleted (the
-  // host left) or this seat is no longer human. Rejoining would fail or silently
-  // re-seat the player, so surface a notice and drop the stored room code.
+  // The home screen offers to rejoin the stored room, so only remember a room this player
+  // actually sits in, and forget it while its game is over. A rematch makes it rejoinable again.
+  const roomStatus = room?.status;
+  useEffect(() => {
+    if (roomStatus === undefined) return;
+    updateSession((current) =>
+      roomStatus === "finished"
+        ? forgetRoom(current, normalizedCode)
+        : current.activeCode === normalizedCode
+          ? current
+          : { ...current, activeCode: normalizedCode },
+    );
+  }, [normalizedCode, roomStatus, updateSession]);
+
+  // Once the room view has loaded, a later null means this seat was released (the host
+  // removed the player) or the room closed. Rejoining would fail or silently re-seat the
+  // player, so surface a notice and drop the stored room code. Leaving on purpose nulls the
+  // room too, before the redirect home lands.
   useEffect(() => {
     if (room) {
       hadRoomRef.current = true;
       return;
     }
-    if (room === null && hadRoomRef.current) {
+    if (room === null && hadRoomRef.current && !leaving) {
       setRoomClosed(true);
-      updateSession((current) => {
-        if (current.activeCode !== normalizedCode) return current;
-        const { activeCode: _activeCode, ...nextSession } = current;
-        return nextSession;
-      });
+      updateSession((current) => forgetRoom(current, normalizedCode));
     }
-  }, [normalizedCode, room, updateSession]);
+  }, [leaving, normalizedCode, room, updateSession]);
 
   useEffect(() => {
     if (!isRoomCode(normalizedCode) || room !== null) return;
@@ -95,20 +104,22 @@ export function RoomScreenContainer({ roomCode }: { roomCode: string }) {
     joinAttemptedRef.current = normalizedCode;
     let cancelled = false;
     joinRoomMutation({ code: normalizedCode, displayName }).catch((cause: unknown) => {
-      if (!cancelled) setJoinError(toActionableError(cause));
+      if (cancelled) return;
+      setJoinError(toActionableError(cause));
+      updateSession((current) => forgetRoom(current, normalizedCode));
     });
     return () => {
       cancelled = true;
     };
-  }, [displayName, joinRoomMutation, normalizedCode, room]);
+  }, [displayName, joinRoomMutation, normalizedCode, room, updateSession]);
 
   if (!isRoomCode(normalizedCode)) {
     return (
       <NoticeScreen
-        actionLabel="Return Home"
-        message="The room code is invalid. Check the link and try again."
+        actionLabel="Return home"
+        message="That Island code doesn't look right. Check the link and try again."
         onAction={exitRoomLocally}
-        title="Invalid Room Code"
+        title="Invalid Island code"
       />
     );
   }
@@ -118,13 +129,16 @@ export function RoomScreenContainer({ roomCode }: { roomCode: string }) {
   }
 
   if (room === null) {
+    if (leaving) {
+      return <FullPageStatus label="Leaving the Island…" />;
+    }
     if (roomClosed) {
       return (
         <NoticeScreen
-          actionLabel="Return Home"
-          message="This room is no longer available. The host may have closed it, or your seat was released."
+          actionLabel="Return home"
+          message="The host removed you, or the Island closed."
           onAction={exitRoomLocally}
-          title="Room Unavailable"
+          title="Off the Island"
         />
       );
     }
@@ -133,95 +147,38 @@ export function RoomScreenContainer({ roomCode }: { roomCode: string }) {
     }
     return (
       <NoticeScreen
-        actionLabel="Return Home"
+        actionLabel="Return home"
         message={joinError}
         onAction={exitRoomLocally}
-        title="Could Not Join Room"
+        title="Couldn't join"
       />
     );
   }
 
-  const perform = async <Result,>(
-    action: Exclude<typeof pendingAction, null>,
-    work: () => Promise<Result>,
-  ): Promise<Result | null> => {
-    setError("");
-    setPendingAction(action);
-    try {
-      return await work();
-    } catch (cause) {
-      setError(toActionableError(cause));
-      return null;
-    } finally {
-      setPendingAction(null);
-    }
-  };
-
+  // Rejects when the server refuses, so each screen can say why in its own way.
   const leaveRoom = async () => {
-    if (room.status === "completed") {
-      exitRoomLocally();
-      return;
-    }
-
-    const left = await perform("leave", async () => {
+    setLeaving(true);
+    try {
       await leaveRoomMutation({ code: normalizedCode });
-      return true;
-    });
-    if (left) {
-      exitRoomLocally();
+    } catch (cause) {
+      setLeaving(false);
+      throw cause;
     }
+    exitRoomLocally();
   };
 
-  const handleStartGame = async (value: LobbySettingsValue) => {
-    await perform("start", async () => {
-      await updateLobbyConfiguration({
-        botCount: value.botCount,
-        botDifficulty: value.botDifficulty,
-        code: normalizedCode,
-        settings: value.settings,
-      });
-      await startGame({ code: normalizedCode });
-    });
+  const replacePlayer = async (targetSeatId: string) => {
+    await replacePlayerWithBot({ code: normalizedCode, targetSeatId });
   };
 
-  const handleReplacePlayer = async (targetSeatId: string) => {
-    await perform("replace", async () => {
-      await replacePlayerWithBot({ code: normalizedCode, targetSeatId });
-      return true;
-    });
-  };
+  const saveLobbySettings = ({ botCount, botDifficulty, settings }: LobbySettingsValue) =>
+    updateLobbyConfiguration({ botCount, botDifficulty, code: normalizedCode, settings });
 
-  const handleGameCommand = async (
-    code: string,
-    expectedActionNumber: number,
-    command: GameCommand,
-  ) => {
-    await applyGameCommand({
-      clientActionId: globalThis.crypto.randomUUID(),
-      code,
-      command,
-      expectedActionNumber,
-    });
-  };
-
-  const handlePauseChange = async (code: string, shouldPause: boolean) => {
-    if (shouldPause) {
-      await pauseGame({ code });
-      return;
-    }
-    await resumeGame({ code });
-  };
-
-  const handleRoomSettings = async ({ botCount, botDifficulty, settings }: LobbySettingsValue) => {
-    await perform("settings", async () => {
-      await updateLobbyConfiguration({
-        botCount,
-        botDifficulty,
-        code: normalizedCode,
-        settings,
-      });
-      return true;
-    });
+  const chat = {
+    messages: chatMessages ?? [],
+    onSend: async (body: string) => {
+      await sendChatMessage({ body, code: normalizedCode });
+    },
   };
 
   if (room.status === "waiting") {
@@ -231,12 +188,23 @@ export function RoomScreenContainer({ roomCode }: { roomCode: string }) {
           src="/music/main-lobby-music.mp3"
           volume={audioSettings.lobbyMusicVolume}
         />
+        <ConnectionBanner />
         <LobbyScreen
+          chat={chat}
           error={error}
+          offlineSeatIndexes={offlineSeatIndexes}
           onLeave={leaveRoom}
-          onReplacePlayer={handleReplacePlayer}
-          onSaveSettings={handleRoomSettings}
-          onStart={handleStartGame}
+          onReplacePlayer={replacePlayer}
+          onSaveSettings={(value) => runAction("settings", () => saveLobbySettings(value))}
+          onStart={(option) =>
+            runAction("start", async () => {
+              await saveLobbySettings(option.value);
+              await startGame({
+                code: normalizedCode,
+                fillEmptySeatsWithBots: option.kind === "fill",
+              });
+            })
+          }
           pendingAction={pendingAction}
           room={room}
         />
@@ -244,40 +212,63 @@ export function RoomScreenContainer({ roomCode }: { roomCode: string }) {
     );
   }
 
-  const game = getParsedPlayerView(room.gameJson);
   if (!game) {
     return (
       <NoticeScreen
-        actionLabel="Leave Game"
+        actionLabel="Leave game"
         confirmation={{
-          confirmLabel: "Leave Game",
+          confirmLabel: "Leave game",
           description:
-            "You cannot reclaim this seat after leaving. A bot will take over, or the game will close if no human players remain.",
+            "A bot takes your seat, and you can't come back to it. If no crew is left, the Island closes.",
           title: "Leave this game?",
         }}
-        message="The live game payload could not be read. Refresh once, or leave and create a new game."
+        message="This game couldn't be loaded. Refresh the page, or leave and start a new one."
         onAction={leaveRoom}
-        title="Game State Unavailable"
+        title="Game didn't load"
       />
     );
   }
 
   return (
-    <GameScreen
-      audioSettings={audioSettings}
-      botThinking={room.botThinking}
-      events={room.events}
-      game={game}
-      isHost={room.isHost}
-      isPaused={room.isPaused}
-      nextActionAt={room.nextActionAt}
-      onCommand={(command) => handleGameCommand(room.code, game.actionNumber, command)}
-      onLeave={leaveRoom}
-      onPauseChange={(shouldPause) => handlePauseChange(room.code, shouldPause)}
-      onReplacePlayer={(targetSeatId) =>
-        replacePlayerWithBot({ code: room.code, targetSeatId }).then(() => undefined)
-      }
-      viewerProfileImageUrl={profileImageUrl}
-    />
+    <>
+      <ConnectionBanner />
+      <GameScreen
+        audioSettings={audioSettings}
+        botDifficulty={room.botDifficulty}
+        botThinking={room.botThinking}
+        chat={chat}
+        events={room.events}
+        game={game}
+        hostSeatIndex={room.members.find((member) => member.role === "host")?.seatIndex ?? null}
+        isHost={room.isHost}
+        isPaused={room.isPaused}
+        nextActionAt={room.nextActionAt}
+        offlineSeatIndexes={offlineSeatIndexes}
+        onCommand={async (command) => {
+          await applyGameCommand({
+            clientActionId: globalThis.crypto.randomUUID(),
+            code: normalizedCode,
+            command,
+            expectedActionNumber: game.actionNumber,
+          });
+        }}
+        onLeave={leaveRoom}
+        onPauseChange={async (shouldPause) => {
+          await (shouldPause ? pauseGame : resumeGame)({ code: normalizedCode });
+        }}
+        onRematch={async () => {
+          await rematch({ code: normalizedCode });
+        }}
+        onReplacePlayer={replacePlayer}
+        pausedRemainingMs={room.pausedRemainingMs}
+        viewerProfileImageUrl={profileImageUrl}
+      />
+    </>
   );
+}
+
+function forgetRoom(session: PlayerSession, code: string): PlayerSession {
+  if (session.activeCode !== code) return session;
+  const { activeCode: _activeCode, ...rest } = session;
+  return rest;
 }

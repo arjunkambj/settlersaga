@@ -1,679 +1,447 @@
 "use client";
 
+import { Radio } from "@base-ui/react/radio";
+import { RadioGroup } from "@base-ui/react/radio-group";
+import { Switch } from "@base-ui/react/switch";
+import {
+  AVAILABLE_GAME_MAPS,
+  GAME_SETTINGS_LIMITS,
+  getGameMapDefinition,
+  TURN_TIMER_OPTIONS,
+  type BaseGameSettings,
+  type BotDifficulty,
+  type GameMapId,
+  type PlayerCount,
+} from "@settersaga/game";
+import addIcon from "@iconify-icons/solar/add-circle-bold";
+import cardsIcon from "@iconify-icons/solar/card-2-bold";
+import trophyIcon from "@iconify-icons/solar/cup-star-bold";
+import minusIcon from "@iconify-icons/solar/minus-circle-bold";
+import usersIcon from "@iconify-icons/solar/users-group-rounded-bold";
+import timerIcon from "@iconify-icons/solar/stopwatch-bold";
+import { Icon, type IconifyIcon } from "@iconify/react/offline";
+import Image from "next/image";
 import { useId, type ReactNode } from "react";
-import type { BaseGameSettings, BotDifficulty, GameMapId } from "@settersaga/game";
-import { TURN_TIMER_OPTIONS } from "@settersaga/game";
-import { AVAILABLE_GAME_MAPS, getGameMapDefinition } from "@settersaga/game/maps";
 
-import { Tooltip as TooltipPrimitive } from "@base-ui/react/tooltip";
-import infoIcon from "@iconify-icons/solar/info-circle-bold";
-import { Icon } from "@iconify/react";
-
-import { Button } from "@/components/ui/button";
-import { Field, FieldLabel } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { MapPreview } from "@/components/lobby/map-preview";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { BOT_DIFFICULTY_DETAILS, BOT_DIFFICULTY_OPTIONS } from "@/lib/lobby/bot-difficulty";
+import { HOUSE_RULE_OPTIONS } from "@/lib/lobby/house-rules";
 import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Slider } from "@/components/ui/slider";
-import { Switch } from "@/components/ui/switch";
-
-import { BOT_DIFFICULTY_OPTIONS } from "@/lib/lobby/bot-difficulty";
-import {
-  getBotCapacity,
   getCompatiblePlayerCount,
-  getMinimumPlayerCount,
-  tableSizeForPlayerCount,
-  toBotCount,
-  type BotCount,
+  withTableSize,
+  type LobbySettingsValue,
 } from "@/lib/lobby/lobby-settings-model";
+import { GAME_MAP_NAMES } from "@/lib/lobby/map-names";
+import { cn } from "@/lib/utils";
 
-export type { BotCount } from "@/lib/lobby/lobby-settings-model";
-
-function InfoTooltip({ content }: { readonly content: string }) {
-  return (
-    <TooltipPrimitive.Root>
-      <TooltipPrimitive.Trigger
-        aria-label={content}
-        className="inline-flex size-5 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        delay={200}
-        type="button"
-      >
-        <Icon icon={infoIcon} className="size-3.5" />
-      </TooltipPrimitive.Trigger>
-      <TooltipPrimitive.Portal>
-        <TooltipPrimitive.Positioner align="center" side="top" sideOffset={8}>
-          <TooltipPrimitive.Popup className="z-50 max-w-[260px] rounded-xl bg-popover px-3 py-2 text-xs leading-relaxed text-popover-foreground shadow-md outline-none">
-            {content}
-          </TooltipPrimitive.Popup>
-        </TooltipPrimitive.Positioner>
-      </TooltipPrimitive.Portal>
-    </TooltipPrimitive.Root>
-  );
-}
-
-const PLAYER_COUNT_OPTIONS = [3, 4, 5, 6, 7, 8] as const;
-
-export interface LobbySettingsValue {
-  readonly botCount: BotCount;
-  readonly botDifficulty: BotDifficulty;
-  readonly settings: Readonly<BaseGameSettings>;
-}
+const TURN_TIMER_CHOICES = TURN_TIMER_OPTIONS.map((seconds) => ({
+  label: seconds === 0 ? "Off" : `${seconds}s`,
+  value: seconds,
+}));
 
 export interface LobbySettingsProps {
-  readonly botCount: BotCount;
-  readonly botDifficulty: BotDifficulty;
+  /** Locks every control, e.g. while the game is starting. */
   readonly disabled: boolean;
   readonly humanCount: number;
-  readonly minBotCount?: BotCount;
   readonly onChange: (value: LobbySettingsValue) => void;
-  readonly settings: Readonly<BaseGameSettings>;
-  readonly variant?: "setup" | "rules";
+  /** Shows the settings without letting this viewer change them. */
+  readonly readOnly: boolean;
+  readonly value: LobbySettingsValue;
 }
 
 export function LobbySettings({
-  botCount,
-  botDifficulty,
   disabled,
   humanCount,
-  minBotCount = 0,
   onChange,
-  settings,
-  variant = "setup",
+  readOnly,
+  value,
 }: LobbySettingsProps) {
-  const botLimit = getBotCapacity(settings.maxPlayers, humanCount);
-  const botFloor = toBotCount(Math.min(minBotCount, botLimit));
-  const selectedMap = getGameMapDefinition(settings.map);
-  const minPlayerCount = getMinimumPlayerCount(settings.map, humanCount);
-  const selectedDifficulty =
-    BOT_DIFFICULTY_OPTIONS.find((option) => option.value === botDifficulty) ??
-    BOT_DIFFICULTY_OPTIONS[0];
-
-  const emit = (
-    nextSettings: Readonly<BaseGameSettings>,
-    nextBotCount: BotCount = botCount,
-    nextBotDifficulty: BotDifficulty = botDifficulty,
-  ) => {
-    onChange({
-      botCount: nextBotCount,
-      botDifficulty: nextBotDifficulty,
-      settings: { ...nextSettings },
-    });
-  };
+  const { settings } = value;
+  const { playerCounts } = getGameMapDefinition(settings.map);
+  const lock = { disabled, readOnly };
 
   const updateSetting = <Key extends keyof BaseGameSettings>(
     key: Key,
-    value: BaseGameSettings[Key],
+    next: BaseGameSettings[Key],
   ) => {
-    emit({ ...settings, [key]: value });
+    onChange({ ...value, settings: { ...settings, [key]: next } });
   };
 
-  const applyMap = (map: GameMapId) => {
+  const chooseMap = (map: GameMapId) => {
     const maxPlayers = getCompatiblePlayerCount(map, humanCount, settings.maxPlayers);
-    if (maxPlayers === null) {
-      return;
+    if (maxPlayers !== null) {
+      onChange(withTableSize(value, { map, maxPlayers }, humanCount));
     }
-    const nextBotLimit = getBotCapacity(maxPlayers, humanCount);
-    const nextBotFloor = toBotCount(Math.min(minBotCount, nextBotLimit));
-    emit(
-      { ...settings, map, maxPlayers },
-      toBotCount(Math.max(nextBotFloor, Math.min(botCount, nextBotLimit))),
-    );
   };
 
-  const id = useId();
+  return (
+    <div className="@container flex flex-col gap-6">
+      <SettingsSection title="Island">
+        <MapPicker
+          {...lock}
+          humanCount={humanCount}
+          maxPlayers={settings.maxPlayers}
+          onChange={chooseMap}
+          value={settings.map}
+        />
+        <Setting icon={usersIcon} label="Seats">
+          {(labelId) => (
+            <ChoiceGroup
+              {...lock}
+              choices={playerCounts.map((playerCount) => ({
+                disabled: playerCount < humanCount,
+                label: `${playerCount} seats`,
+                value: playerCount,
+              }))}
+              labelId={labelId}
+              onChange={(maxPlayers: PlayerCount) =>
+                onChange(withTableSize(value, { map: settings.map, maxPlayers }, humanCount))
+              }
+              value={settings.maxPlayers}
+            />
+          )}
+        </Setting>
+        {playerCounts.some((playerCount) => playerCount < humanCount) ? (
+          <p className="lobby-hint">
+            Your crew of {humanCount} needs at least {humanCount} seats.
+          </p>
+        ) : null}
+      </SettingsSection>
 
-  if (variant === "rules") {
-    return (
-      <fieldset className="m-0 flex min-h-0 flex-1 flex-col border-0 p-0" disabled={disabled}>
-        <legend className="sr-only">House rules</legend>
-        <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-3">
-          <SettingsCategory title="Game rules">
-            <SettingPanel>
-              <SliderSetting
-                disabled={disabled}
-                id={`${id}-victory-points`}
-                label="Points to Win"
-                max={13}
-                min={3}
-                onChange={(value) => updateSetting("victoryPoints", value)}
+      <SettingsSection title="Match">
+        <div className="grid gap-5 @min-[22rem]:grid-cols-2">
+          <Setting icon={trophyIcon} label="Victory points">
+            {(labelId) => (
+              <Stepper
+                {...lock}
+                {...GAME_SETTINGS_LIMITS.victoryPoints}
+                labelId={labelId}
+                name="victory points"
+                onChange={(next) => updateSetting("victoryPoints", next)}
                 value={settings.victoryPoints}
               />
-            </SettingPanel>
-            <SettingPanel>
-              <SliderSetting
-                disabled={disabled}
-                id={`${id}-discard-limit`}
-                label="Card Discard Limit"
-                max={20}
-                min={5}
-                onChange={(value) => updateSetting("discardLimit", value)}
+            )}
+          </Setting>
+          <Setting icon={cardsIcon} label="Discard limit">
+            {(labelId) => (
+              <Stepper
+                {...lock}
+                {...GAME_SETTINGS_LIMITS.discardLimit}
+                labelId={labelId}
+                name="discard limit"
+                onChange={(next) => updateSetting("discardLimit", next)}
                 value={settings.discardLimit}
               />
-            </SettingPanel>
-            <SettingPanel>
-              <TurnTimerField
-                disabled={disabled}
-                id={`${id}-turn-timer`}
-                onChange={(value) => updateSetting("turnTimerSeconds", value)}
-                value={settings.turnTimerSeconds}
-              />
-            </SettingPanel>
-          </SettingsCategory>
-
-          <SettingsCategory title="Bots">
-            <SettingPanel>
-              <BotDifficultyField
-                disabled={disabled || botCount === 0}
-                id={`${id}-bot-difficulty`}
-                onChange={(value) => emit(settings, botCount, value)}
-                tooltip={selectedDifficulty.description}
-                value={botDifficulty}
-              />
-            </SettingPanel>
-          </SettingsCategory>
-
-          <SettingsCategory title="Table">
-            <SettingPanel>
-              <Field className="gap-1">
-                <FieldLabel
-                  htmlFor={`${id}-players`}
-                  className="flex items-center gap-1.5 text-sm font-semibold"
-                >
-                  Players
-                  <InfoTooltip content="How many seats the table has. 3–4 use the standard island, 5–6 the wide island, and 7–8 the grand island." />
-                </FieldLabel>
-                <Select
-                  disabled={disabled}
-                  value={String(settings.maxPlayers)}
-                  onValueChange={(value) => {
-                    const nextSize = tableSizeForPlayerCount(Number(value));
-                    if (!nextSize || nextSize.maxPlayers < humanCount) return;
-                    const nextBotLimit = getBotCapacity(nextSize.maxPlayers, humanCount);
-                    emit(
-                      { ...settings, map: nextSize.map, maxPlayers: nextSize.maxPlayers },
-                      toBotCount(Math.min(botCount, nextBotLimit)),
-                    );
-                  }}
-                >
-                  <SelectTrigger
-                    id={`${id}-players`}
-                    className="flex h-8 w-full items-center justify-between px-3 text-sm font-medium"
-                  >
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      {PLAYER_COUNT_OPTIONS.map((playerCount) => (
-                        <SelectItem
-                          key={playerCount}
-                          value={String(playerCount)}
-                          disabled={playerCount < humanCount}
-                        >
-                          {playerCount} players
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-              </Field>
-            </SettingPanel>
-            <RuleToggle
-              checked={settings.friendlyRobber}
-              description="Robber cannot target a player with 2 VP or fewer."
-              disabled={disabled}
-              id={`${id}-friendly-robber`}
-              label="Friendly Robber"
-              name="friendlyRobber"
-              onChange={(checked) => updateSetting("friendlyRobber", checked)}
-              variant="card"
-            />
-            <RuleToggle
-              checked={settings.balancedDice}
-              description="Reduces short streaks while keeping rolls fair."
-              disabled={disabled}
-              id={`${id}-balanced-dice`}
-              label="Balanced Dice"
-              name="balancedDice"
-              onChange={(checked) => updateSetting("balancedDice", checked)}
-              variant="card"
-            />
-            <RuleToggle
-              checked={settings.hideBankCards}
-              description="Hides exact remaining bank counts."
-              disabled={disabled}
-              id={`${id}-hide-bank-counts`}
-              label="Hide Bank Cards"
-              name="hideBankCards"
-              onChange={(checked) => updateSetting("hideBankCards", checked)}
-              variant="card"
-            />
-          </SettingsCategory>
+            )}
+          </Setting>
         </div>
-      </fieldset>
-    );
-  }
+        <p className="lobby-hint">
+          Holding more than {settings.discardLimit} cards when a 7 is rolled? Discard half.
+        </p>
+        <Setting icon={timerIcon} label="Turn timer">
+          {(labelId) => (
+            <ChoiceGroup
+              {...lock}
+              choices={TURN_TIMER_CHOICES}
+              labelId={labelId}
+              onChange={(seconds) => updateSetting("turnTimerSeconds", seconds)}
+              value={settings.turnTimerSeconds}
+            />
+          )}
+        </Setting>
+      </SettingsSection>
 
-  return (
-    <fieldset className="m-0 flex flex-col gap-4 border-0 p-0" disabled={disabled}>
-      <legend className="sr-only">Standard Game Settings</legend>
+      <SettingsSection title="Bots">
+        <DifficultyPicker
+          {...lock}
+          onChange={(botDifficulty) => onChange({ ...value, botDifficulty })}
+          value={value.botDifficulty}
+        />
+        <p className="lobby-hint">{BOT_DIFFICULTY_DETAILS[value.botDifficulty].description}</p>
+      </SettingsSection>
 
-      <div className="grid grid-cols-1 gap-5 md:grid-cols-2 md:gap-6 md:divide-x md:divide-border">
-        <section className="flex flex-col gap-3">
-          <SliderSetting
-            disabled={disabled}
-            id={`${id}-victory-points`}
-            label="Points to Win"
-            max={13}
-            min={3}
-            onChange={(value) => updateSetting("victoryPoints", value)}
-            value={settings.victoryPoints}
-          />
-
-          <SliderSetting
-            disabled={disabled}
-            id={`${id}-discard-limit`}
-            label="Card Discard Limit"
-            max={20}
-            min={5}
-            onChange={(value) => updateSetting("discardLimit", value)}
-            value={settings.discardLimit}
-          />
-
-          <Field className="gap-1">
-            <FieldLabel
-              htmlFor={`${id}-bot-count`}
-              className="flex items-center gap-1.5 text-sm font-semibold text-foreground"
-            >
-              Bot Seats
-              <InfoTooltip
-                content={
-                  botLimit === 0
-                    ? "No bot seats available."
-                    : botFloor === botLimit
-                      ? `${botLimit} bot seat${botLimit === 1 ? "" : "s"} required.`
-                      : `Choose ${botFloor}–${botLimit} bot seats.`
-                }
-              />
-            </FieldLabel>
-            <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                aria-label="Remove one bot seat"
-                className="size-8 shrink-0 font-bold"
-                disabled={disabled || botCount <= botFloor}
-                onClick={() => emit(settings, toBotCount(botCount - 1))}
-                size="icon-sm"
-                variant="outline"
-              >
-                −
-              </Button>
-              <Input
-                id={`${id}-bot-count`}
-                className="h-8 w-14 shrink-0 px-0 text-center font-mono text-sm font-bold"
-                disabled={disabled}
-                readOnly
-                value={String(botCount)}
-              />
-              <Button
-                type="button"
-                aria-label="Add one bot seat"
-                className="size-8 shrink-0 font-bold"
-                disabled={disabled || botCount >= botLimit}
-                onClick={() => emit(settings, toBotCount(botCount + 1))}
-                size="icon-sm"
-                variant="outline"
-              >
-                +
-              </Button>
-            </div>
-          </Field>
-        </section>
-
-        <section className="flex flex-col gap-3 md:pl-6">
-          <TurnTimerField
-            disabled={disabled}
-            id={`${id}-turn-timer`}
-            onChange={(value) => updateSetting("turnTimerSeconds", value)}
-            value={settings.turnTimerSeconds}
-          />
-
-          <Field className="gap-1">
-            <FieldLabel
-              htmlFor={`${id}-max-players`}
-              className="flex items-center gap-1.5 text-sm font-semibold text-foreground"
-            >
-              Max Players
-              <InfoTooltip content={selectedMap.description} />
-            </FieldLabel>
-            <Select
-              disabled={disabled}
-              value={String(settings.maxPlayers)}
-              onValueChange={(value) => {
-                const maxPlayers = Number(value) as BaseGameSettings["maxPlayers"];
-                const nextBotLimit = getBotCapacity(maxPlayers, humanCount);
-                const nextBotFloor = toBotCount(Math.min(minBotCount, nextBotLimit));
-                emit(
-                  { ...settings, maxPlayers },
-                  toBotCount(Math.max(nextBotFloor, Math.min(botCount, nextBotLimit))),
-                );
-              }}
-            >
-              <SelectTrigger
-                id={`${id}-max-players`}
-                className="flex h-8 w-full items-center justify-between px-3 text-sm font-medium"
-              >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  {selectedMap.playerCounts.map((playerCount) => (
-                    <SelectItem
-                      key={playerCount}
-                      value={String(playerCount)}
-                      disabled={playerCount < minPlayerCount}
-                    >
-                      {playerCount} players
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-          </Field>
-
-          <BotDifficultyField
-            disabled={disabled || botCount === 0}
-            id={`${id}-bot-difficulty`}
-            onChange={(value) => emit(settings, botCount, value)}
-            tooltip={selectedDifficulty.description}
-            value={botDifficulty}
-          />
-
-          <Field className="gap-1">
-            <FieldLabel
-              htmlFor={`${id}-map`}
-              className="flex items-center gap-1.5 text-sm font-semibold text-foreground"
-            >
-              Map Layout
-              <InfoTooltip content={selectedMap.description} />
-            </FieldLabel>
-            <Select
-              disabled={disabled}
-              value={settings.map}
-              onValueChange={(value) => applyMap(value as GameMapId)}
-            >
-              <SelectTrigger
-                id={`${id}-map`}
-                className="flex h-8 w-full items-center justify-between px-3 text-sm font-medium"
-              >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  {AVAILABLE_GAME_MAPS.map((map) => (
-                    <SelectItem
-                      key={map.id}
-                      value={map.id}
-                      disabled={
-                        getCompatiblePlayerCount(map.id, humanCount, settings.maxPlayers) === null
-                      }
-                    >
-                      {map.label}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-          </Field>
-        </section>
-      </div>
-
-      <section>
-        <div className="grid sm:grid-cols-3 sm:gap-5">
-          <RuleToggle
-            checked={settings.friendlyRobber}
-            description="Robber cannot target players with 2 VP or fewer."
-            disabled={disabled}
-            id={`${id}-friendly-robber`}
-            label="Friendly Robber"
-            name="friendlyRobber"
-            onChange={(checked) => updateSetting("friendlyRobber", checked)}
-          />
-          <RuleToggle
-            checked={settings.balancedDice}
-            description="Reduces extreme dice roll streaks."
-            disabled={disabled}
-            id={`${id}-balanced-dice`}
-            label="Balanced Dice"
-            name="balancedDice"
-            onChange={(checked) => updateSetting("balancedDice", checked)}
-          />
-          <RuleToggle
-            checked={settings.hideBankCards}
-            description="Hides exact card counts in the bank."
-            disabled={disabled}
-            id={`${id}-hide-bank-counts`}
-            label="Hide Bank Cards"
-            name="hideBankCards"
-            onChange={(checked) => updateSetting("hideBankCards", checked)}
-          />
+      <SettingsSection title="House rules">
+        <div className="grid auto-rows-fr gap-3 @min-[34rem]:grid-cols-3">
+          {HOUSE_RULE_OPTIONS.map((rule) => (
+            <RuleTile
+              {...lock}
+              artSrc={rule.artSrc}
+              checked={settings[rule.value]}
+              description={rule.description}
+              key={rule.value}
+              label={rule.label}
+              onChange={(checked) => updateSetting(rule.value, checked)}
+            />
+          ))}
         </div>
-      </section>
-    </fieldset>
-  );
-}
-
-function TurnTimerField({
-  disabled,
-  id,
-  onChange,
-  value,
-}: {
-  readonly disabled: boolean;
-  readonly id: string;
-  readonly onChange: (value: BaseGameSettings["turnTimerSeconds"]) => void;
-  readonly value: BaseGameSettings["turnTimerSeconds"];
-}) {
-  return (
-    <Field className="gap-1">
-      <FieldLabel htmlFor={id} className="flex items-center gap-1.5 text-sm font-semibold">
-        Turn Timer
-        <InfoTooltip content="Timed turns display a shared turn countdown." />
-      </FieldLabel>
-      <Select
-        disabled={disabled}
-        value={String(value)}
-        onValueChange={(next) => onChange(Number(next) as BaseGameSettings["turnTimerSeconds"])}
-      >
-        <SelectTrigger
-          id={id}
-          className="flex h-8 w-full items-center justify-between px-3 text-sm font-medium"
-        >
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectGroup>
-            {TURN_TIMER_OPTIONS.map((seconds) => (
-              <SelectItem key={seconds} value={String(seconds)}>
-                {seconds === 0 ? "Off (Untimed)" : `${seconds} seconds`}
-              </SelectItem>
-            ))}
-          </SelectGroup>
-        </SelectContent>
-      </Select>
-    </Field>
-  );
-}
-
-function BotDifficultyField({
-  disabled,
-  id,
-  onChange,
-  tooltip,
-  value,
-}: {
-  readonly disabled: boolean;
-  readonly id: string;
-  readonly onChange: (value: BotDifficulty) => void;
-  readonly tooltip: string;
-  readonly value: BotDifficulty;
-}) {
-  return (
-    <Field className="gap-1">
-      <FieldLabel htmlFor={id} className="flex items-center gap-1.5 text-sm font-semibold">
-        Bot Difficulty
-        <InfoTooltip content={tooltip} />
-      </FieldLabel>
-      <Select
-        disabled={disabled}
-        value={value}
-        onValueChange={(next) => onChange(next as BotDifficulty)}
-      >
-        <SelectTrigger
-          id={id}
-          className="flex h-8 w-full items-center justify-between px-3 text-sm font-medium"
-        >
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectGroup>
-            {BOT_DIFFICULTY_OPTIONS.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectGroup>
-        </SelectContent>
-      </Select>
-    </Field>
-  );
-}
-
-function SettingsCategory({
-  children,
-  title,
-}: {
-  readonly children: ReactNode;
-  readonly title: string;
-}) {
-  return (
-    <section className="flex min-h-0 flex-col gap-2 rounded-2xl bg-muted/30 p-3">
-      <h3 className="px-1 text-sm font-semibold">{title}</h3>
-      <div className="flex flex-col gap-2">{children}</div>
-    </section>
-  );
-}
-
-function SettingPanel({ children }: { readonly children: ReactNode }) {
-  return <div className="rounded-2xl bg-muted/40 px-4 py-3">{children}</div>;
-}
-
-function SliderSetting({
-  disabled,
-  id,
-  label,
-  max,
-  min,
-  onChange,
-  step = 1,
-  value,
-}: {
-  readonly disabled: boolean;
-  readonly id: string;
-  readonly label: string;
-  readonly max: number;
-  readonly min: number;
-  readonly onChange: (value: number) => void;
-  readonly step?: number;
-  readonly value: number;
-}) {
-  return (
-    <Field className="gap-2">
-      <div className="flex items-center justify-between gap-3">
-        <FieldLabel htmlFor={id} className="text-sm font-semibold">
-          {label}
-        </FieldLabel>
-        <span className="font-mono text-sm font-bold">{value}</span>
-      </div>
-      <Slider
-        disabled={disabled}
-        id={id}
-        max={max}
-        min={min}
-        onValueChange={(next) => {
-          const nextValue = Array.isArray(next) ? next[0] : next;
-          if (typeof nextValue === "number") {
-            onChange(clampInteger(nextValue, min, max));
-          }
-        }}
-        step={step}
-        value={[value]}
-      />
-      <div className="flex justify-between text-xs text-muted-foreground">
-        <span>{min}</span>
-        <span>{max}</span>
-      </div>
-    </Field>
-  );
-}
-
-function RuleToggle({
-  checked,
-  description,
-  disabled,
-  id,
-  label,
-  name,
-  onChange,
-  variant = "inline",
-}: {
-  readonly checked: boolean;
-  readonly description: string;
-  readonly disabled: boolean;
-  readonly id: string;
-  readonly label: string;
-  readonly name: string;
-  readonly onChange: (checked: boolean) => void;
-  readonly variant?: "card" | "inline";
-}) {
-  return (
-    <div
-      className={
-        variant === "card"
-          ? "flex items-center justify-between gap-3 rounded-2xl bg-muted/40 px-4 py-3"
-          : "flex items-center justify-between gap-3 py-3 sm:py-1"
-      }
-    >
-      <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <Label
-          htmlFor={id}
-          className="inline-flex cursor-pointer items-center gap-1.5 text-sm font-semibold text-foreground"
-        >
-          {label}
-          <InfoTooltip content={description} />
-        </Label>
-      </div>
-      <Switch
-        id={id}
-        checked={checked}
-        disabled={disabled}
-        name={name}
-        onCheckedChange={onChange}
-        className="shrink-0"
-      />
+      </SettingsSection>
     </div>
   );
 }
 
-function clampInteger(value: number, min: number, max: number): number {
-  if (!Number.isFinite(value)) {
-    return min;
-  }
-  return Math.min(max, Math.max(min, Math.round(value)));
+interface LockProps {
+  readonly disabled: boolean;
+  readonly readOnly: boolean;
+}
+
+function SettingsSection({ children, title }: { children: ReactNode; title: string }) {
+  const titleId = useId();
+  return (
+    <section aria-labelledby={titleId} className="flex flex-col gap-3">
+      <h3 className="lobby-section-title" id={titleId}>
+        {title}
+      </h3>
+      {children}
+    </section>
+  );
+}
+
+function Setting({
+  children,
+  icon,
+  label,
+}: {
+  children: (labelId: string) => ReactNode;
+  icon: IconifyIcon;
+  label: string;
+}) {
+  const labelId = useId();
+  return (
+    <div className="flex flex-col gap-2">
+      <p className="flex items-center gap-2 text-sm font-extrabold" id={labelId}>
+        <Icon className="size-5 text-accent" icon={icon} />
+        {label}
+      </p>
+      {children(labelId)}
+    </div>
+  );
+}
+
+function MapPicker({
+  disabled,
+  humanCount,
+  maxPlayers,
+  onChange,
+  readOnly,
+  value,
+}: LockProps & {
+  humanCount: number;
+  maxPlayers: PlayerCount;
+  onChange: (map: GameMapId) => void;
+  value: GameMapId;
+}) {
+  return (
+    <RadioGroup<GameMapId>
+      aria-label="Island"
+      className="grid grid-cols-3 gap-2 @md:gap-3"
+      disabled={disabled}
+      onValueChange={onChange}
+      readOnly={readOnly}
+      value={value}
+    >
+      {AVAILABLE_GAME_MAPS.map((map) => {
+        const tooSmall = getCompatiblePlayerCount(map.id, humanCount, maxPlayers) === null;
+        return (
+          <Radio.Root
+            className="game-choice-tile lobby-map-tile flex min-w-0 flex-col items-center gap-1 p-2 text-center"
+            disabled={tooSmall}
+            key={map.id}
+            value={map.id}
+          >
+            <MapPreview className="h-20 w-full @xl:h-28" mapId={map.id} />
+            <span className="w-full truncate font-display text-base leading-tight tracking-wide">
+              {GAME_MAP_NAMES[map.id]}
+            </span>
+            <span className="w-full truncate text-xs font-bold text-muted-foreground">
+              {tooSmall ? `Too small for ${humanCount}` : `${map.playerCounts.join("–")} players`}
+            </span>
+          </Radio.Root>
+        );
+      })}
+    </RadioGroup>
+  );
+}
+
+function DifficultyPicker({
+  disabled,
+  onChange,
+  readOnly,
+  value,
+}: LockProps & {
+  onChange: (value: BotDifficulty) => void;
+  value: BotDifficulty;
+}) {
+  return (
+    <RadioGroup<BotDifficulty>
+      aria-label="Bot difficulty"
+      className="grid grid-cols-3 gap-2 @md:gap-3"
+      disabled={disabled}
+      onValueChange={onChange}
+      readOnly={readOnly}
+      value={value}
+    >
+      {BOT_DIFFICULTY_OPTIONS.map((option) => (
+        <Radio.Root
+          className="game-choice-tile flex min-w-0 flex-col items-center gap-1 p-2 text-center"
+          key={option.value}
+          value={option.value}
+        >
+          <Image
+            alt=""
+            className="size-16 object-contain @xl:size-20"
+            height={160}
+            src={option.artSrc}
+            width={160}
+          />
+          <span className="font-display text-base leading-tight tracking-wide">{option.label}</span>
+        </Radio.Root>
+      ))}
+    </RadioGroup>
+  );
+}
+
+function ChoiceGroup<Value extends number | string>({
+  choices,
+  disabled,
+  labelId,
+  onChange,
+  readOnly,
+  value,
+}: LockProps & {
+  choices: readonly { disabled?: boolean; label: string; value: Value }[];
+  labelId: string;
+  onChange: (value: Value) => void;
+  value: Value;
+}) {
+  return (
+    <RadioGroup<Value>
+      aria-labelledby={labelId}
+      className="grid auto-cols-fr grid-flow-col gap-2"
+      disabled={disabled}
+      onValueChange={onChange}
+      readOnly={readOnly}
+      value={value}
+    >
+      {choices.map((choice) => (
+        <Radio.Root
+          className={(state) =>
+            cn(
+              buttonVariants({
+                size: "game-sm",
+                variant: state.checked ? "game" : "game-secondary",
+              }),
+              "min-w-0 px-2 data-readonly:pointer-events-none max-lg:h-11 pointer-coarse:h-11",
+            )
+          }
+          disabled={choice.disabled}
+          key={choice.value}
+          value={choice.value}
+        >
+          {choice.label}
+        </Radio.Root>
+      ))}
+    </RadioGroup>
+  );
+}
+
+function Stepper({
+  disabled,
+  labelId,
+  max,
+  min,
+  name,
+  onChange,
+  readOnly,
+  value,
+}: LockProps & {
+  labelId: string;
+  max: number;
+  min: number;
+  name: string;
+  onChange: (value: number) => void;
+  value: number;
+}) {
+  return (
+    <div
+      aria-labelledby={labelId}
+      className="lobby-well flex items-center gap-2 p-1.5"
+      role="group"
+    >
+      {readOnly ? null : (
+        <Button
+          aria-label={`Lower ${name}`}
+          disabled={disabled || value <= min}
+          onClick={() => onChange(value - 1)}
+          size="game-md"
+          variant="game-icon"
+        >
+          <Icon icon={minusIcon} />
+        </Button>
+      )}
+      <output aria-live="polite" className="lobby-counter flex-1">
+        {value}
+      </output>
+      {readOnly ? null : (
+        <Button
+          aria-label={`Raise ${name}`}
+          disabled={disabled || value >= max}
+          onClick={() => onChange(value + 1)}
+          size="game-md"
+          variant="game-icon"
+        >
+          <Icon icon={addIcon} />
+        </Button>
+      )}
+    </div>
+  );
+}
+
+function RuleTile({
+  artSrc,
+  checked,
+  description,
+  disabled,
+  label,
+  onChange,
+  readOnly,
+}: LockProps & {
+  artSrc: string;
+  checked: boolean;
+  description: string;
+  label: string;
+  onChange: (checked: boolean) => void;
+}) {
+  const labelId = useId();
+  const descriptionId = useId();
+  return (
+    <Switch.Root
+      aria-describedby={descriptionId}
+      aria-labelledby={labelId}
+      checked={checked}
+      className="game-choice-tile lobby-rule-tile grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3 p-3 text-left @min-[34rem]:grid-cols-1 @min-[34rem]:justify-items-center @min-[34rem]:text-center"
+      disabled={disabled}
+      onCheckedChange={onChange}
+      readOnly={readOnly}
+    >
+      <Image
+        alt=""
+        className="size-14 object-contain @min-[34rem]:size-16"
+        height={128}
+        src={artSrc}
+        width={128}
+      />
+      <span className="flex min-w-0 flex-col gap-1 @min-[34rem]:items-center">
+        <span className="flex items-center gap-2">
+          <span className="font-display text-base leading-tight tracking-wide" id={labelId}>
+            {label}
+          </span>
+          <span className="lobby-rule-state">{checked ? "On" : "Off"}</span>
+        </span>
+        <span className="text-sm leading-snug text-muted-foreground" id={descriptionId}>
+          {description}
+        </span>
+      </span>
+    </Switch.Root>
+  );
 }
