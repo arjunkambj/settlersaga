@@ -1,0 +1,9 @@
+import { cronJobs } from "convex/server";
+
+import { internal } from "./_generated/api";
+
+const crons = cronJobs();
+
+crons.interval("purge stale rooms", { hours: 1 }, internal.cleanup.purgeStaleRooms);
+
+export default crons;
