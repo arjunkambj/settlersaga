@@ -29,8 +29,10 @@ import {
   RESOURCE_CARD_ASSET_PATHS,
 } from "@/constants/game/card-assets";
 import { RESOURCE_LABELS } from "@/constants/game/labels";
+import { getFlightEndpointKey } from "@/lib/game/card-flights";
 import { getResourceCardChanges, type ResourceCardChange } from "@/lib/game/resource-card-changes";
 
+import { useCardFlights, useShownCounts } from "./card-flight-context";
 import { useHandDock } from "./hand-dock";
 import { useMediaQuery } from "./use-media-query";
 
@@ -39,6 +41,8 @@ const DEVELOPMENT_STACK_ID = "game-hand-dev-cards";
 const DOCK_ROW_QUERY = "(min-width: 48rem)";
 /** From lg up the development cards fan out in the room kept for them; at md they stack. */
 const DEVELOPMENT_FAN_QUERY = "(min-width: 64rem)";
+/** The resource cards' counts, as the card flights name them. */
+const HAND_TARGETS = RESOURCE_ORDER.map(getHandTarget);
 
 /** Names that fit under a hand card. */
 const DEVELOPMENT_CARD_SHORT_LABELS: Readonly<Record<DevelopmentCardType, string>> = {
@@ -51,6 +55,8 @@ const DEVELOPMENT_CARD_SHORT_LABELS: Readonly<Record<DevelopmentCardType, string
 
 interface ResourceAnimation extends ResourceCardChange {
   id: string;
+  /** Stands in for cards a dropped flight never landed (card-flight-layer.tsx). */
+  missed?: true;
   /** Where the card's center was when the change landed, from the shelf's left edge. */
   x: number;
 }
@@ -112,11 +118,22 @@ function CardArt({ path }: { path: string }) {
   );
 }
 
-/** A count chip; callers key it by its count so it pops whenever the number changes. */
-function CountChip({ count }: { count: number }) {
+/**
+ * A count chip that pops when its number changes. A change that cards fly in or out of the hand
+ * shows only as they land or leave (`shown`, from useShownCounts), and then only brightens with
+ * their landing (card-flight-layer.tsx), so one card never pops twice.
+ */
+function CountChip({ count, shown = count }: { count: number; shown?: number }) {
+  const [pop, setPop] = useState({ count, key: 0, shown });
+  let { key } = pop;
+  if (pop.count !== count || pop.shown !== shown) {
+    // Remounted, so popped, only when the count and the number shown change together.
+    key += pop.count !== count && pop.shown !== shown ? 1 : 0;
+    setPop({ count, key, shown });
+  }
   return (
-    <span aria-hidden="true" className="game-count-chip motion-safe:animate-game-pop">
-      {count}
+    <span aria-hidden="true" className="game-count-chip motion-safe:animate-game-pop" key={key}>
+      {shown}
     </span>
   );
 }
@@ -151,6 +168,8 @@ export function ResourceHand({
   playableDevelopmentCards: readonly PlayableDevelopmentCardType[];
 }) {
   const { interaction } = useHandDock();
+  const flightStore = useCardFlights()?.store;
+  const shownCountOf = useShownCounts(HAND_TARGETS);
   const dockRow = useMediaQuery(DOCK_ROW_QUERY);
   const fanLayout = useMediaQuery(DEVELOPMENT_FAN_QUERY);
   const shelfRef = useRef<HTMLDivElement>(null);
@@ -199,28 +218,24 @@ export function ResourceHand({
       return;
     }
 
-    const changes = getResourceCardChanges(previousSnapshot.resources, nextSnapshot.resources);
+    // Cards flying in or out from the table (card-flight-layer.tsx) show themselves.
+    const changes = getResourceCardChanges(
+      previousSnapshot.resources,
+      nextSnapshot.resources,
+    ).filter((change) => !flightStore?.isCarried(actionNumber, getHandTarget(change.resource)));
     const shelf = shelfRef.current;
     if (changes.length === 0 || !shelf) {
       return;
     }
 
-    // Flights land on the card wherever the row is aligned or scrolled, kept inside the shelf.
-    const shelfBox = shelf.getBoundingClientRect();
-    const cardCenter = (resource: ResourceType) => {
-      const cardBox = shelf.querySelector(`[data-resource="${resource}"]`)?.getBoundingClientRect();
-      const center = cardBox ? cardBox.left + cardBox.width / 2 - shelfBox.left : 0;
-      return Math.min(Math.max(center, 0), shelfBox.width);
-    };
-    setResourceAnimations(
-      changes.map((change) => ({
-        ...change,
-        id: `${me.id}:${actionNumber}:${change.resource}`,
-        x: cardCenter(change.resource),
-      })),
-    );
+    const animations = placeResourceAnimations(shelf, changes, `${me.id}:${actionNumber}`);
+    setResourceAnimations((current) => [
+      ...current.filter((animation) => animation.missed),
+      ...animations,
+    ]);
   }, [
     actionNumber,
+    flightStore,
     me.id,
     me.resources.brick,
     me.resources.sheep,
@@ -228,6 +243,36 @@ export function ResourceHand({
     me.resources.tree,
     me.resources.wheat,
   ]);
+
+  // Cards a dropped burst was to fly into or out of the hand: the hand shows them itself.
+  useEffect(() => {
+    if (!flightStore) {
+      return;
+    }
+    let dropCount = 0;
+    return flightStore.onMissed((missed) => {
+      const changes = RESOURCE_ORDER.flatMap((resource): ResourceCardChange[] => {
+        const target = getHandTarget(resource);
+        const delta = missed.reduce(
+          (total, change) => (change.target === target ? total + change.delta : total),
+          0,
+        );
+        return delta === 0
+          ? []
+          : [{ amount: Math.abs(delta), direction: delta > 0 ? "receive" : "spend", resource }];
+      });
+      const shelf = shelfRef.current;
+      if (changes.length === 0 || !shelf) {
+        return;
+      }
+      dropCount += 1;
+      const animations = placeResourceAnimations(shelf, changes, `${me.id}:dropped:${dropCount}`);
+      setResourceAnimations((current) => [
+        ...current,
+        ...animations.map((animation) => ({ ...animation, missed: true as const })),
+      ]);
+    });
+  }, [flightStore, me.id]);
 
   const updateScrollEdges = () => {
     const cardList = cardListRef.current;
@@ -317,7 +362,7 @@ export function ResourceHand({
         <span aria-hidden="true" className="game-hand-card-face">
           <CardArt path={card.path} />
         </span>
-        <CountChip count={card.count} key={card.count} />
+        <CountChip count={card.count} />
         <span aria-hidden="true" className="game-hand-card-label">
           {DEVELOPMENT_CARD_SHORT_LABELS[card.id]}
         </span>
@@ -347,6 +392,7 @@ export function ResourceHand({
     <Element
       className="game-hand-card"
       data-development
+      data-hand-dev
       data-playable={stackPlayableCount > 0 || undefined}
       data-stack
     >
@@ -378,7 +424,7 @@ export function ResourceHand({
   // From md up: the room kept for the development cards, the same width whatever it holds. With
   // none, a dashed card; its words run shorter where the room is one card wide (md).
   const developmentArea = !dockRow ? null : developmentKinds === 0 ? (
-    <li className="game-hand-dev" data-empty>
+    <li className="game-hand-dev" data-empty data-hand-dev>
       <span aria-hidden="true" className="game-hand-dev-empty">
         <CardArt path={DEVELOPMENT_CARD_BACK_ASSET_PATH} />
       </span>
@@ -392,7 +438,7 @@ export function ResourceHand({
   ) : showStack ? (
     <li className="game-hand-dev">{renderStack("div")}</li>
   ) : (
-    <li className="game-hand-dev">
+    <li className="game-hand-dev" data-hand-dev>
       <ul
         aria-label="Development cards"
         className="game-hand-fan"
@@ -447,6 +493,8 @@ export function ResourceHand({
             const displayedCount = picking?.preserveHandAppearance
               ? me.resources[resource]
               : available;
+            // Cards still flying in or out count as they land or leave.
+            const shownCount = shownCountOf(getHandTarget(resource), displayedCount);
             const name = RESOURCE_LABELS[resource];
 
             return (
@@ -457,7 +505,7 @@ export function ResourceHand({
                     : `${name}: ${me.resources[resource]}`
                 }
                 className="game-hand-card"
-                data-empty={displayedCount === 0 || undefined}
+                data-empty={shownCount === 0 || undefined}
                 data-gained={
                   resourceAnimations.some(
                     (animation) =>
@@ -471,7 +519,7 @@ export function ResourceHand({
                 <span aria-hidden="true" className="game-hand-card-face">
                   <CardArt path={RESOURCE_CARD_ASSET_PATHS[resource]} />
                 </span>
-                <CountChip count={displayedCount} key={displayedCount} />
+                <CountChip count={displayedCount} shown={shownCount} />
                 {selected > 0 && !picking?.preserveHandAppearance ? (
                   <span aria-hidden="true" className="game-hand-picked">
                     {selected}
@@ -562,6 +610,32 @@ export function ResourceHand({
       </div>
     </section>
   );
+}
+
+/** The hand card's count, as the flights and the store name it. */
+function getHandTarget(resource: ResourceType): string {
+  return getFlightEndpointKey({ kind: "hand", resource });
+}
+
+/** Each change as a flight onto its card, wherever the row is aligned or scrolled. */
+function placeResourceAnimations(
+  shelf: HTMLElement,
+  changes: readonly ResourceCardChange[],
+  idPrefix: string,
+): ResourceAnimation[] {
+  // Kept inside the shelf.
+  const shelfBox = shelf.getBoundingClientRect();
+  return changes.map((change) => {
+    const cardBox = shelf
+      .querySelector(`[data-resource="${change.resource}"]`)
+      ?.getBoundingClientRect();
+    const center = cardBox ? cardBox.left + cardBox.width / 2 - shelfBox.left : 0;
+    return {
+      ...change,
+      id: `${idPrefix}:${change.resource}`,
+      x: Math.min(Math.max(center, 0), shelfBox.width),
+    };
+  });
 }
 
 /**

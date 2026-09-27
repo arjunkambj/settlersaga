@@ -5,6 +5,7 @@
 @import "./styles/game-board.css";
 @import "./styles/game-hud.css";
 @import "./styles/game-dock.css";
+@import "./styles/game-flights.css";
 @import "./styles/game-layout.css";
 @import "./styles/lobby.css";
 @import "./styles/menu.css";

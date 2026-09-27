@@ -1,0 +1,69 @@
+/* --------------------------------------------------------------------------
+   Card flights: cards that fly between the board, the bank and the players
+   as moves land (components/game/card-flight-layer.tsx). A fixed layer over
+   the HUD, under the results and dialogs; nothing on it takes a pointer.
+   ----------------------------------------------------------------------- */
+
+.card-flight-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 38;
+  overflow: hidden;
+  pointer-events: none;
+  contain: strict;
+}
+
+/* Placed and moved only by its animation's transform. */
+.card-flight {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 2rem;
+  height: 3rem;
+  border-radius: 0.3125rem;
+  box-shadow: var(--ui-shadow-control);
+  opacity: 0;
+  object-fit: cover;
+  transform-origin: center;
+  will-change: opacity, transform;
+}
+
+/* A little larger across a wide table, where the trips are long (SPRITE_SIZES). */
+@media (width >= 80rem) {
+  .card-flight {
+    width: 2.25rem;
+    height: 3.375rem;
+  }
+}
+
+/* "+2" by the cards that just landed, "−1" by the ones that just left: the flights' own count
+   badge, green for a gain and red for a loss. */
+.card-flight-label {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: grid;
+  min-width: 1.5rem;
+  height: 1.375rem;
+  place-items: center;
+  padding-inline: 0.4375rem;
+  border-radius: var(--ui-radius-pill);
+  background: var(--ui-ready);
+  box-shadow:
+    0 0 0 1.5px var(--game-outline),
+    var(--ui-shadow-control);
+  color: var(--ui-ink-on-ready);
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  white-space: nowrap;
+  opacity: 0;
+  will-change: opacity, transform;
+}
+
+.card-flight-label[data-tone="loss"] {
+  background: var(--ui-danger-bottom);
+  color: var(--ui-ink-on-primary);
+}

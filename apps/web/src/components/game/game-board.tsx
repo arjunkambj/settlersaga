@@ -6,10 +6,12 @@ import { Icon, type IconifyIcon } from "@iconify/react/offline";
 import Image from "next/image";
 import {
   useEffect,
+  useImperativeHandle,
   useMemo,
   useRef,
   useState,
   type CSSProperties,
+  type Ref,
   type KeyboardEvent as ReactKeyboardEvent,
   type MouseEvent as ReactMouseEvent,
 } from "react";
@@ -26,6 +28,7 @@ import {
   getEdgePlacement,
   getPointStyle,
   getPortPlacement,
+  getTilePoint,
   type BoardLayout,
 } from "@/lib/game/board-layout";
 import { BOARD_VIEWPORT_SCALE, DEFAULT_BOARD_VIEWPORT } from "@/lib/game/board-viewport";
@@ -57,6 +60,14 @@ interface BoardInspection {
   title: string;
 }
 
+/** Read-only screen positions on the board under the current camera, for cards that fly from it. */
+export interface BoardScreenPoints {
+  /** The middle of the board's area. */
+  getCenterClientPoint(): { x: number; y: number } | null;
+  /** A tile's center in client pixels, kept inside the board's area when it is panned away. */
+  getTileClientPoint(tileId: string): { x: number; y: number } | null;
+}
+
 interface InspectableBoardItemProps {
   inspection: BoardInspection;
   isKeyboardTarget: boolean;
@@ -73,6 +84,7 @@ export function GameBoard({
   onCommand,
   onPlacementExit,
   pending,
+  screenPointsRef,
 }: {
   buildMode: BoardBuildMode;
   game: PlayerGameView;
@@ -81,6 +93,7 @@ export function GameBoard({
   onCommand(command: GameCommand, successMessage: string): void;
   onPlacementExit(mode: BoardTargetMode): void;
   pending: boolean;
+  screenPointsRef?: Ref<BoardScreenPoints>;
 }) {
   const playersById = useMemo(
     () => new Map(game.players.map((player) => [player.id, player])),
@@ -186,6 +199,37 @@ export function GameBoard({
     const boardPoint = mapClientPointToBoard({ x: clientX, y: clientY }, bounds, BOARD_CANVAS);
     return boardPoint ? findNearestBoardTarget(boardTargets, boardPoint) : null;
   };
+  useImperativeHandle(
+    screenPointsRef,
+    () => ({
+      getCenterClientPoint() {
+        const area = boardShellRef.current?.getBoundingClientRect();
+        return area ? { x: area.left + area.width / 2, y: area.top + area.height / 2 } : null;
+      },
+      getTileClientPoint(tileId) {
+        const tile = game.board.tiles.find((candidate) => candidate.id === tileId);
+        const plane = boardPlaneRef.current?.getBoundingClientRect();
+        const area = boardShellRef.current?.getBoundingClientRect();
+        if (!tile || !plane || !area) {
+          return null;
+        }
+        const point = getTilePoint(boardLayout, tile);
+        return {
+          x: clamp(
+            plane.left + (point.x / BOARD_CANVAS.width) * plane.width,
+            area.left,
+            area.right,
+          ),
+          y: clamp(
+            plane.top + (point.y / BOARD_CANVAS.height) * plane.height,
+            area.top,
+            area.bottom,
+          ),
+        };
+      },
+    }),
+    [boardLayout, boardShellRef, game.board.tiles],
+  );
   const previousTargetModeRef = useRef<BoardTargetMode | null>(null);
   const [inspectedItemId, setInspectedItemId] = useState<string | null>(null);
   const [keyboardInspectionId, setKeyboardInspectionId] = useState<string | null>(null);
@@ -671,4 +715,8 @@ function getTargetModeLabel(mode: BoardTargetMode): string {
     case "settlement":
       return "Pick a corner for your settlement";
   }
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
 }

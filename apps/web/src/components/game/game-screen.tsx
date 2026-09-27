@@ -37,10 +37,12 @@ import { getPhaseCopy, phaseTitleText } from "@/lib/game/dock-phase-copy";
 import type { RoomEventView } from "@/lib/game/types";
 import { getLongestRoadLengths, getViewerAndActivePlayer } from "@/lib/game/view";
 
+import { CardFlightProvider } from "./card-flight-context";
+import { CardFlightLayer } from "./card-flight-layer";
 import { CommandDock } from "./command-dock";
 import { DevelopmentCardDialog, type DevelopmentCardChoice } from "./development-card-dialog";
 import { DiscardPanel } from "./discard-panel";
-import { GameBoard } from "./game-board";
+import { GameBoard, type BoardScreenPoints } from "./game-board";
 import { GameHeader } from "./game-header";
 import { GameHelpDialog } from "./game-help-dialog";
 import { GameSidebar, type GameFeedTab } from "./game-sidebar";
@@ -71,6 +73,7 @@ export function GameScreen({
   events,
   game,
   hostSeatIndex,
+  isConnected = true,
   isHost,
   isPaused,
   nextActionAt,
@@ -92,6 +95,8 @@ export function GameScreen({
   game: PlayerGameView;
   /** Seat of the room's host, or null while the role is changing hands. */
   hostSeatIndex: number | null;
+  /** False while the connection to the server is down; its catch-up then flies no cards. */
+  isConnected?: boolean;
   isHost: boolean;
   isPaused: boolean;
   nextActionAt?: number;
@@ -138,6 +143,7 @@ export function GameScreen({
   const [pausedNoticeVisible, setPausedNoticeVisible] = useState(false);
   const commandInFlightRef = useRef(false);
   const confirmationInFlightRef = useRef(false);
+  const boardScreenPointsRef = useRef<BoardScreenPoints>(null);
   const drawerToggleRef = useRef<HTMLButtonElement>(null);
   const phaseHeadingRef = useRef<HTMLHeadingElement>(null);
   const pauseChangeInFlightRef = useRef(false);
@@ -357,7 +363,8 @@ export function GameScreen({
     }
   };
 
-  return (
+  // The counts that cards fly to or from wait for them (card-flight-context.tsx).
+  const screen = (
     <main className="game-shell" id="main-content">
       <GameAudio
         actionNumber={game.actionNumber}
@@ -411,6 +418,7 @@ export function GameScreen({
               onCommand={sendCommand}
               onPlacementExit={restorePlacementFocus}
               pending={pending}
+              screenPointsRef={boardScreenPointsRef}
             />
 
             {/* Toasts and the trade and discard sheets share the bottom of the board area, just
@@ -530,6 +538,8 @@ export function GameScreen({
         </HandDockProvider>
       </div>
 
+      <CardFlightLayer isConnected={isConnected} screenPointsRef={boardScreenPointsRef} />
+
       {developmentCardChoice ? (
         <DevelopmentCardDialog
           bank={game.bank}
@@ -601,6 +611,12 @@ export function GameScreen({
         />
       ) : null}
     </main>
+  );
+
+  return (
+    <CardFlightProvider events={events} game={game} isConnected={isConnected}>
+      {screen}
+    </CardFlightProvider>
   );
 }
 

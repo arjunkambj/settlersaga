@@ -13,9 +13,11 @@ import {
   UNKNOWN_RESOURCE_CARD_ASSET_PATH,
 } from "@/constants/game/card-assets";
 import { nameFit } from "@/lib/app/name-fit";
+import { getFlightEndpointKey } from "@/lib/game/card-flights";
 import { getPlayerPortraitSrc } from "@/lib/game/hud-portraits";
 import { getDisplayedVictoryPoints, getPlayerColor, getPlayerHudOrder } from "@/lib/game/view";
 
+import { useShownCount } from "./card-flight-context";
 import { PlayerAvatar } from "./player-avatar";
 import { getPointsLead } from "./player-panel";
 
@@ -88,6 +90,7 @@ export function PlayerStrip({
             className={`game-strip-player player-${theme}`}
             data-away={isAway || undefined}
             data-leader={(pointsLead.top !== null && points === pointsLead.top) || undefined}
+            data-player-id={player.id}
             data-viewer={player.isViewer || undefined}
             key={player.id}
           >
@@ -114,11 +117,15 @@ export function PlayerStrip({
                 count={player.resourceCount}
                 image={UNKNOWN_RESOURCE_CARD_ASSET_PATH}
                 label={`${player.resourceCount} ${player.resourceCount === 1 ? "card" : "cards"} in hand`}
+                pile="resources"
+                playerId={player.id}
               />
               <StripStat
                 count={developmentCardCount}
                 image={DEVELOPMENT_CARD_BACK_ASSET_PATH}
                 label={`${developmentCardCount} development ${developmentCardCount === 1 ? "card" : "cards"}`}
+                pile="development"
+                playerId={player.id}
               />
             </span>
             <span aria-hidden="true" className="game-strip-end">
@@ -166,13 +173,30 @@ export function PlayerStrip({
   );
 }
 
-/** A card count, named by a tooltip (the row's sr-only line reads it to screen readers). */
-function StripStat({ count, image, label }: { count: number; image: string; label: string }) {
+/**
+ * A card count, named by a tooltip (the row's sr-only line reads it to screen readers). Cards that
+ * fly to or from the player land on their `pile`, whose number changes as they land or leave; the
+ * tooltip and the sr-only line always give the real count.
+ */
+function StripStat({
+  count,
+  image,
+  label,
+  pile,
+  playerId,
+}: {
+  count: number;
+  image: string;
+  label: string;
+  pile: "development" | "resources";
+  playerId: string;
+}) {
+  const shownCount = useShownCount(getFlightEndpointKey({ kind: "player", pile, playerId }), count);
   return (
     <Tooltip label={label} side="left">
-      <span className="game-strip-stat">
+      <span className="game-strip-stat" data-flight-pile={pile}>
         <Image alt="" draggable={false} height={768} sizes="1rem" src={image} width={512} />
-        {count}
+        {shownCount}
       </span>
     </Tooltip>
   );

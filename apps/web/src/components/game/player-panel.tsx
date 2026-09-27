@@ -23,6 +23,7 @@ import {
   DEVELOPMENT_CARD_BACK_ASSET_PATH,
   UNKNOWN_RESOURCE_CARD_ASSET_PATH,
 } from "@/constants/game/card-assets";
+import { getFlightEndpointKey, type FlightEndpoint } from "@/lib/game/card-flights";
 import { getPlayerPortraitSrc } from "@/lib/game/hud-portraits";
 import {
   getDisplayedVictoryPoints,
@@ -31,6 +32,7 @@ import {
   getVictoryPointCardCount,
 } from "@/lib/game/view";
 
+import { useShownCount } from "./card-flight-context";
 import { PlayerAvatar } from "./player-avatar";
 
 /**
@@ -226,12 +228,14 @@ export function PlayerPanel({
                 count={player.resourceCount}
                 image={UNKNOWN_RESOURCE_CARD_ASSET_PATH}
                 label={`${player.resourceCount} ${plural(player.resourceCount, "card")} in hand`}
+                pile={{ kind: "player", pile: "resources", playerId: player.id }}
                 shape="card"
               />
               <PlayerStat
                 count={developmentCardCount}
                 image={DEVELOPMENT_CARD_BACK_ASSET_PATH}
                 label={`${developmentCardCount} development ${plural(developmentCardCount, "card")}`}
+                pile={{ kind: "player", pile: "development", playerId: player.id }}
                 shape="card"
               />
               <PlayerStat
@@ -281,13 +285,16 @@ export function PlayerPanel({
 
 /**
  * A quiet count: cards by their card-back icon, the awards by a short word ("Road 5", "Army 2").
- * An award the player holds turns into a gold chip with its points.
+ * An award the player holds turns into a gold chip with its points. Cards that fly to or from the
+ * player land on their `pile`, whose number changes as they land or leave; its tooltip and
+ * accessible name always give the real count.
  */
 function PlayerStat({
   award = null,
   count,
   image,
   label,
+  pile,
   shape,
   word,
 }: {
@@ -297,21 +304,28 @@ function PlayerStat({
   /** The card-back icon for a card count. */
   image?: string;
   label: string;
+  pile?: Extract<FlightEndpoint, { kind: "player" }>;
   /** Cards are drawn upright at card proportions; awards are named in words. */
   shape: "award" | "card";
   /** The award's short name, shown before its count. */
   word?: string;
 }) {
+  const shownCount = useShownCount(pile ? getFlightEndpointKey(pile) : null, count);
   return (
     <Tooltip label={label} side="top">
-      <li className="game-stat" data-held={award !== null || undefined} data-shape={shape}>
+      <li
+        className="game-stat"
+        data-flight-pile={pile?.pile}
+        data-held={award !== null || undefined}
+        data-shape={shape}
+      >
         {image ? <Image alt="" draggable={false} height={48} src={image} width={32} /> : null}
         {word ? (
           <span aria-hidden="true" className="game-stat-word">
             {word}
           </span>
         ) : null}
-        <span aria-hidden="true">{count}</span>
+        <span aria-hidden="true">{shownCount}</span>
         {award !== null ? (
           <span aria-hidden="true" className="game-stat-bonus">
             +{award}

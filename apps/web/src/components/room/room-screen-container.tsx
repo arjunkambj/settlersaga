@@ -1,8 +1,8 @@
 "use client";
 
 import { api } from "@settersaga/backend/convex/_generated/api";
-import { useMutation, useQuery } from "convex/react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useConvex, useMutation, useQuery } from "convex/react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 
 import { useAppSession } from "@/components/app/app-session-context";
 import { BackgroundMusic } from "@/components/audio/background-music";
@@ -50,6 +50,7 @@ export function RoomScreenContainer({ roomCode }: { roomCode: string }) {
     room ? { code: normalizedCode } : "skip",
   );
   const offlineSeatIndexes = useRoomPresence(room);
+  const isWebSocketConnected = useIsWebSocketConnected();
   const gameJson = room?.gameJson;
   const game = useMemo(() => parsePlayerView(gameJson), [gameJson]);
 
@@ -240,6 +241,7 @@ export function RoomScreenContainer({ roomCode }: { roomCode: string }) {
         events={room.events}
         game={game}
         hostSeatIndex={room.members.find((member) => member.role === "host")?.seatIndex ?? null}
+        isConnected={isWebSocketConnected}
         isHost={room.isHost}
         isPaused={room.isPaused}
         nextActionAt={room.nextActionAt}
@@ -264,6 +266,19 @@ export function RoomScreenContainer({ roomCode }: { roomCode: string }) {
         viewerProfileImageUrl={profileImageUrl}
       />
     </>
+  );
+}
+
+/**
+ * Whether the socket to the server is up. Unlike useConvexConnectionState it re-renders only when
+ * that flips, not on every request the connection counts.
+ */
+function useIsWebSocketConnected(): boolean {
+  const convex = useConvex();
+  return useSyncExternalStore(
+    (onChange) => convex.subscribeToConnectionState(onChange),
+    () => convex.connectionState().isWebSocketConnected,
+    () => true,
   );
 }
 
