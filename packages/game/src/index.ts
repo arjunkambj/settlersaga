@@ -28,7 +28,13 @@ export {
   type GameMapDefinition,
 } from "./maps";
 export { emptyInventory, isValidInventory, totalResources } from "./resources";
-export { applyCommand, getLegalActions, getRequiredPlayerIds } from "./rules";
+export {
+  applyCommand,
+  getDiceProduction,
+  getLegalActions,
+  getRequiredPlayerIds,
+  type DiceProduction,
+} from "./rules";
 export {
   DEFAULT_BASE_GAME_SETTINGS,
   GAME_SETTINGS_LIMITS,

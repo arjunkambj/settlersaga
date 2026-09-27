@@ -569,38 +569,79 @@ function playYearOfPlenty(
   };
 }
 
-function distributeResourcesForRoll(state: GameState, rollTotal: number): GameState {
-  const topology = boardTopology(state);
-  const buildingByVertex = new Map(
-    state.board.buildings.map((building) => [building.vertexKey, building]),
-  );
-  const claims = new Map(state.players.map((player) => [player.id, emptyInventory()]));
+/** One tile's payout to one player on a roll, after the bank has covered what it can. */
+export interface DiceProduction {
+  amount: number;
+  playerId: PlayerId;
+  resource: ResourceType;
+  tileId: string;
+}
 
-  for (const tile of state.board.tiles) {
+/**
+ * What a roll pays, tile by tile: every tile showing the rolled number, unless the robber sits on
+ * it, pays 1 card per settlement and 2 per city at its corners. When the bank cannot cover every
+ * claim for a resource, nobody receives it, unless a single player is owed it: they take whatever
+ * the bank has left, from their first tiles on.
+ */
+export function getDiceProduction(
+  board: Pick<GameState["board"], "buildings" | "robberTileId" | "tiles">,
+  rollTotal: number,
+  bank: Readonly<ResourceInventory>,
+): DiceProduction[] {
+  const topology = getBoardTopology(board.tiles);
+  const buildingByVertex = new Map(
+    board.buildings.map((building) => [building.vertexKey, building]),
+  );
+  const production: DiceProduction[] = [];
+
+  for (const tile of board.tiles) {
     const resource = TERRAIN_RESOURCE[tile.terrain];
-    if (!resource || tile.numberToken !== rollTotal || tile.id === state.board.robberTileId) {
+    if (!resource || tile.numberToken !== rollTotal || tile.id === board.robberTileId) {
       continue;
     }
 
+    const amountByPlayer = new Map<PlayerId, number>();
     for (const vertexKey of topology.tileById[tile.id]!.vertexKeys) {
       const building = buildingByVertex.get(vertexKey);
       if (building) {
-        claims.get(building.playerId)![resource] += building.kind === "city" ? 2 : 1;
+        amountByPlayer.set(
+          building.playerId,
+          (amountByPlayer.get(building.playerId) ?? 0) + (building.kind === "city" ? 2 : 1),
+        );
       }
+    }
+    for (const [playerId, amount] of amountByPlayer) {
+      production.push({ amount, playerId, resource, tileId: tile.id });
     }
   }
 
-  // When the bank cannot cover every claim for a resource, nobody receives it,
-  // unless a single player is owed it: they take whatever the bank has left.
   for (const resource of RESOURCE_TYPES) {
-    const claimants = [...claims.values()].filter((claim) => claim[resource] > 0);
-    const requested = claimants.reduce((total, claim) => total + claim[resource], 0);
-
-    if (requested > state.bank[resource]) {
-      for (const claim of claimants) {
-        claim[resource] = claimants.length === 1 ? state.bank[resource] : 0;
-      }
+    const claims = production.filter((claim) => claim.resource === resource);
+    const requested = claims.reduce((total, claim) => total + claim.amount, 0);
+    if (requested <= bank[resource]) {
+      continue;
     }
+
+    const claimantCount = new Set(claims.map((claim) => claim.playerId)).size;
+    let remaining = claimantCount === 1 ? bank[resource] : 0;
+    for (const claim of claims) {
+      claim.amount = Math.min(claim.amount, remaining);
+      remaining -= claim.amount;
+    }
+  }
+
+  return production.filter((claim) => claim.amount > 0);
+}
+
+function distributeResourcesForRoll(state: GameState, rollTotal: number): GameState {
+  const claims = new Map(state.players.map((player) => [player.id, emptyInventory()]));
+
+  for (const { amount, playerId, resource } of getDiceProduction(
+    state.board,
+    rollTotal,
+    state.bank,
+  )) {
+    claims.get(playerId)![resource] += amount;
   }
 
   const paidOut = [...claims.values()].reduce(addResources, emptyInventory());
