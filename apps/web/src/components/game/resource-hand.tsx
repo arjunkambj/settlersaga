@@ -2,7 +2,6 @@
 
 import {
   RESOURCE_ORDER,
-  type DevelopmentCardType,
   type PlayableDevelopmentCardType,
   type PrivatePlayerState,
   type ResourceInventory,
@@ -11,11 +10,13 @@ import {
 import arrowLeftIcon from "@iconify-icons/solar/alt-arrow-left-bold";
 import arrowRightIcon from "@iconify-icons/solar/alt-arrow-right-bold";
 import playIcon from "@iconify-icons/solar/play-bold";
+import starIcon from "@iconify-icons/solar/star-bold";
 import { Icon } from "@iconify/react/offline";
 import Image from "next/image";
 import {
   type AnimationEvent,
   type CSSProperties,
+  type ReactNode,
   useEffect,
   useLayoutEffect,
   useRef,
@@ -23,13 +24,19 @@ import {
 } from "react";
 
 import { Button } from "@/components/ui/button";
+import { Tooltip } from "@/components/ui/tooltip";
 import {
-  DEVELOPMENT_CARD_ASSETS,
+  DEVELOPMENT_CARD_ASSET_PATHS,
   DEVELOPMENT_CARD_BACK_ASSET_PATH,
   RESOURCE_CARD_ASSET_PATHS,
 } from "@/constants/game/card-assets";
 import { RESOURCE_LABELS } from "@/constants/game/labels";
 import { getFlightEndpointKey } from "@/lib/game/card-flights";
+import {
+  describeVictoryPoints,
+  splitDevelopmentHand,
+  type DevelopmentKind,
+} from "@/lib/game/development-hand";
 import { getResourceCardChanges, type ResourceCardChange } from "@/lib/game/resource-card-changes";
 
 import { useCardFlights, useShownCounts } from "./card-flight-context";
@@ -39,17 +46,21 @@ import { useMediaQuery } from "./use-media-query";
 const DEVELOPMENT_STACK_ID = "game-hand-dev-cards";
 /** From md up the hand is one row of one fixed width in the dock (styles/game-dock.css). */
 const DOCK_ROW_QUERY = "(min-width: 48rem)";
-/** From lg up the development cards fan out in the room kept for them; at md they stack. */
-const DEVELOPMENT_FAN_QUERY = "(min-width: 64rem)";
-/** The resource cards' counts, as the card flights name them. */
-const HAND_TARGETS = RESOURCE_ORDER.map(getHandTarget);
+/**
+ * The room kept for development cards holds three cards side by side from lg up and two at md
+ * (--dock-dev-width in styles/game-dock.css); the victory point card takes the last of them.
+ */
+const DEVELOPMENT_ROOM_QUERY = "(min-width: 64rem)";
+/** The victory point card's count, as the card flights name it. */
+const VICTORY_POINT_TARGET = getFlightEndpointKey({ kind: "hand-victory-point" });
+/** The counts cards fly to or from: the resource cards' and the victory point card's. */
+const HAND_TARGETS = [...RESOURCE_ORDER.map(getHandTarget), VICTORY_POINT_TARGET];
 
 /** Names that fit under a hand card. */
-const DEVELOPMENT_CARD_SHORT_LABELS: Readonly<Record<DevelopmentCardType, string>> = {
+const DEVELOPMENT_CARD_SHORT_LABELS: Readonly<Record<PlayableDevelopmentCardType, string>> = {
   knight: "Knight",
-  monopoly: "Monopoly",
+  monopoly: "Mono",
   "road-building": "Roads",
-  "victory-point": "+1 VP",
   "year-of-plenty": "Plenty",
 };
 
@@ -121,9 +132,18 @@ function CardArt({ path }: { path: string }) {
 /**
  * A count chip that pops when its number changes. A change that cards fly in or out of the hand
  * shows only as they land or leave (`shown`, from useShownCounts), and then only brightens with
- * their landing (card-flight-layer.tsx), so one card never pops twice.
+ * their landing (card-flight-layer.tsx), so one card never pops twice. `children` stand in for the
+ * number (the victory point card's star).
  */
-function CountChip({ count, shown = count }: { count: number; shown?: number }) {
+function CountChip({
+  children,
+  count,
+  shown = count,
+}: {
+  children?: ReactNode;
+  count: number;
+  shown?: number;
+}) {
   const [pop, setPop] = useState({ count, key: 0, shown });
   let { key } = pop;
   if (pop.count !== count || pop.shown !== shown) {
@@ -133,24 +153,31 @@ function CountChip({ count, shown = count }: { count: number; shown?: number }) 
   }
   return (
     <span aria-hidden="true" className="game-count-chip motion-safe:animate-game-pop" key={key}>
-      {shown}
+      {children ?? shown}
     </span>
   );
 }
 
 /**
  * The viewer's cards in one row: five resource cards (always shown, dimmed at zero), a thin
- * divider, then development cards, all the same size. Gains fly in and pop the card; spends fly
- * out.
+ * divider, the development cards they can play, then their victory point cards as one card of
+ * their own, all the same size. Gains fly in and pop the card; spends fly out.
+ *
+ * Victory point cards are never played, so they stay out of the development cards' fan, stack and
+ * "Dev ×N" count: one gold-marked card at the end of the hand says how many points they are worth
+ * ("+2 VP"), and it shows only while the player holds one.
  *
  * From md up the hand keeps one width whatever it holds, so the dock never shifts as cards come
- * and go: after the resources it keeps room for the development cards (styles/game-dock.css).
- * From lg up they fan out in that room, each overlapping the one after it, its art, count and
- * Play pill still showing; with none, a dashed card says so. At md the room is one card: a lone
- * kind shows as itself, more gather into one "Dev ×N" stack that opens them in a small popover
- * above the hand. On phones the row shows every kind side by side while they fit the shelf and
- * stacks them when they don't; when the row still overflows, the hidden end fades and an arrow
- * scrolls it.
+ * and go: after the resources it keeps room for the development cards, two cards wide at md and
+ * three from lg up (styles/game-dock.css). The victory point card takes the last of those slots;
+ * the playable kinds share the rest, side by side while they fit and fanned when they don't, each
+ * overlapping the one after it, its art, count and Play pill still showing. With no victory point
+ * card they spread over the whole room; with no development cards at all, a dashed card says so.
+ * Where only one card's room is left for them (md, beside a victory point card), a lone kind shows
+ * as itself and more gather into one "Dev ×N" stack that opens them in a small popover above the
+ * hand. On phones the row shows every kind side by side while they fit the shelf and stacks them
+ * when they don't, the victory point card after them; when the row still overflows, the hidden
+ * end fades and an arrow scrolls it.
  */
 export function ResourceHand({
   actionNumber,
@@ -171,7 +198,7 @@ export function ResourceHand({
   const flightStore = useCardFlights()?.store;
   const shownCountOf = useShownCounts(HAND_TARGETS);
   const dockRow = useMediaQuery(DOCK_ROW_QUERY);
-  const fanLayout = useMediaQuery(DEVELOPMENT_FAN_QUERY);
+  const wideRoom = useMediaQuery(DEVELOPMENT_ROOM_QUERY);
   const shelfRef = useRef<HTMLDivElement>(null);
   const cardListRef = useRef<HTMLUListElement>(null);
   const previousSnapshotRef = useRef<ResourceSnapshot | null>(null);
@@ -182,18 +209,23 @@ export function ResourceHand({
   const [stackOpen, setStackOpen] = useState(false);
   const stackRef = useRef<HTMLDivElement>(null);
   const overflows = scrollEdges.start || scrollEdges.end;
-  const developmentCardCounts = DEVELOPMENT_CARD_ASSETS.flatMap((asset) => {
-    const count = me.developmentCards.filter((card) => card === asset.id).length;
-    return count > 0 ? [{ ...asset, count }] : [];
-  });
-  const developmentKinds = developmentCardCounts.length;
-  const developmentTotal = me.developmentCards.length;
-  const isPlayable = (card: (typeof developmentCardCounts)[number]) =>
-    card.id !== "victory-point" && playableDevelopmentCards.includes(card.id);
-  const showStack = developmentKinds > 1 && (dockRow ? !fanLayout : overflowsShelf);
+  const {
+    kinds: developmentKinds,
+    total: developmentTotal,
+    victoryPoints,
+  } = splitDevelopmentHand(me.developmentCards);
+  const kindCount = developmentKinds.length;
+  const hasVictoryCard = victoryPoints > 0;
+  // A bought victory point card counts as it lands (card-flight-layer.tsx).
+  const shownVictoryPoints = shownCountOf(VICTORY_POINT_TARGET, victoryPoints);
+  const isPlayable = (card: DevelopmentKind) => playableDevelopmentCards.includes(card.id);
+  // From md up: the cards the room holds side by side once the victory point card has its slot.
+  const fanSlots = (wideRoom ? 3 : 2) - (hasVictoryCard ? 1 : 0);
+  const showStack = kindCount > 1 && (dockRow ? fanSlots < 2 : overflowsShelf);
+  const fanOverlaps = kindCount > fanSlots;
   const popoverOpen = showStack && stackOpen;
-  const stackPlayableCount = developmentCardCounts.filter(isPlayable).length;
-  const handCardCount = RESOURCE_ORDER.length + developmentKinds;
+  const stackPlayableCount = developmentKinds.filter(isPlayable).length;
+  const handCardCount = RESOURCE_ORDER.length + kindCount + (hasVictoryCard ? 1 : 0);
   const interactionMatchesSource =
     interaction !== null &&
     RESOURCE_ORDER.every(
@@ -298,7 +330,7 @@ export function ResourceHand({
       if (dockRow) {
         cardList.style.removeProperty("--hand-gap");
       } else {
-        setOverflowsShelf(needsStack(cardList, shelfWidth, handCardCount));
+        setOverflowsShelf(needsStack(cardList, shelfWidth, kindCount, handCardCount));
         fitCardGap(cardList, shelfWidth);
       }
       setScrollEdges((current) => getScrollEdges(current, cardList, shelfWidth));
@@ -307,7 +339,7 @@ export function ResourceHand({
     resizeObserver.observe(cardList);
     measure();
     return () => resizeObserver.disconnect();
-  }, [dockRow, handCardCount, showStack]);
+  }, [dockRow, handCardCount, kindCount, showStack]);
 
   // The stack's popover closes on any press outside it and on Escape.
   useEffect(() => {
@@ -337,19 +369,13 @@ export function ResourceHand({
   }, [popoverOpen]);
 
   /** One kind of development card; `fanIndex` places it in the fan. */
-  const renderDevelopmentCard = (
-    card: (typeof developmentCardCounts)[number],
-    fanIndex?: number,
-  ) => {
-    const playable = card.id !== "victory-point" && playableDevelopmentCards.includes(card.id);
-    const note =
-      card.id === "victory-point"
-        ? "Counts toward your score"
-        : playable
-          ? card.description
-          : isViewerTurn
-            ? "Not playable right now"
-            : "Play it on your turn";
+  const renderDevelopmentCard = (card: DevelopmentKind, fanIndex?: number) => {
+    const playable = isPlayable(card);
+    const note = playable
+      ? card.description
+      : isViewerTurn
+        ? "Not playable right now"
+        : "Play it on your turn";
     return (
       <li
         aria-label={`${card.label}: ${card.count}. ${note}`}
@@ -387,7 +413,10 @@ export function ResourceHand({
     );
   };
 
-  /** The "Dev ×N" stack: a card of the row on phones, the whole development room at md. */
+  /**
+   * The "Dev ×N" stack of the playable kinds: a card of the row on phones, and the room left beside
+   * the victory point card at md.
+   */
   const renderStack = (Element: "div" | "li") => (
     <Element
       className="game-hand-card"
@@ -421,37 +450,79 @@ export function ResourceHand({
     </Element>
   );
 
-  // From md up: the room kept for the development cards, the same width whatever it holds. With
-  // none, a dashed card; its words run shorter where the room is one card wide (md).
-  const developmentArea = !dockRow ? null : developmentKinds === 0 ? (
-    <li className="game-hand-dev" data-empty data-hand-dev>
-      <span aria-hidden="true" className="game-hand-dev-empty">
-        <CardArt path={DEVELOPMENT_CARD_BACK_ASSET_PATH} />
-      </span>
-      <span className="game-hand-card-label game-hand-dev-empty-label" data-length="long">
-        No dev cards
-      </span>
-      <span className="game-hand-card-label game-hand-dev-empty-label" data-length="short">
-        None
-      </span>
+  /**
+   * The victory point cards as one card at the end of the hand: never played, so no Play pill. A
+   * bought one still in the air keeps its slot, so it lands there, and shows as it lands; the card
+   * then pops in once (remounted), and a later one only brightens its star as it lands. The slot
+   * itself never fades in, so the flight layer finds it showing the moment the card leaves.
+   */
+  const renderVictoryCard = () => {
+    const arriving = shownVictoryPoints === 0;
+    const words = describeVictoryPoints(victoryPoints);
+    return (
+      <Tooltip key={arriving ? "victory-arriving" : "victory"} label={words} side="top">
+        <li
+          aria-label={`+${victoryPoints} VP: ${words}`}
+          className={arriving ? "game-hand-card" : "game-hand-card motion-safe:animate-game-pop"}
+          data-arriving={arriving || undefined}
+          data-development
+          data-hand-vp
+          data-victory
+        >
+          <span aria-hidden="true" className="game-hand-card-face">
+            <CardArt path={DEVELOPMENT_CARD_ASSET_PATHS["victory-point"]} />
+          </span>
+          <CountChip count={victoryPoints} shown={shownVictoryPoints}>
+            <Icon className="game-hand-vp-star" icon={starIcon} />
+          </CountChip>
+          <span aria-hidden="true" className="game-hand-card-label">
+            +{shownVictoryPoints} VP
+          </span>
+        </li>
+      </Tooltip>
+    );
+  };
+
+  // From md up: the room kept for the development cards, the same width whatever it holds. The
+  // victory point card follows it in its last slot, and the room gives that slot up to it. With no
+  // development cards at all, a dashed card; with victory point cards alone, the playable kinds'
+  // part of the room stays empty.
+  const developmentArea = !dockRow ? null : showStack ? (
+    <li className="game-hand-dev" data-beside-vp={hasVictoryCard || undefined}>
+      {renderStack("div")}
     </li>
-  ) : showStack ? (
-    <li className="game-hand-dev">{renderStack("div")}</li>
   ) : (
-    <li className="game-hand-dev" data-hand-dev>
-      <ul
-        aria-label="Development cards"
-        className="game-hand-fan"
-        data-count={developmentKinds}
-        style={{ "--fan-count": developmentKinds } as CSSProperties}
-      >
-        {developmentCardCounts.map((card, index) => renderDevelopmentCard(card, index))}
-      </ul>
-      {developmentKinds > 2 ? (
-        <span aria-hidden="true" className="game-hand-card-label game-hand-fan-label">
-          Dev ×{developmentTotal}
-        </span>
-      ) : null}
+    <li
+      aria-hidden={kindCount === 0 && hasVictoryCard ? true : undefined}
+      className="game-hand-dev"
+      data-beside-vp={hasVictoryCard || undefined}
+      data-empty={(kindCount === 0 && !hasVictoryCard) || undefined}
+      data-hand-dev
+    >
+      {kindCount > 0 ? (
+        <>
+          <ul
+            aria-label="Development cards"
+            className="game-hand-fan"
+            data-overlap={fanOverlaps || undefined}
+            style={{ "--fan-count": kindCount } as CSSProperties}
+          >
+            {developmentKinds.map((card, index) => renderDevelopmentCard(card, index))}
+          </ul>
+          {fanOverlaps ? (
+            <span aria-hidden="true" className="game-hand-card-label game-hand-fan-label">
+              Dev ×{developmentTotal}
+            </span>
+          ) : null}
+        </>
+      ) : hasVictoryCard ? null : (
+        <>
+          <span aria-hidden="true" className="game-hand-dev-empty">
+            <CardArt path={DEVELOPMENT_CARD_BACK_ASSET_PATH} />
+          </span>
+          <span className="game-hand-card-label game-hand-dev-empty-label">No dev cards</span>
+        </>
+      )}
     </li>
   );
 
@@ -540,14 +611,15 @@ export function ResourceHand({
               </li>
             );
           })}
-          {dockRow || developmentKinds > 0 ? (
+          {dockRow || kindCount > 0 || hasVictoryCard ? (
             <li aria-hidden="true" className="game-hand-divider" role="presentation" />
           ) : null}
           {dockRow
             ? developmentArea
             : showStack
               ? renderStack("li")
-              : developmentCardCounts.map((card) => renderDevelopmentCard(card))}
+              : developmentKinds.map((card) => renderDevelopmentCard(card))}
+          {hasVictoryCard ? renderVictoryCard() : null}
         </ul>
         {showStack ? (
           <div
@@ -559,7 +631,7 @@ export function ResourceHand({
             role="group"
           >
             <ul className="game-hand-dev-list">
-              {developmentCardCounts.map((card) => renderDevelopmentCard(card))}
+              {developmentKinds.map((card) => renderDevelopmentCard(card))}
             </ul>
           </div>
         ) : null}
@@ -697,14 +769,15 @@ function getSmallestGap(): number {
 }
 
 /**
- * Whether the development cards must gather into one stack: the row laid out with every kind
- * side by side (five resource cards, the divider, one card per kind), at the smallest gap, would
- * be wider than `room`. With one kind there is nothing to gather.
+ * Whether the playable kinds must gather into one stack: the row laid out with every kind side by
+ * side (five resource cards, the divider, one card per kind, then any victory point card: `slots`
+ * cards in all), at the smallest gap, would be wider than `room`. With one kind there is nothing to
+ * gather.
  */
-function needsStack(list: HTMLElement, room: number, slots: number): boolean {
+function needsStack(list: HTMLElement, room: number, kinds: number, slots: number): boolean {
   const card = list.querySelector<HTMLElement>(":scope > .game-hand-card");
   const divider = list.querySelector<HTMLElement>(":scope > .game-hand-divider");
-  if (!card || !divider || slots - RESOURCE_ORDER.length < 2) {
+  if (!card || !divider || kinds < 2) {
     return false;
   }
   const needed =

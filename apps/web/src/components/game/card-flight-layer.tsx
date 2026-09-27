@@ -4,6 +4,7 @@ import { getImageProps } from "next/image";
 import { useEffect, useLayoutEffect, useRef, type RefObject } from "react";
 
 import {
+  DEVELOPMENT_CARD_ASSET_PATHS,
   DEVELOPMENT_CARD_BACK_ASSET_PATH,
   RESOURCE_CARD_ASSET_PATHS,
   UNKNOWN_RESOURCE_CARD_ASSET_PATH,
@@ -419,6 +420,17 @@ function createTargetResolver(screenPoints: BoardScreenPoints | null, sprite: Sp
     const point = screenPoints?.getCenterClientPoint();
     return point ? { labelEnd: false, labelPoint: point, point, pulse: null } : null;
   };
+  /**
+   * The hand's playable development cards: their room (or stack), else the last of them (never the
+   * victory point card after them), else the hand.
+   */
+  const findDevelopmentRoom = (): FlightTarget | null => {
+    const room =
+      findShown(".game-hand [data-hand-dev]") ??
+      findShown(".game-hand [data-development]:not([data-hand-vp])", true) ??
+      findShown(".game-hand");
+    return room ? toTarget(room, room, "above") : null;
+  };
 
   const find = (endpoint: FlightEndpoint): FlightTarget | null => {
     switch (endpoint.kind) {
@@ -437,12 +449,14 @@ function createTargetResolver(screenPoints: BoardScreenPoints | null, sprite: Sp
           ? toTarget(card.querySelector(".game-hand-card-face") ?? card, card, "above")
           : null;
       }
-      case "hand-development": {
-        const room =
-          findShown(".game-hand [data-hand-dev]") ??
-          findShown(".game-hand [data-development]", true) ??
-          findShown(".game-hand");
-        return room ? toTarget(room, room, "above") : null;
+      case "hand-development":
+        return findDevelopmentRoom();
+      case "hand-victory-point": {
+        // The victory point card, its slot kept while the card is in the air.
+        const card = findShown(".game-hand [data-hand-vp]");
+        return card
+          ? toTarget(card.querySelector(".game-hand-card-face") ?? card, card, "above")
+          : findDevelopmentRoom();
       }
       case "player": {
         const row = findShown(`[data-player-id="${CSS.escape(endpoint.playerId)}"]`);
@@ -628,7 +642,7 @@ function easeInOut(progress: number): number {
 function getCardArtPath(card: FlightCard): string {
   switch (card.kind) {
     case "development":
-      return DEVELOPMENT_CARD_BACK_ASSET_PATH;
+      return card.card ? DEVELOPMENT_CARD_ASSET_PATHS[card.card] : DEVELOPMENT_CARD_BACK_ASSET_PATH;
     case "hidden-resource":
       return UNKNOWN_RESOURCE_CARD_ASSET_PATH;
     case "resource":
@@ -661,12 +675,13 @@ function createCardSprite(card: FlightCard): HTMLImageElement {
   return sprite;
 }
 
-/** Fetched once, so the first flight pops with its art. */
+/** Fetched once, so the first flight pops with its art (a bought card's face included). */
 function preloadCardArt() {
   const paths = [
     DEVELOPMENT_CARD_BACK_ASSET_PATH,
     UNKNOWN_RESOURCE_CARD_ASSET_PATH,
     ...Object.values(RESOURCE_CARD_ASSET_PATHS),
+    ...Object.values(DEVELOPMENT_CARD_ASSET_PATHS),
   ];
   for (const path of paths) {
     const source = getCardArtSource(path);

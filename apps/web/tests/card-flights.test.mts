@@ -7,6 +7,7 @@ import {
   RESOURCE_TYPES,
   toPlayerView,
   type BaseGameSettings,
+  type DevelopmentCardType,
   type GameCommand,
   type GamePlayerInput,
   type GameState,
@@ -14,10 +15,12 @@ import {
 } from "@settersaga/game";
 import { describe, expect, test } from "bun:test";
 
+import { createCardFlightStore } from "../src/lib/game/card-flight-store";
 import {
   CARD_FLIGHT_TIMING,
   getFlightCountChanges,
   getFlightEndpointKey,
+  getFlightEndpointKeys,
   planCardFlights,
   trackCardFlights,
   type CardFlight,
@@ -94,6 +97,12 @@ function withDevelopmentCard(
   };
 }
 
+/** Moves a `card` to the top of the development deck, so the next purchase draws it. */
+function withDeckTop(state: GameState, card: DevelopmentCardType): GameState {
+  const deck = state.developmentDeck;
+  return { ...state, developmentDeck: [card, ...deck.toSpliced(deck.indexOf(card), 1)] };
+}
+
 function act(state: GameState, actorPlayerId: string, command: GameCommand) {
   return applyCommand(state, actorPlayerId, command);
 }
@@ -123,6 +132,12 @@ function routes(result: CardFlightPlan | null): Route[] {
 const played = playSetup("card-flights");
 const game: GameState = { ...played.state, phase: { kind: "build_and_trade" } };
 const [first, second, third, fourth] = game.turnOrder as [string, string, string, string];
+
+/** The first player buys a development card, drawing `card` off the top of the deck. */
+function buyDevelopmentCard(card: DevelopmentCardType) {
+  const before = withDeckTop(withHands(game, { [first]: { sheep: 1, stone: 1, wheat: 1 } }), card);
+  return { after: act(before, first, { kind: "buy_development_card" }), before };
+}
 
 describe("card flight plans", () => {
   test("a roll flies each tile's cards to every player it pays, face up for everyone", () => {
@@ -363,22 +378,55 @@ describe("card flight plans", () => {
     expect(onlooker!.labels.map((label) => label.detail)).toEqual(["−1 card", "+1 card"]);
   });
 
-  test("a development card flies face down from the bank's pile to the buyer", () => {
-    const before = withHands(game, { [first]: { sheep: 1, stone: 1, wheat: 1 } });
-    const after = act(before, first, { kind: "buy_development_card" });
-    const card = { kind: "development" } as const;
+  test("a bought development card flies face up to its buyer's hand, a victory point to its own card", () => {
+    const knight = buyDevelopmentCard("knight");
+    const victoryPoint = buyDevelopmentCard("victory-point");
+    const buyerPlan = (bought: typeof knight) =>
+      plan(bought.before, bought.after, first, "buy_development_card", first);
 
-    expect(routes(plan(before, after, first, "buy_development_card", first))).toEqual([
-      { card, count: 1, from: { kind: "bank-development" }, to: { kind: "hand-development" } },
-    ]);
-    expect(routes(plan(before, after, second, "buy_development_card", first))).toEqual([
+    // The buyer's own view shows which card it is: a Knight joins the playable cards...
+    expect(routes(buyerPlan(knight))).toEqual([
       {
-        card,
+        card: { card: "knight", kind: "development" },
         count: 1,
         from: { kind: "bank-development" },
-        to: { kind: "player", pile: "development", playerId: first },
+        to: { kind: "hand-development" },
       },
     ]);
+    // ...and a victory point lands on the victory point card, not on the development cards.
+    expect(routes(buyerPlan(victoryPoint))).toEqual([
+      {
+        card: { card: "victory-point", kind: "development" },
+        count: 1,
+        from: { kind: "bank-development" },
+        to: { kind: "hand-victory-point" },
+      },
+    ]);
+    expect(
+      buyerPlan(victoryPoint)!.labels.map(({ at, detail, text, tone }) => ({
+        at,
+        detail,
+        text,
+        tone,
+      })),
+    ).toEqual([
+      { at: { kind: "hand-victory-point" }, detail: "+1 Victory Point", text: "+1", tone: "gain" },
+    ]);
+  });
+
+  test("everyone else sees a card back land on the buyer's row, whichever card it was", () => {
+    for (const bought of [buyDevelopmentCard("knight"), buyDevelopmentCard("victory-point")]) {
+      const onlooker = plan(bought.before, bought.after, second, "buy_development_card", first);
+      expect(routes(onlooker)).toEqual([
+        {
+          card: { kind: "development" },
+          count: 1,
+          from: { kind: "bank-development" },
+          to: { kind: "player", pile: "development", playerId: first },
+        },
+      ]);
+      expect(onlooker!.labels.map((label) => label.detail)).toEqual(["+1 development card"]);
+    }
   });
 
   test("a discard flies to the bank, face down when the bank's counts are hidden", () => {
@@ -657,8 +705,7 @@ describe("card flight count changes", () => {
   });
 
   test("a bought development card counts on the buyer's row as it lands, not in the viewer's hand", () => {
-    const before = withHands(game, { [first]: { sheep: 1, stone: 1, wheat: 1 } });
-    const after = act(before, first, { kind: "buy_development_card" });
+    const { after, before } = buyDevelopmentCard("knight");
 
     expect(
       byTarget(
@@ -668,11 +715,91 @@ describe("card flight count changes", () => {
       "bank:development leaves": [-1, 0],
       [`player:${first}:development lands`]: [1, popMs + flightMs],
     });
+    // A playable card joins the buyer's hand, and their row with it, at once.
     expect(
       byTarget(
         getFlightCountChanges(plan(before, after, first, "buy_development_card", first)!, first),
       ),
     ).toEqual({ "bank:development leaves": [-1, 0] });
+  });
+
+  test("a bought victory point counts on the buyer's victory point card, and their row, as it lands", () => {
+    const { after, before } = buyDevelopmentCard("victory-point");
+
+    expect(
+      byTarget(
+        getFlightCountChanges(plan(before, after, first, "buy_development_card", first)!, first),
+      ),
+    ).toEqual({
+      "bank:development leaves": [-1, 0],
+      "hand:victory-point lands": [1, popMs + flightMs],
+      [`player:${first}:development lands`]: [1, popMs + flightMs],
+    });
+    // The table cannot tell it apart from any other development card.
+    expect(
+      byTarget(
+        getFlightCountChanges(plan(before, after, second, "buy_development_card", first)!, second),
+      ),
+    ).toEqual({
+      "bank:development leaves": [-1, 0],
+      [`player:${first}:development lands`]: [1, popMs + flightMs],
+    });
+  });
+
+  test("the store holds the victory point card's count until its card lands", () => {
+    const { after, before } = buyDevelopmentCard("victory-point");
+    const result = plan(before, after, first, "buy_development_card", first)!;
+    let now = 0;
+    let timers: { at: number; callback: () => void }[] = [];
+    const store = createCardFlightStore({
+      now: () => now,
+      schedule(callback, delayMs) {
+        const timer = { at: now + delayMs, callback };
+        timers.push(timer);
+        return () => {
+          timers = timers.filter((candidate) => candidate !== timer);
+        };
+      },
+    });
+    /** Moves the clock on, firing the store's timers in order as it passes them. */
+    const advanceTo = (time: number) => {
+      for (;;) {
+        const [due] = timers
+          .filter((timer) => timer.at <= time)
+          .sort((left, right) => left.at - right.at);
+        if (!due) break;
+        timers = timers.filter((timer) => timer !== due);
+        now = due.at;
+        due.callback();
+      }
+      now = time;
+    };
+    const victoryCard = getFlightEndpointKey({ kind: "hand-victory-point" });
+    const viewerRow = getFlightEndpointKey({
+      kind: "player",
+      pile: "development",
+      playerId: first,
+    });
+
+    store.hold(result, {
+      actionNumber: after.actionNumber,
+      carried: getFlightEndpointKeys(result.flights),
+      changes: getFlightCountChanges(result, first).map(({ atMs, delta, target }) => ({
+        at: atMs,
+        delta,
+        target,
+      })),
+    });
+    // The hand leaves the card to its flight, and the card and the row show the old count.
+    expect(store.isCarried(after.actionNumber, victoryCard)).toBe(true);
+    expect(store.getPending(victoryCard)).toBe(1);
+    expect(store.getPending(viewerRow)).toBe(1);
+
+    advanceTo(popMs + flightMs - 1);
+    expect(store.getPending(victoryCard)).toBe(1);
+    advanceTo(popMs + flightMs);
+    expect(store.getPending(victoryCard)).toBe(0);
+    expect(store.getPending(viewerRow)).toBe(0);
   });
 });
 

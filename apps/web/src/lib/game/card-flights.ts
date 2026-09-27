@@ -1,28 +1,38 @@
 import {
+  DEVELOPMENT_CARD_TYPES,
   RESOURCE_ORDER,
   getBoardTopology,
   getDiceProduction,
+  type DevelopmentCardType,
   type PlayerGameView,
   type PrivatePlayerState,
   type ResourceInventory,
   type ResourceType,
 } from "@settersaga/game";
 
+import { DEVELOPMENT_CARD_ASSETS } from "@/constants/game/card-assets";
 import { RESOURCE_LABELS } from "@/constants/game/labels";
 import type { RoomEventView } from "@/lib/game/types";
 
-/** Where a card leaves from or lands. The viewer's own resource cards use their hand. */
+/**
+ * Where a card leaves from or lands. The viewer's own cards use their hand: a resource's card, the
+ * playable development cards, or the victory point card.
+ */
 export type FlightEndpoint =
   | { kind: "bank"; resource: ResourceType | null }
   | { kind: "bank-development" }
   | { kind: "hand"; resource: ResourceType }
   | { kind: "hand-development" }
+  | { kind: "hand-victory-point" }
   | { kind: "player"; pile: "development" | "resources"; playerId: string }
   | { kind: "tile"; tileId: string };
 
-/** What the flying card shows: a resource's face, the unknown resource's back, or a dev back. */
+/**
+ * What the flying card shows: a resource's face, the unknown resource's back, or a development
+ * card: its face (`card`) for the viewer who bought it, its back for everyone else.
+ */
 export type FlightCard =
-  | { kind: "development" }
+  | { card?: DevelopmentCardType; kind: "development" }
   | { kind: "hidden-resource" }
   | { kind: "resource"; resource: ResourceType };
 
@@ -111,7 +121,8 @@ interface CardMove {
  *
  * Other players' hands are public only as a count, so their cards fly face down unless the move
  * itself makes the resource public: the dice and the opening payout (from the board), a player
- * trade (the offer), and the bank's own counts when the host shows them.
+ * trade (the offer), and the bank's own counts when the host shows them. A bought development card
+ * flies face up only to its buyer.
  */
 export function planCardFlights(
   previous: PlayerGameView,
@@ -191,18 +202,7 @@ function getCardMoves(
     case "move_robber_and_steal":
       return getStealMoves(change, actor);
     case "buy_development_card":
-      return change.next.developmentCardSupply === change.previous.developmentCardSupply - 1
-        ? [
-            {
-              card: { kind: "development" },
-              count: 1,
-              from: { kind: "bank-development" },
-              to: change.isViewer(actor)
-                ? { kind: "hand-development" }
-                : { kind: "player", pile: "development", playerId: actor },
-            },
-          ]
-        : [];
+      return getDevelopmentPurchaseMoves(change, actor);
     case "discard":
       return getDiscardMoves(change, actor);
     case "play_monopoly":
@@ -414,6 +414,54 @@ function getStealMoves(change: ViewChange, thiefPlayerId: string): CardMove[] {
   ];
 }
 
+/**
+ * The bought card from the bank's pile: face down to the buyer's row for everyone else, and face
+ * up to the buyer, whose own view shows which card it is. A victory point card lands on the hand's
+ * victory point card, any other on the development cards.
+ */
+function getDevelopmentPurchaseMoves(change: ViewChange, playerId: string): CardMove[] {
+  if (change.next.developmentCardSupply !== change.previous.developmentCardSupply - 1) {
+    return [];
+  }
+  const from: FlightEndpoint = { kind: "bank-development" };
+  if (!change.isViewer(playerId)) {
+    return [
+      {
+        card: { kind: "development" },
+        count: 1,
+        from,
+        to: { kind: "player", pile: "development", playerId },
+      },
+    ];
+  }
+
+  const bought = getBoughtDevelopmentCard(change);
+  return [
+    {
+      card: bought ? { card: bought, kind: "development" } : { kind: "development" },
+      count: 1,
+      from,
+      to:
+        bought === "victory-point" ? { kind: "hand-victory-point" } : { kind: "hand-development" },
+    },
+  ];
+}
+
+/** The one card the viewer's development cards gained, or null if the views show otherwise. */
+function getBoughtDevelopmentCard(change: ViewChange): DevelopmentCardType | null {
+  const before = getViewer(change.previous).developmentCards;
+  const after = getViewer(change.next).developmentCards;
+  if (after.length !== before.length + 1) {
+    return null;
+  }
+  const countIn = (cards: readonly DevelopmentCardType[], type: DevelopmentCardType) =>
+    cards.filter((card) => card === type).length;
+  const gained = DEVELOPMENT_CARD_TYPES.filter(
+    (type) => countIn(after, type) === countIn(before, type) + 1,
+  );
+  return gained.length === 1 ? gained[0]! : null;
+}
+
 /** The discarded cards to the bank. */
 function getDiscardMoves(change: ViewChange, playerId: string): CardMove[] {
   const discarded = -change.countChange(playerId);
@@ -551,7 +599,7 @@ function groupLabels(
   });
 }
 
-/** "+1 Wood", "+2 Wood +1 Brick", "−1 card", "+1 development card". */
+/** "+1 Wood", "+2 Wood +1 Brick", "−1 card", "+1 development card", "+1 Victory Point". */
 function describeCards(flights: readonly CardFlight[], sign: string): string {
   const parts = new Map<string, number>();
   for (const { card, count } of flights) {
@@ -559,7 +607,8 @@ function describeCards(flights: readonly CardFlight[], sign: string): string {
       card.kind === "resource"
         ? RESOURCE_LABELS[card.resource]
         : card.kind === "development"
-          ? "development card"
+          ? (DEVELOPMENT_CARD_ASSETS.find((asset) => asset.id === card.card)?.label ??
+            "development card")
           : "card";
     parts.set(name, (parts.get(name) ?? 0) + count);
   }
@@ -581,6 +630,8 @@ export function getFlightEndpointKey(endpoint: FlightEndpoint): string {
       return `hand:${endpoint.resource}`;
     case "hand-development":
       return "hand:development";
+    case "hand-victory-point":
+      return "hand:victory-point";
     case "player":
       return `player:${endpoint.playerId}:${endpoint.pile}`;
     case "tile":
@@ -713,8 +764,14 @@ function getCountTargets(
         ? [getFlightEndpointKey({ kind: "bank", resource: card.resource })]
         : [];
     case "hand-development":
-      // The viewer's development cards join the hand as they are bought.
+      // The viewer's playable development cards join the hand as they are bought.
       return [];
+    case "hand-victory-point":
+      // The victory point card counts it as it lands, and the viewer's own row follows the hand.
+      return [
+        getFlightEndpointKey(endpoint),
+        getFlightEndpointKey({ kind: "player", pile: "development", playerId: viewerPlayerId }),
+      ];
   }
 }
 
