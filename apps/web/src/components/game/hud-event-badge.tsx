@@ -8,8 +8,9 @@ import playIcon from "@iconify-icons/solar/play-bold";
 import { Icon, type IconifyIcon } from "@iconify/react/offline";
 import Image from "next/image";
 
-import { PIECE_ASSET_PATHS, ROBBER_ASSET_PATH } from "@/constants/game/board-assets";
+import { ROBBER_ASSET_PATH } from "@/constants/game/board-assets";
 import {
+  ACTION_CARD_ASSET_PATHS,
   DEVELOPMENT_CARD_ASSET_PATHS,
   DEVELOPMENT_CARD_BACK_ASSET_PATH,
 } from "@/constants/game/card-assets";
@@ -25,7 +26,7 @@ type EventBadge = { art: string } | { die: true } | { icon: IconifyIcon };
 /** Game art where the table already has a picture for the move; a glyph for the rest. */
 const EVENT_BADGES: Readonly<Record<RoomEventView["kind"], EventBadge>> = {
   bot_control_started: { icon: botIcon },
-  build_city: { art: PIECE_ASSET_PATHS.city },
+  build_city: { art: ACTION_CARD_ASSET_PATHS.city },
   buy_development_card: { art: DEVELOPMENT_CARD_BACK_ASSET_PATH },
   cancel_trade: { icon: closeIcon },
   confirm_trade: { icon: tradeIcon },
@@ -36,8 +37,8 @@ const EVENT_BADGES: Readonly<Record<RoomEventView["kind"], EventBadge>> = {
   game_started: { icon: startIcon },
   move_robber: { art: ROBBER_ASSET_PATH },
   move_robber_and_steal: { art: ROBBER_ASSET_PATH },
-  place_road: { art: PIECE_ASSET_PATHS.road },
-  place_settlement: { art: PIECE_ASSET_PATHS.settlement },
+  place_road: { art: ACTION_CARD_ASSET_PATHS.road },
+  place_settlement: { art: ACTION_CARD_ASSET_PATHS.settlement },
   play_knight: { art: DEVELOPMENT_CARD_ASSET_PATHS.knight },
   play_monopoly: { art: DEVELOPMENT_CARD_ASSET_PATHS.monopoly },
   play_road_building: { art: DEVELOPMENT_CARD_ASSET_PATHS["road-building"] },
