@@ -1,18 +1,18 @@
 "use client";
 
-import {
-  RESOURCE_ORDER,
-  type GamePhase,
-  type ResourceInventory,
-  type TradeOffer,
-} from "@settersaga/game";
+import type { GamePhase, ResourceInventory, TradeOffer } from "@settersaga/game";
 import { useCallback, useEffect, useRef } from "react";
 
 import {
+  installAudioUnlock,
+  playSoundEffect,
+  preloadSoundEffects,
+  setSoundEffectsMuted,
+} from "@/components/audio/sound-engine";
+import {
+  getGameEndSound,
   getTradeOfferSound,
-  getViewerEventSound,
-  shouldPlayVictory,
-  SOUND_EFFECT_PATHS,
+  getViewerEventCues,
   type SoundEffect,
 } from "@/lib/game/audio-cues";
 import type { RoomEventView } from "@/lib/game/types";
@@ -37,11 +37,13 @@ export function GameAudio({
   soundEffectsVolume: number;
   tradeOffer: TradeOffer | null;
   viewerPlayerId: string;
-  /** Tells a confirmed trade's partner from the other players who accepted it. */
+  /**
+   * Tells a confirmed trade's partner from the other players who accepted it, and plays the cues for
+   * cards the viewer gains or loses through other players' moves.
+   */
   viewerResources: Readonly<ResourceInventory>;
   winnerPlayerId: string | null;
 }) {
-  const audioElementsRef = useRef(new Map<SoundEffect, HTMLAudioElement>());
   const lastEventIdRef = useRef(events.at(-1)?.id);
   // A fresh game announces its opening turn; rejoining a game in progress stays quiet.
   const previousActivePlayerIdRef = useRef(actionNumber === 0 ? null : activePlayerId);
@@ -52,24 +54,32 @@ export function GameAudio({
 
   useEffect(() => {
     soundEffectsVolumeRef.current = soundEffectsVolume;
+    setSoundEffectsMuted(soundEffectsVolume <= 0);
   }, [soundEffectsVolume]);
 
-  const playSound = useCallback((sound: SoundEffect) => {
-    const volume = soundEffectsVolumeRef.current;
-    if (volume === 0) {
+  const pendingCuesRef = useRef(new Set<number>());
+
+  useEffect(() => {
+    installAudioUnlock();
+    preloadSoundEffects();
+    const pendingCues = pendingCuesRef.current;
+    return () => {
+      for (const timeoutId of pendingCues) window.clearTimeout(timeoutId);
+      pendingCues.clear();
+    };
+  }, []);
+
+  // Reads the volume when the cue starts, so muting silences a cue that is still waiting.
+  const playSound = useCallback((sound: SoundEffect, delayMs = 0) => {
+    if (delayMs <= 0) {
+      playSoundEffect(sound, soundEffectsVolumeRef.current);
       return;
     }
-
-    let audio = audioElementsRef.current.get(sound);
-    if (!audio) {
-      audio = new Audio(SOUND_EFFECT_PATHS[sound]);
-      audio.preload = "auto";
-      audioElementsRef.current.set(sound, audio);
-    }
-
-    audio.currentTime = 0;
-    audio.volume = volume / 100;
-    void audio.play().catch(() => undefined);
+    const timeoutId = window.setTimeout(() => {
+      pendingCuesRef.current.delete(timeoutId);
+      playSoundEffect(sound, soundEffectsVolumeRef.current);
+    }, delayMs);
+    pendingCuesRef.current.add(timeoutId);
   }, []);
 
   useEffect(() => {
@@ -86,17 +96,16 @@ export function GameAudio({
       return;
     }
 
-    const sound = getViewerEventSound(
+    const cues = getViewerEventCues(
       newestEvent,
       phaseKind,
       viewerPlayerId,
       previousTradeOfferRef.current,
-      RESOURCE_ORDER.some(
-        (resource) => previousViewerResources[resource] !== viewerResources[resource],
-      ),
+      previousViewerResources,
+      viewerResources,
     );
-    if (sound) {
-      playSound(sound);
+    for (const cue of cues) {
+      playSound(cue.sound, cue.delayMs);
     }
   }, [events, phaseKind, playSound, viewerPlayerId, viewerResources, winnerPlayerId]);
 
@@ -113,8 +122,9 @@ export function GameAudio({
   useEffect(() => {
     const previousWinnerPlayerId = previousWinnerPlayerIdRef.current;
     previousWinnerPlayerIdRef.current = winnerPlayerId;
-    if (shouldPlayVictory(previousWinnerPlayerId, winnerPlayerId, viewerPlayerId)) {
-      playSound("victory");
+    const sound = getGameEndSound(previousWinnerPlayerId, winnerPlayerId, viewerPlayerId);
+    if (sound) {
+      playSound(sound);
     }
   }, [playSound, viewerPlayerId, winnerPlayerId]);
 

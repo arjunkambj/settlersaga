@@ -69,12 +69,26 @@ const AUDIO_FORMAT = "MP3 · 44.1 kHz · 192 kbps";
 
 const SOUND_EFFECTS: Record<SoundEffect, { description: string; name: string }> = {
   action: { description: "Generic game action confirmation.", name: "Action feedback" },
+  cardGain: {
+    description: "Soft rising chime when resource cards land in your hand.",
+    name: "Card gain",
+  },
   city: { description: "Weightier city upgrade cue.", name: "City placed" },
   dice: { description: "Cushioned arcane roll.", name: "Magic dice" },
+  gameOver: {
+    description: "Calm falling arpeggio when another player wins.",
+    name: "Game over",
+  },
   nextTurn: { description: "Notification when another player's turn begins.", name: "Next turn" },
-  resource: { description: "Resource gain or loss cue.", name: "Resource change" },
+  resource: {
+    description: "Cards leaving your hand: discards, steals, monopolies.",
+    name: "Resource change",
+  },
   road: { description: "Short wooden road placement cue.", name: "Road placed" },
-  robber: { description: "Robber sequence warning.", name: "Robber alert" },
+  robber: {
+    description: "Warning when another player rolls a seven, or when you move the robber.",
+    name: "Robber alert",
+  },
   settlement: { description: "Warm settlement placement cue.", name: "Settlement placed" },
   trade: { description: "Soft resource exchange.", name: "Trade resolved" },
   turn: { description: "Notification when your turn begins or has been idle.", name: "Your turn" },
@@ -505,9 +519,15 @@ const ASSET_CATEGORIES: readonly AssetCategory[] = [
         ],
       },
       { name: "General", assets: soundEffectAssets(["action"]) },
-      { name: "Turn flow", assets: soundEffectAssets(["dice", "nextTurn", "turn", "resource"]) },
+      {
+        name: "Turn flow",
+        assets: soundEffectAssets(["dice", "nextTurn", "turn", "resource", "cardGain"]),
+      },
       { name: "Building", assets: soundEffectAssets(["road", "settlement", "city"]) },
-      { name: "High-priority events", assets: soundEffectAssets(["robber", "trade", "victory"]) },
+      {
+        name: "High-priority events",
+        assets: soundEffectAssets(["robber", "trade", "victory", "gameOver"]),
+      },
     ],
   },
 ];
