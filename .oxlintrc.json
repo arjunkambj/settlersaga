@@ -7,5 +7,22 @@
   "rules": {},
   "env": {
     "builtin": true
-  }
+  },
+  "overrides": [
+    {
+      "files": ["packages/backend/convex/**"],
+      "excludeFiles": ["packages/backend/convex/_generated/**"],
+      "jsPlugins": ["@convex-dev/eslint-plugin"],
+      "rules": {
+        "@convex-dev/explicit-table-ids": "error",
+        "@convex-dev/no-duplicate-indexes": "error",
+        "@convex-dev/no-filter-in-query": "warn",
+        "@convex-dev/no-old-registered-function-syntax": "error",
+        "@convex-dev/no-process-env": "error",
+        "@convex-dev/no-schema-import-cycle": "error",
+        "@convex-dev/no-top-of-hour-crons": "warn",
+        "@convex-dev/require-args-validator": "error"
+      }
+    }
+  ]
 }

@@ -67,6 +67,7 @@ export default defineSchema({
     roomId: v.id("rooms"),
     seatIndex: v.number(),
   })
+    // oxlint-disable-next-line @convex-dev/no-duplicate-indexes -- chat history reads a room's messages in _creationTime order, which the compound index can't give
     .index("by_room_id", ["roomId"])
     .index("by_room_and_auth_user_id", ["roomId", "authUserId"]),
 

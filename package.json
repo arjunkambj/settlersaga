@@ -16,6 +16,7 @@
     "check": "oxlint && oxfmt --write"
   },
   "devDependencies": {
+    "@convex-dev/eslint-plugin": "^5.0.0",
     "@hexclave/next": "^1.0.80",
     "@settersaga/config": "workspace:*",
     "@types/bun": "^1.3.14",
