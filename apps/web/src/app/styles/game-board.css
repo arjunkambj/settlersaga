@@ -15,12 +15,6 @@
   --player-yellow: #e0b23a;
   --player-pink: #ec6aa0;
 
-  --board-port-any: #8b6a35;
-  --board-port-brick: #c94f2d;
-  --board-port-sheep: #789b25;
-  --board-port-stone: #657686;
-  --board-port-tree: #287444;
-  --board-port-wheat: #b77a0b;
   --board-plaque-face: #fff8e6;
   --board-plaque-mid: #f9e9ca;
   --board-plaque-edge: #efd5aa;
@@ -29,13 +23,16 @@
   --board-highlight: #fff8e3;
   --board-piece-shadow: #0c283a;
   --board-robber-glow: #ffc22d;
-  /* Flat terrain colors, sampled from the terrain art, drawn until the texture loads. */
-  --board-terrain-desert: #f7d28f;
-  --board-terrain-fields: #fed052;
-  --board-terrain-forest: #479842;
-  --board-terrain-hills: #f88651;
-  --board-terrain-mountains: #94b1d5;
-  --board-terrain-pasture: #b1d552;
+  --board-target: #fffdf6;
+  --board-window: #ffd97a;
+  /* Each terrain's flat color. The ground texture is faded over it, so these carry the terrain
+     and must stay clearly apart (desert pale sand, fields gold). */
+  --board-terrain-desert: #e9cf95;
+  --board-terrain-fields: #f9c93a;
+  --board-terrain-forest: #3f9a3c;
+  --board-terrain-hills: #f0794a;
+  --board-terrain-mountains: #93a7c7;
+  --board-terrain-pasture: #9fd845;
 }
 
 /* One class per seat color sets the --player-color the HUD and board read. */
@@ -179,9 +176,52 @@
   transform: translate(-50%, -50%) rotate(var(--target-rotation, 0deg));
 }
 
+/* The board draws the focused spot's preview itself, so the ring stays
+   invisible; a transparent outline still shows in forced-colors mode. */
 .build-target:focus-visible {
-  outline: 2px solid var(--primary);
+  outline: 2px solid transparent;
   outline-offset: 2px;
+}
+
+/* A soft ripple from every legal spot, so they are easy to find while the rings
+   drawn on the board stay light. It stops once a spot is hovered or focused and
+   the piece preview takes over. */
+.build-target:not(:disabled)::before {
+  position: absolute;
+  inset: 22%;
+  border: 2px solid var(--board-target);
+  border-radius: inherit;
+  content: "";
+  opacity: 0;
+  pointer-events: none;
+  animation: board-target-pulse 1.8s ease-out infinite;
+}
+
+.build-target[data-asset="road"]::before {
+  inset: 36% 6%;
+  border-radius: 9999px;
+}
+
+.build-target:hover::before,
+.build-target:focus-visible::before {
+  animation: none;
+}
+
+@keyframes board-target-pulse {
+  0% {
+    opacity: 0.85;
+    scale: 0.75;
+  }
+  100% {
+    opacity: 0;
+    scale: 1.4;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .build-target::before {
+    animation: none;
+  }
 }
 
 .board-shell.is-interacting .board-hit-target,
@@ -194,10 +234,12 @@
   display: grid;
   gap: 0.375rem;
   padding: 0.75rem;
-  border: 2px solid var(--game-panel-rim);
-  border-radius: 1rem;
-  background: linear-gradient(var(--game-panel-top), var(--game-panel-bottom));
-  box-shadow: 0 4px 0 var(--game-panel-lip);
+  border: var(--ui-line) solid var(--game-outline);
+  border-radius: var(--ui-radius-control);
+  background: linear-gradient(var(--ui-panel-top), var(--ui-panel-bottom));
+  box-shadow:
+    inset 0 1px 0 var(--ui-panel-highlight),
+    var(--ui-shadow-float);
   color: var(--foreground);
 }
 

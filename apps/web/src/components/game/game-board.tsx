@@ -500,6 +500,7 @@ function BuildTarget({
     <button
       aria-label={target.label}
       className="build-target"
+      data-asset={target.asset}
       data-board-target-id={target.id}
       disabled={disabled}
       onBlur={() => onFocus(null)}
@@ -585,7 +586,7 @@ function createPortInspection(
     ? "Available to you"
     : ownerNames.length > 0
       ? `Used by ${ownerNames.join(" and ")}`
-      : "Build beside it to unlock";
+      : "Build a settlement on its corner to use it";
 
   return {
     accessibleLabel: `${rate} ${title}, trades ${resourceLabel}. ${access}.`,
@@ -662,12 +663,12 @@ function focusBoardElement(
 function getTargetModeLabel(mode: BoardTargetMode): string {
   switch (mode) {
     case "city":
-      return "Choose a settlement to upgrade";
+      return "Pick a settlement to upgrade";
     case "road":
-      return "Choose an edge for your road";
+      return "Pick a spot for your road";
     case "robber":
-      return "Choose a tile for the robber";
+      return "Pick a tile for the robber";
     case "settlement":
-      return "Choose a corner for your settlement";
+      return "Pick a corner for your settlement";
   }
 }

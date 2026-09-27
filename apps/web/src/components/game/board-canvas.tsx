@@ -2,7 +2,6 @@
 
 import {
   NUMBER_TOKEN_PIPS,
-  RESOURCE_ORDER,
   type PixelCoordinate,
   type PlayerColor,
   type PlayerGameView,
@@ -12,26 +11,29 @@ import {
 import { memo, useEffect, useLayoutEffect, useRef, type RefObject } from "react";
 import { preload } from "react-dom";
 
+import { getPlayerPieceArt } from "@/components/game/board-piece-art";
 import {
-  PIECE_ASSET_PATHS,
+  BOARD_PIECE_ART_PATHS,
   PORT_BOAT_ASSET_PATH,
   PORT_BOAT_RENDER_SIZE,
-  PORT_TRADE_BADGE_SIZE,
+  PORT_BOAT_SAIL,
+  PORT_WALKWAY_ASSET_PATH,
+  ROAD_TEXTURE_ASSET_PATH,
   ROBBER_ASSET_PATH,
   TERRAIN_ATLAS,
-  TERRAIN_ATLAS_ASSET_PATH,
+  TERRAIN_FEATURE_ASSET_PATHS,
+  TERRAIN_GROUND_ATLAS_ASSET_PATH,
+  TERRAIN_ICON_ASSET_PATHS,
 } from "@/constants/game/board-assets";
-import { RESOURCE_CARD_ASSET_PATHS } from "@/constants/game/card-assets";
 import {
   BOARD_CANVAS,
-  getEdgePlacement,
   getPortPlacement,
-  getPortTradeBadgePoint,
   getTilePoint,
   getVertexPoint,
   type BoardLayout,
   type PortPlacement,
 } from "@/lib/game/board-layout";
+import { mixColor, withAlpha } from "@/lib/game/canvas-colors";
 
 type Board = PlayerGameView["board"];
 type NumberToken = NonNullable<Board["tiles"][number]["numberToken"]>;
@@ -78,33 +80,66 @@ type SceneRenderer<Scene> = (
 ) => Promise<void>;
 
 const MAX_CANVAS_PIXEL_RATIO = 3;
-const CITY_PIECE_SIZE = 94;
-const ROAD_PIECE_SIZE = 124;
-const ROAD_PIECE_SCALE_Y = 0.82;
-const SETTLEMENT_PIECE_SIZE = 82;
-const PORT_DOCK_WIDTH = 14;
-const TILE_TERRAIN_INSET = 6.5;
-const PORT_RESOURCE_MARK_SIZE = 31;
 
-/** Placement-target sizing. Resting markers stay small so a board full of legal
-    corners still reads as terrain; the hovered one grows into a real preview. */
-const VERTEX_MARKER_RADIUS = 20;
-const VERTEX_CITY_SIZE = 36;
-const VERTEX_SETTLEMENT_SIZE = 32;
-const VERTEX_GLOW_RADIUS = 26;
-// A corner marker has to stay small — a fresh board offers 54 of them — so the
-// hovered one grows a long way to reach the size the piece will actually be
-// built at. Road edges are never crowded, so their marker already sits close to
-// full size and only needs a nudge.
-const VERTEX_HOVER_PIECE_SCALE = 2.3;
-const ROAD_TARGET_SIZE = 95;
-const ROAD_HOVER_PIECE_SCALE = 1.45;
-const TARGET_RESTING_PIECE_ALPHA = 0.5;
+// The sizes below are multiples of the tile radius (center to corner), so every
+// map keeps the same proportions whatever radius its layout fits.
+/** Half the sand seam between neighbouring tiles. */
+const TILE_GAP = 0.045;
+const GROUND_TEXTURE_OPACITY = 0.4;
+const TILE_BEVEL = 0.05;
+const TERRAIN_FEATURE_WIDTH = 1.0;
+const TERRAIN_FEATURE_OFFSET_Y = -0.43;
+const TOKEN_RADIUS = 0.28;
+const TOKEN_OFFSET_Y = 0.3;
+// Piece art is drawn at these sizes; each image leaves room around the piece.
+const SETTLEMENT_ART_SIZE = 0.68;
+const CITY_ART_SIZE = 0.9;
+// A road is a raised wooden bar: its top face is ROAD_WIDTH wide and its side
+// shows ROAD_DEPTH below it, straight down whatever the road's angle, like the
+// houses' own walls under their roofs.
+const ROAD_WIDTH = 0.13;
+const ROAD_DEPTH = 0.05;
+const ROAD_OUTLINE = 0.03;
+/** How far a road end that joins nothing stops short of its corner. */
+const ROAD_END_GAP = 0.13;
+const ROBBER_SIZE = 0.9;
+/** The robber stands on the tile's art, above the number, so the number stays readable. */
+const ROBBER_OFFSET_Y = -0.4;
+/** On a tile without a number (the desert) it stands in the middle. */
+const ROBBER_OFFSET_Y_NO_NUMBER = 0.05;
+const PORT_WALKWAY_WIDTH = 0.2;
+
+/** Placement targets: a small ring (or an edge slot) at rest, the real piece on hover. */
+const VERTEX_MARKER_RADIUS = 0.14;
+const VERTEX_GLOW_RADIUS = 0.36;
 const TARGET_DISABLED_ALPHA = 0.2;
+/** A hovered spot previews the piece see-through, so it never reads as already built. */
+const TARGET_PREVIEW_ALPHA = 0.5;
+
+/** The terrain whose icon marks each resource's harbor. */
+const RESOURCE_TERRAIN: Readonly<Record<ResourceType, TerrainType>> = {
+  brick: "hills",
+  sheep: "pasture",
+  stone: "mountains",
+  tree: "forest",
+  wheat: "fields",
+};
+
+const STATIC_ART_PATHS = [
+  TERRAIN_GROUND_ATLAS_ASSET_PATH,
+  ...Object.values(TERRAIN_FEATURE_ASSET_PATHS),
+  ...Object.values(TERRAIN_ICON_ASSET_PATHS),
+  PORT_BOAT_ASSET_PATH,
+  PORT_WALKWAY_ASSET_PATH,
+];
+const DYNAMIC_ART_PATHS = [
+  ROBBER_ASSET_PATH,
+  ROAD_TEXTURE_ASSET_PATH,
+  ...Object.values(BOARD_PIECE_ART_PATHS),
+];
 
 const imagePromises = new Map<string, Promise<HTMLImageElement | null>>();
 const loadedImages = new Map<string, HTMLImageElement>();
-const tintedPieceCanvases = new Map<string, HTMLCanvasElement>();
 
 export const BoardCanvas = memo(function BoardCanvas({
   board,
@@ -115,12 +150,13 @@ export const BoardCanvas = memo(function BoardCanvas({
 }: BoardCanvasProps) {
   const staticCanvasRef = useRef<HTMLCanvasElement>(null);
   const dynamicCanvasRef = useRef<HTMLCanvasElement>(null);
-  preload(TERRAIN_ATLAS_ASSET_PATH, { as: "image", fetchPriority: "high" });
   for (const path of [
-    PORT_BOAT_ASSET_PATH,
-    ROBBER_ASSET_PATH,
-    ...Object.values(PIECE_ASSET_PATHS),
+    TERRAIN_GROUND_ATLAS_ASSET_PATH,
+    ...Object.values(TERRAIN_FEATURE_ASSET_PATHS),
   ]) {
+    preload(path, { as: "image", fetchPriority: "high" });
+  }
+  for (const path of [...STATIC_ART_PATHS, ...DYNAMIC_ART_PATHS]) {
     preload(path, { as: "image" });
   }
   const staticScene: StaticScene = {
@@ -238,24 +274,16 @@ async function renderStaticScene(
   scene: StaticScene,
   isCancelled: () => boolean,
 ) {
-  const portResourcePaths = scene.ports.flatMap((port) =>
-    port.trade === "any" ? [] : [RESOURCE_CARD_ASSET_PATHS[port.trade]],
-  );
+  await drawWhileImagesLoad(STATIC_ART_PATHS, isCancelled, (images) => {
+    const context = prepareCanvas(canvas, scene.renderScale);
+    if (!context) {
+      return;
+    }
 
-  await drawWhileImagesLoad(
-    [PORT_BOAT_ASSET_PATH, TERRAIN_ATLAS_ASSET_PATH, ...portResourcePaths],
-    isCancelled,
-    (images) => {
-      const context = prepareCanvas(canvas, scene.renderScale);
-      if (!context) {
-        return;
-      }
-
-      const palette = getBoardPalette(canvas);
-      drawTerrain(context, scene, images.get(TERRAIN_ATLAS_ASSET_PATH) ?? null, palette);
-      drawPorts(context, scene, images, palette);
-    },
-  );
+    const palette = getBoardPalette(canvas);
+    drawTerrain(context, scene, images, palette);
+    drawPorts(context, scene, images, palette);
+  });
 }
 
 async function renderDynamicScene(
@@ -263,22 +291,18 @@ async function renderDynamicScene(
   scene: DynamicScene,
   isCancelled: () => boolean,
 ) {
-  await drawWhileImagesLoad(
-    [...Object.values(PIECE_ASSET_PATHS), ROBBER_ASSET_PATH],
-    isCancelled,
-    (images) => {
-      const context = prepareCanvas(canvas, scene.renderScale);
-      if (!context) {
-        return;
-      }
+  await drawWhileImagesLoad(DYNAMIC_ART_PATHS, isCancelled, (images) => {
+    const context = prepareCanvas(canvas, scene.renderScale);
+    if (!context) {
+      return;
+    }
 
-      const palette = getBoardPalette(canvas);
-      drawRoads(context, scene, images, palette);
-      drawBuildings(context, scene, images, palette);
-      drawRobber(context, scene, images.get(ROBBER_ASSET_PATH) ?? null, palette);
-      drawTargets(context, scene, images, palette);
-    },
-  );
+    const palette = getBoardPalette(canvas);
+    drawRoads(context, scene, images, palette);
+    drawBuildings(context, scene, images, palette);
+    drawRobber(context, scene, images.get(ROBBER_ASSET_PATH) ?? null, palette);
+    drawTargets(context, scene, images, palette);
+  });
 }
 
 /**
@@ -351,7 +375,9 @@ function getBoardPalette(canvas: HTMLCanvasElement) {
   return {
     earth: color("board-earth"),
     earthDeep: color("board-earth-deep"),
+    foam: color("board-foam"),
     highlight: color("board-highlight"),
+    ocean: color("board-ocean"),
     pieceShadow: color("board-piece-shadow"),
     plaqueEdge: color("board-plaque-edge"),
     plaqueFace: color("board-plaque-face"),
@@ -368,14 +394,6 @@ function getBoardPalette(canvas: HTMLCanvasElement) {
       teal: color("player-teal"),
       yellow: color("player-yellow"),
     } satisfies Record<PlayerColor, string>,
-    portAccents: {
-      any: color("board-port-any"),
-      brick: color("board-port-brick"),
-      sheep: color("board-port-sheep"),
-      stone: color("board-port-stone"),
-      tree: color("board-port-tree"),
-      wheat: color("board-port-wheat"),
-    } satisfies Record<"any" | ResourceType, string>,
     robberGlow: color("board-robber-glow"),
     terrain: {
       desert: color("board-terrain-desert"),
@@ -388,6 +406,9 @@ function getBoardPalette(canvas: HTMLCanvasElement) {
     sand: color("board-sand"),
     sandLight: color("board-sand-light"),
     shadow: color("board-shadow"),
+    shallows: color("board-shallows"),
+    target: color("board-target"),
+    window: color("board-window"),
     tokenEdge: color("board-token-edge"),
     tokenFace: color("board-token-face"),
     tokenHot: color("board-token-hot"),
@@ -400,9 +421,10 @@ type BoardPalette = ReturnType<typeof getBoardPalette>;
 function drawTerrain(
   context: CanvasRenderingContext2D,
   scene: StaticScene,
-  terrainAtlas: HTMLImageElement | null,
+  images: ReadonlyMap<string, HTMLImageElement | null>,
   palette: BoardPalette,
 ) {
+  const { tileRadius } = scene.boardLayout;
   const tiles = scene.tiles
     .map((tile) => ({
       point: getTilePoint(scene.boardLayout, tile),
@@ -410,120 +432,138 @@ function drawTerrain(
     }))
     .sort((first, second) => first.point.y - second.point.y);
 
-  drawCoastline(context, scene.boardLayout, palette);
+  drawIsland(
+    context,
+    tiles.map(({ point }) => point),
+    tileRadius,
+    palette,
+  );
 
-  for (const { point } of tiles) {
-    createRoundedHexagonPath(
-      context,
-      { x: point.x, y: point.y + 8 },
-      scene.boardLayout.tileRadius + 0.65,
-      0,
-      0,
-    );
-    context.fillStyle = palette.earthDeep;
-    context.fill();
-  }
-
-  for (const { point } of tiles) {
-    createRoundedHexagonPath(context, point, scene.boardLayout.tileRadius + 0.65, 8, 0);
-    const bevel = context.createLinearGradient(
-      point.x,
-      point.y - scene.boardLayout.tileRadius,
-      point.x,
-      point.y + scene.boardLayout.tileRadius,
-    );
-    bevel.addColorStop(0, palette.sandLight);
-    bevel.addColorStop(0.5, palette.sand);
-    bevel.addColorStop(1, palette.earth);
-    context.fillStyle = bevel;
-    context.fill();
-  }
-
-  const terrainRadius = scene.boardLayout.tileRadius - TILE_TERRAIN_INSET;
-  const textureSize = terrainRadius * 2;
+  const ground = images.get(TERRAIN_GROUND_ATLAS_ASSET_PATH) ?? null;
   for (const { point, tile } of tiles) {
-    context.save();
-    createRoundedHexagonPath(context, point, terrainRadius, 5, 0);
-    if (terrainAtlas) {
-      const frame = TERRAIN_ATLAS.frames[tile.terrain];
-      context.clip();
-      context.drawImage(
-        terrainAtlas,
-        frame.column * TERRAIN_ATLAS.frameSize,
-        frame.row * TERRAIN_ATLAS.frameSize,
-        TERRAIN_ATLAS.frameSize,
-        TERRAIN_ATLAS.frameSize,
-        point.x - textureSize / 2,
-        point.y - textureSize / 2,
-        textureSize,
-        textureSize,
-      );
-    } else {
-      context.fillStyle = palette.terrain[tile.terrain];
-      context.fill();
-    }
-    context.restore();
-  }
-
-  for (const { point } of tiles) {
-    createRoundedHexagonPath(context, point, terrainRadius, 5, 0);
-    context.lineWidth = 1.2;
-    context.strokeStyle = palette.sandLight;
-    context.stroke();
+    drawTile(
+      context,
+      point,
+      tileRadius,
+      tile.terrain,
+      ground,
+      images.get(TERRAIN_FEATURE_ASSET_PATHS[tile.terrain]) ?? null,
+      palette,
+    );
   }
 
   for (const { point, tile } of tiles) {
     if (tile.numberToken !== null) {
-      drawNumberToken(context, tile.numberToken, point, scene.boardLayout.tileSize, palette);
+      drawNumberToken(context, tile.numberToken, point, tileRadius, palette);
     }
   }
 }
 
-function drawCoastline(
+/**
+ * Foam, shallows and a sand beach around the island. Each ring is every tile's
+ * hexagon grown by the same amount, so together they trace the coastline.
+ */
+function drawIsland(
   context: CanvasRenderingContext2D,
-  layout: BoardLayout,
+  points: readonly PixelCoordinate[],
+  tileRadius: number,
   palette: BoardPalette,
 ) {
-  context.save();
-  context.lineCap = "round";
-  context.lineJoin = "round";
-  for (const [edgeKey, tileIds] of Object.entries(layout.topology.edgeTileIds)) {
-    if (tileIds.length !== 1) continue;
-    const vertices = layout.topology.edgeVertices[edgeKey];
-    const start = vertices?.[0] ? getVertexPoint(layout, vertices[0]) : null;
-    const end = vertices?.[1] ? getVertexPoint(layout, vertices[1]) : null;
-    if (!start || !end) continue;
-    const tile = layout.topology.tileById[tileIds[0]!];
-    if (!tile) continue;
-    const point = getTilePoint(layout, tile);
-    const bevel = context.createLinearGradient(
-      0,
-      point.y - layout.tileRadius,
-      0,
-      point.y + layout.tileRadius,
-    );
-    bevel.addColorStop(0, palette.sandLight);
-    bevel.addColorStop(0.5, palette.sand);
-    bevel.addColorStop(1, palette.earth);
-    context.beginPath();
-    context.moveTo(start.x, start.y);
-    context.lineTo(end.x, end.y);
-    context.strokeStyle = bevel;
-    context.lineWidth = 12;
-    context.stroke();
+  const rings = [
+    { color: mixColor(palette.ocean, palette.foam, 0.78), scale: 1.33 },
+    { color: palette.shallows, scale: 1.28 },
+    { color: palette.earth, scale: 1.17 },
+    { color: palette.sand, scale: 1.14 },
+  ];
+
+  for (const { color, scale } of rings) {
+    context.fillStyle = color;
+    for (const point of points) {
+      createRoundedHexagonPath(context, point, tileRadius * scale, tileRadius * 0.3, 0);
+      context.fill();
+    }
   }
+}
+
+/**
+ * One terrain tile: the terrain's flat color with its ground texture faded over
+ * it, the terrain's feature at the same size and spot on every tile, and one frame
+ * shared by every tile. The flat color carries the terrain; the texture only adds
+ * warmth, so it stays quiet behind the number token.
+ */
+function drawTile(
+  context: CanvasRenderingContext2D,
+  point: PixelCoordinate,
+  tileRadius: number,
+  terrain: TerrainType,
+  ground: HTMLImageElement | null,
+  feature: HTMLImageElement | null,
+  palette: BoardPalette,
+) {
+  const radius = tileRadius * (1 - TILE_GAP);
+
+  context.save();
+  createRoundedHexagonPath(context, point, radius, 6, 0);
+  context.clip();
+  context.fillStyle = palette.terrain[terrain];
+  context.fillRect(point.x - radius, point.y - radius, radius * 2, radius * 2);
+  if (ground) {
+    const frame = TERRAIN_ATLAS.frames[terrain];
+    const size = radius * 2.04;
+    context.globalAlpha = GROUND_TEXTURE_OPACITY;
+    context.drawImage(
+      ground,
+      frame.column * TERRAIN_ATLAS.frameSize,
+      frame.row * TERRAIN_ATLAS.frameSize,
+      TERRAIN_ATLAS.frameSize,
+      TERRAIN_ATLAS.frameSize,
+      point.x - size / 2,
+      point.y - size / 2,
+      size,
+      size,
+    );
+    context.globalAlpha = 1;
+  }
+  // A raised-tile bevel, the same on every tile: lit along the top edges,
+  // shaded along the bottom ones.
+  const bevel = context.createLinearGradient(point.x, point.y - radius, point.x, point.y + radius);
+  bevel.addColorStop(0, withAlpha(palette.highlight, 0.7));
+  bevel.addColorStop(0.45, withAlpha(palette.highlight, 0));
+  bevel.addColorStop(0.55, withAlpha(palette.pieceShadow, 0));
+  bevel.addColorStop(1, withAlpha(palette.pieceShadow, 0.5));
+  createRoundedHexagonPath(context, point, radius, 6, 0);
+  context.lineWidth = tileRadius * TILE_BEVEL * 2;
+  context.strokeStyle = bevel;
+  context.stroke();
   context.restore();
+
+  createRoundedHexagonPath(context, point, radius, 6, 0);
+  context.lineWidth = 1.5;
+  context.strokeStyle = withAlpha(palette.pieceShadow, 0.35);
+  context.stroke();
+
+  if (feature) {
+    const width = tileRadius * TERRAIN_FEATURE_WIDTH;
+    const height = (width * feature.naturalHeight) / feature.naturalWidth;
+    context.drawImage(
+      feature,
+      point.x - width / 2,
+      point.y + tileRadius * TERRAIN_FEATURE_OFFSET_Y - height / 2,
+      width,
+      height,
+    );
+  }
 }
 
 function drawNumberToken(
   context: CanvasRenderingContext2D,
   number: NumberToken,
   tilePoint: PixelCoordinate,
-  tileSize: number,
+  tileRadius: number,
   palette: BoardPalette,
 ) {
-  const point = { x: tilePoint.x, y: tilePoint.y + tileSize * 0.16 };
-  const radius = Math.min(44, tileSize * 0.125);
+  const point = { x: tilePoint.x, y: tilePoint.y + tileRadius * TOKEN_OFFSET_Y };
+  const radius = tileRadius * TOKEN_RADIUS;
   const isHot = number === 6 || number === 8;
   const ink = isHot ? palette.tokenHot : palette.tokenInk;
 
@@ -531,12 +571,17 @@ function drawNumberToken(
   context.shadowBlur = 8;
   context.shadowColor = palette.shadow;
   context.shadowOffsetY = 3;
-  createRoundedHexagonPath(context, point, radius, 5, Math.PI / 6);
+  createRoundedHexagonPath(context, point, radius, 7, 0);
   context.fillStyle = palette.tokenEdge;
   context.fill();
   context.restore();
+  // The same dark keyline as the pieces keeps the pale token crisp on pale tiles.
+  createRoundedHexagonPath(context, point, radius + 1.5, 7, 0);
+  context.lineWidth = 3;
+  context.strokeStyle = withAlpha(palette.pieceShadow, 0.85);
+  context.stroke();
 
-  createRoundedHexagonPath(context, point, radius - 1.2, 4, Math.PI / 6);
+  createRoundedHexagonPath(context, point, radius - 2, 6, 0);
   const face = context.createRadialGradient(
     point.x - radius * 0.28,
     point.y - radius * 0.34,
@@ -555,24 +600,17 @@ function drawNumberToken(
   context.stroke();
 
   context.fillStyle = ink;
-  context.font = `800 ${Math.round(radius * 0.92)}px ui-rounded, system-ui, sans-serif`;
+  context.font = `900 ${Math.round(radius * 1.02)}px ui-rounded, system-ui, sans-serif`;
   context.textAlign = "center";
   context.textBaseline = "middle";
-  context.fillText(String(number), point.x, point.y - radius * 0.08);
+  context.fillText(String(number), point.x, point.y - radius * 0.1);
 
   const pips = NUMBER_TOKEN_PIPS[number];
-  const pipGap = Math.max(6.2, radius * 0.2);
+  const pipGap = radius * 0.24;
   const firstPipX = point.x - ((pips - 1) * pipGap) / 2;
-  context.fillStyle = ink;
   for (let index = 0; index < pips; index += 1) {
     context.beginPath();
-    context.arc(
-      firstPipX + index * pipGap,
-      point.y + radius * 0.42,
-      radius * 0.075,
-      0,
-      Math.PI * 2,
-    );
+    context.arc(firstPipX + index * pipGap, point.y + radius * 0.52, radius * 0.1, 0, Math.PI * 2);
     context.fill();
   }
 }
@@ -588,9 +626,10 @@ function drawPorts(
     return placement ? [{ placement, port }] : [];
   });
 
+  const walkway = images.get(PORT_WALKWAY_ASSET_PATH) ?? null;
   for (const { placement } of ports) {
     for (const dock of placement.docks) {
-      drawDock(context, dock.start, dock.end, palette);
+      drawDock(context, dock.start, dock.end, scene.boardLayout.tileRadius, walkway);
     }
   }
 
@@ -600,129 +639,280 @@ function drawPorts(
       placement,
       port.trade,
       images.get(PORT_BOAT_ASSET_PATH) ?? null,
-      port.trade === "any" ? null : (images.get(RESOURCE_CARD_ASSET_PATHS[port.trade]) ?? null),
+      port.trade === "any"
+        ? null
+        : (images.get(TERRAIN_ICON_ASSET_PATHS[RESOURCE_TERRAIN[port.trade]]) ?? null),
       palette,
     );
   }
 }
 
+/** A wooden pier from a harbor corner out to its ship. */
 function drawDock(
   context: CanvasRenderingContext2D,
   start: PixelCoordinate,
   end: PixelCoordinate,
-  palette: BoardPalette,
+  tileRadius: number,
+  walkway: HTMLImageElement | null,
 ) {
-  const plankLength = Math.hypot(end.x - start.x, end.y - start.y);
-  if (plankLength < 4) {
+  const length = Math.hypot(end.x - start.x, end.y - start.y);
+  if (!walkway || length < 4) {
     return;
   }
 
-  const angle = Math.atan2(end.y - start.y, end.x - start.x);
-  const half = PORT_DOCK_WIDTH / 2;
-
+  const width = tileRadius * PORT_WALKWAY_WIDTH;
   context.save();
   context.translate((start.x + end.x) / 2, (start.y + end.y) / 2);
-  context.rotate(angle);
-  context.lineJoin = "round";
-
-  context.fillStyle = palette.earthDeep;
-  createRoundedRectPath(
-    context,
-    -plankLength / 2 + 1,
-    -half + 1.5,
-    plankLength,
-    PORT_DOCK_WIDTH,
-    3,
-  );
-  context.fill();
-
-  const wood = context.createLinearGradient(0, -half, 0, half);
-  wood.addColorStop(0, palette.sandLight);
-  wood.addColorStop(0.5, palette.sand);
-  wood.addColorStop(1, palette.earth);
-  createRoundedRectPath(context, -plankLength / 2, -half, plankLength, PORT_DOCK_WIDTH, 3);
-  context.fillStyle = wood;
-  context.fill();
-
-  context.fillStyle = palette.earth;
-  createRoundedRectPath(context, -plankLength / 2, -half, plankLength, 2.1, 1);
-  context.fill();
-  createRoundedRectPath(context, -plankLength / 2, half - 2.1, plankLength, 2.1, 1);
-  context.fill();
-
-  context.strokeStyle = palette.sandLight;
-  context.lineWidth = 1;
-  context.beginPath();
-  context.moveTo(-plankLength / 2 + 4, -half + 3.2);
-  context.lineTo(plankLength / 2 - 4, -half + 3.2);
-  context.stroke();
-
-  context.strokeStyle = palette.earth;
-  context.globalAlpha = 0.45;
-  context.lineWidth = 1;
-  const seamCount = Math.max(2, Math.round(plankLength / 22));
-  for (let index = 1; index < seamCount; index += 1) {
-    const x = -plankLength / 2 + (plankLength * index) / seamCount;
-    context.beginPath();
-    context.moveTo(x, -half + 2.4);
-    context.lineTo(x, half - 2.4);
-    context.stroke();
-  }
-
+  context.rotate(Math.atan2(end.y - start.y, end.x - start.x));
+  context.drawImage(walkway, -length / 2, -width / 2, length, width);
   context.restore();
 }
 
+/** The harbor ship, with its trade printed on the sail: the resource (or "?") and the rate. */
 function drawPort(
   context: CanvasRenderingContext2D,
   placement: PortPlacement,
   trade: "any" | ResourceType,
-  boatImage: HTMLImageElement | null,
-  resourceImage: HTMLImageElement | null,
+  shipImage: HTMLImageElement | null,
+  resourceIcon: HTMLImageElement | null,
   palette: BoardPalette,
 ) {
   const { height, width } = PORT_BOAT_RENDER_SIZE;
+  const left = placement.x - width / 2;
+  const top = placement.y - height / 2;
 
-  if (boatImage) {
+  if (shipImage) {
     context.save();
-    context.translate(placement.x, placement.y);
-    context.shadowBlur = 5;
-    context.shadowColor = withAlpha(palette.pieceShadow, 0.24);
-    context.shadowOffsetY = 3;
-    context.drawImage(boatImage, -width / 2, -height / 2, width, height);
+    context.shadowBlur = 6;
+    context.shadowColor = withAlpha(palette.pieceShadow, 0.3);
+    context.shadowOffsetY = 4;
+    context.drawImage(shipImage, left, top, width, height);
     context.restore();
   }
 
-  drawPortTradeBadge(context, getPortTradeBadgePoint(placement), trade, resourceImage, palette);
+  const sailX = left + width * PORT_BOAT_SAIL.centerX;
+  const sailY = top + height * PORT_BOAT_SAIL.centerY;
+  const sailWidth = width * PORT_BOAT_SAIL.width;
+  const sailHeight = height * PORT_BOAT_SAIL.height;
+  const markX = sailX - sailWidth * 0.22;
+  const markSize = Math.min(sailHeight * 0.82, sailWidth * 0.42);
+
+  context.save();
+  context.fillStyle = palette.plaqueInk;
+  context.textAlign = "center";
+  context.textBaseline = "middle";
+  if (trade === "any") {
+    context.font = `900 ${Math.round(sailHeight * 0.74)}px ui-rounded, system-ui, sans-serif`;
+    context.fillText("?", markX, sailY + 1);
+  } else if (resourceIcon) {
+    context.drawImage(resourceIcon, markX - markSize / 2, sailY - markSize / 2, markSize, markSize);
+  }
+  context.font = `900 ${Math.round(sailHeight * 0.46)}px ui-rounded, system-ui, sans-serif`;
+  context.fillText(trade === "any" ? "3:1" : "2:1", sailX + sailWidth * 0.2, sailY + 1);
+  context.restore();
 }
 
+/**
+ * Roads are drawn in passes (every outline, then every painted fill), so a
+ * player's roads that meet at a corner join into one continuous path. A road end
+ * with no road of the same player beyond it stops short of the corner, so rival
+ * roads that share a corner never overlap.
+ */
 function drawRoads(
   context: CanvasRenderingContext2D,
   scene: DynamicScene,
   images: ReadonlyMap<string, HTMLImageElement | null>,
   palette: BoardPalette,
 ) {
-  const path = PIECE_ASSET_PATHS.road;
-  const image = images.get(path) ?? null;
-  if (!image) {
-    return;
+  const { tileRadius, topology } = scene.boardLayout;
+  const roadsAtCorner = new Map<string, number>();
+  for (const road of scene.roads) {
+    for (const vertexKey of topology.edgeVertices[road.edgeKey] ?? []) {
+      const key = `${road.playerId}:${vertexKey}`;
+      roadsAtCorner.set(key, (roadsAtCorner.get(key) ?? 0) + 1);
+    }
   }
 
-  for (const road of scene.roads) {
-    const placement = getEdgePlacement(scene.boardLayout, road.edgeKey);
-    if (!placement) {
-      continue;
+  const segments = scene.roads.flatMap((road) => {
+    const [startKey, endKey] = topology.edgeVertices[road.edgeKey] ?? [];
+    const start = startKey ? getVertexPoint(scene.boardLayout, startKey) : null;
+    const end = endKey ? getVertexPoint(scene.boardLayout, endKey) : null;
+    if (!startKey || !endKey || !start || !end) {
+      return [];
     }
 
-    drawPlayerPiece(
-      context,
-      getTintedPieceCanvas(image, path, getPlayerTint(scene, road.playerId, palette)),
-      placement,
-      ROAD_PIECE_SIZE,
-      palette,
-      placement.angle,
-      ROAD_PIECE_SCALE_Y,
-    );
+    const joins = (vertexKey: string) =>
+      (roadsAtCorner.get(`${road.playerId}:${vertexKey}`) ?? 0) > 1;
+    return [
+      {
+        color: getPlayerTint(scene, road.playerId, palette),
+        ...trimRoadEnds(start, end, tileRadius * ROAD_END_GAP, joins(startKey), joins(endKey)),
+      },
+    ];
+  });
+
+  drawRoadSegments(
+    context,
+    segments,
+    tileRadius,
+    images.get(ROAD_TEXTURE_ASSET_PATH) ?? null,
+    palette,
+    getPlacedShadow(palette),
+  );
+}
+
+interface RoadSegment extends RoadEnds {
+  color: string;
+}
+
+/**
+ * Raised wooden roads, drawn in passes (every outline, then every side face,
+ * then every top face) so roads that meet at a corner join into one path.
+ */
+function drawRoadSegments(
+  context: CanvasRenderingContext2D,
+  segments: readonly RoadSegment[],
+  tileRadius: number,
+  texture: HTMLImageElement | null,
+  palette: BoardPalette,
+  shadow: PieceShadow,
+) {
+  const width = tileRadius * ROAD_WIDTH;
+  const depth = tileRadius * ROAD_DEPTH;
+  const outline = tileRadius * ROAD_OUTLINE;
+
+  context.save();
+  context.lineCap = "round";
+  // One shadow under the whole bar; the outline sweep below would stack it.
+  context.save();
+  applyShadow(context, shadow);
+  context.lineWidth = width + outline * 2;
+  context.strokeStyle = palette.pieceShadow;
+  for (const segment of segments) {
+    traceRoad(context, segment, depth);
+    context.stroke();
   }
+  context.restore();
+
+  context.lineWidth = width + outline * 2;
+  context.strokeStyle = palette.pieceShadow;
+  for (const segment of segments) {
+    sweepRoad(context, segment, depth);
+  }
+  context.lineWidth = width;
+  for (const segment of segments) {
+    context.strokeStyle = mixColor(segment.color, palette.pieceShadow, 0.38);
+    sweepRoad(context, segment, depth);
+  }
+  context.restore();
+
+  for (const segment of segments) {
+    drawRoadTop(context, segment, texture, tileRadius, palette);
+  }
+}
+
+/** Strokes a road from its top face down to its base, sweeping out the raised bar. */
+function sweepRoad(context: CanvasRenderingContext2D, road: RoadEnds, depth: number) {
+  for (const step of [0, 0.5, 1]) {
+    traceRoad(context, road, depth * step);
+    context.stroke();
+  }
+}
+
+/** Pulls each road end that does not join another road back from its corner by `gap`. */
+function trimRoadEnds(
+  start: PixelCoordinate,
+  end: PixelCoordinate,
+  gap: number,
+  startJoins: boolean,
+  endJoins: boolean,
+): RoadEnds {
+  const length = Math.hypot(end.x - start.x, end.y - start.y) || 1;
+  const ux = (end.x - start.x) / length;
+  const uy = (end.y - start.y) / length;
+  const startInset = startJoins ? 0 : gap;
+  const endInset = endJoins ? 0 : gap;
+  return {
+    end: { x: end.x - ux * endInset, y: end.y - uy * endInset },
+    start: { x: start.x + ux * startInset, y: start.y + uy * startInset },
+  };
+}
+
+interface RoadEnds {
+  end: PixelCoordinate;
+  start: PixelCoordinate;
+}
+
+/** The two corners an edge runs between, from its midpoint and angle. */
+function getRoadEnds(center: PixelCoordinate, angle: number, tileRadius: number): RoadEnds {
+  const half = tileRadius / 2;
+  const dx = Math.cos((angle * Math.PI) / 180) * half;
+  const dy = Math.sin((angle * Math.PI) / 180) * half;
+  return {
+    end: { x: center.x + dx, y: center.y + dy },
+    start: { x: center.x - dx, y: center.y - dy },
+  };
+}
+
+function traceRoad(context: CanvasRenderingContext2D, { end, start }: RoadEnds, drop = 0) {
+  context.beginPath();
+  context.moveTo(start.x, start.y + drop);
+  context.lineTo(end.x, end.y + drop);
+}
+
+/**
+ * A road's top face: painted wood in the seat color with a lit upper rim and
+ * plank seams laid across it. The seams run across the road at every angle, so
+ * nothing in the shading turns with it.
+ */
+function drawRoadTop(
+  context: CanvasRenderingContext2D,
+  road: RoadSegment,
+  texture: HTMLImageElement | null,
+  tileRadius: number,
+  palette: BoardPalette,
+) {
+  const width = tileRadius * ROAD_WIDTH;
+  const length = Math.hypot(road.end.x - road.start.x, road.end.y - road.start.y);
+  context.save();
+  context.translate(road.start.x, road.start.y);
+  context.rotate(Math.atan2(road.end.y - road.start.y, road.end.x - road.start.x));
+  createRoundedRectPath(context, -width / 2, -width / 2, length + width, width, width / 2);
+  context.fillStyle = road.color;
+  context.fill();
+  context.clip();
+  if (texture) {
+    // The middle band of the painted wood: its grain, without its top-lit edge.
+    const art = getPlayerPieceArt(texture, ROAD_TEXTURE_ASSET_PATH, road.color);
+    const band = art.height * 0.4;
+    const tileLength = (art.width / band) * width;
+    context.globalAlpha *= 0.55;
+    for (let x = -width / 2; x < length + width / 2; x += tileLength) {
+      context.drawImage(
+        art,
+        0,
+        art.height * 0.3,
+        art.width,
+        band,
+        x,
+        -width / 2,
+        tileLength,
+        width,
+      );
+    }
+    context.globalAlpha /= 0.55;
+  }
+
+  context.strokeStyle = withAlpha(mixColor(road.color, palette.pieceShadow, 0.5), 0.85);
+  context.lineWidth = Math.max(1, width * 0.13);
+  const plank = width * 0.9;
+  for (let x = plank * 0.75; x < length - plank * 0.25; x += plank) {
+    context.beginPath();
+    context.moveTo(x, -width / 2);
+    context.lineTo(x, width / 2);
+    context.stroke();
+  }
+  context.restore();
 }
 
 function drawBuildings(
@@ -733,24 +923,80 @@ function drawBuildings(
 ) {
   for (const building of scene.buildings) {
     const point = getVertexPoint(scene.boardLayout, building.vertexKey);
-    const path = PIECE_ASSET_PATHS[building.kind];
-    const image = images.get(path) ?? null;
-    if (!point || !image) {
+    const path = BOARD_PIECE_ART_PATHS[building.kind];
+    const art = images.get(path) ?? null;
+    if (!point || !art) {
       continue;
     }
 
-    drawPlayerPiece(
+    context.save();
+    context.translate(point.x, point.y);
+    drawBuildingArt(
       context,
-      getTintedPieceCanvas(image, path, getPlayerTint(scene, building.playerId, palette)),
-      point,
-      building.kind === "city" ? CITY_PIECE_SIZE : SETTLEMENT_PIECE_SIZE,
-      palette,
+      getPlayerPieceArt(art, path, getPlayerTint(scene, building.playerId, palette)),
+      scene.boardLayout.tileRadius *
+        (building.kind === "city" ? CITY_ART_SIZE : SETTLEMENT_ART_SIZE),
+      getPlacedShadow(palette),
     );
+    context.restore();
   }
+}
+
+/** A building centered on the current origin. */
+function drawBuildingArt(
+  context: CanvasRenderingContext2D,
+  art: HTMLCanvasElement,
+  size: number,
+  shadow: PieceShadow,
+) {
+  context.save();
+  applyShadow(context, shadow);
+  context.drawImage(art, -size / 2, -size / 2, size, size);
+  context.restore();
 }
 
 function getPlayerTint(scene: DynamicScene, playerId: string, palette: BoardPalette): string {
   return palette.players[scene.playerThemes.get(playerId) ?? "red"];
+}
+
+/** A soft drop shadow under a piece. */
+interface PieceShadow {
+  blur: number;
+  color: string;
+  offsetY: number;
+}
+
+function getPlacedShadow(palette: BoardPalette): PieceShadow {
+  return { blur: 7, color: withAlpha(palette.pieceShadow, 0.55), offsetY: 4 };
+}
+
+function applyShadow(context: CanvasRenderingContext2D, shadow: PieceShadow) {
+  context.shadowBlur = shadow.blur;
+  context.shadowColor = shadow.color;
+  context.shadowOffsetY = shadow.offsetY;
+}
+
+/**
+ * The robber stands on the tile's art, over the resource it blocks, and leaves
+ * the number below it readable; on a tile without a number it stands in the middle.
+ */
+function getRobberPoint(
+  tilePoint: PixelCoordinate,
+  tileRadius: number,
+  hasNumber: boolean,
+): PixelCoordinate {
+  return {
+    x: tilePoint.x,
+    y: tilePoint.y + tileRadius * (hasNumber ? ROBBER_OFFSET_Y : ROBBER_OFFSET_Y_NO_NUMBER),
+  };
+}
+
+function tileHasNumber(scene: DynamicScene, tilePoint: PixelCoordinate): boolean {
+  const tile = scene.tiles.find((candidate) => {
+    const point = getTilePoint(scene.boardLayout, candidate);
+    return Math.abs(point.x - tilePoint.x) < 1 && Math.abs(point.y - tilePoint.y) < 1;
+  });
+  return tile?.numberToken != null;
 }
 
 function drawRobber(
@@ -768,13 +1014,18 @@ function drawRobber(
     return;
   }
 
-  const point = getTilePoint(scene.boardLayout, tile);
-  const size = 102;
+  const { tileRadius } = scene.boardLayout;
+  const point = getRobberPoint(
+    getTilePoint(scene.boardLayout, tile),
+    tileRadius,
+    tile.numberToken !== null,
+  );
+  const size = tileRadius * ROBBER_SIZE;
   context.save();
   context.shadowBlur = 5;
   context.shadowColor = withAlpha(palette.pieceShadow, 0.42);
   context.shadowOffsetY = 4;
-  context.drawImage(image, point.x - size / 2, point.y - size * 0.5, size, size);
+  context.drawImage(image, point.x - size / 2, point.y - size / 2, size, size);
   context.restore();
 }
 
@@ -784,6 +1035,7 @@ function drawTargets(
   images: ReadonlyMap<string, HTMLImageElement | null>,
   palette: BoardPalette,
 ) {
+  const { tileRadius } = scene.boardLayout;
   // The hovered target paints last so its glow and full-size preview are never
   // clipped by a neighbouring marker.
   const ordered = [...scene.targets].sort(
@@ -792,19 +1044,24 @@ function drawTargets(
 
   for (const target of ordered) {
     if (target.asset === "robber") {
-      drawRobberTarget(context, target, images.get(ROBBER_ASSET_PATH) ?? null, palette);
-      continue;
-    }
-
-    const path = PIECE_ASSET_PATHS[target.asset];
-    const image = images.get(path) ?? null;
-    const accent = palette.players[target.theme];
-    const preview = image ? getTintedPieceCanvas(image, path, accent) : null;
-
-    if (target.asset === "road") {
-      drawRoadTarget(context, target, preview, accent, palette);
+      drawRobberTarget(
+        context,
+        target,
+        tileRadius,
+        tileHasNumber(scene, target.point),
+        images.get(ROBBER_ASSET_PATH) ?? null,
+        palette,
+      );
+    } else if (target.asset === "road") {
+      drawRoadTarget(
+        context,
+        target,
+        tileRadius,
+        images.get(ROAD_TEXTURE_ASSET_PATH) ?? null,
+        palette,
+      );
     } else {
-      drawVertexTarget(context, target, preview, accent, palette);
+      drawVertexTarget(context, target, tileRadius, images, palette);
     }
   }
 }
@@ -813,11 +1070,11 @@ function drawTargets(
 function drawVertexTarget(
   context: CanvasRenderingContext2D,
   target: BoardCanvasTarget,
-  preview: HTMLCanvasElement | null,
-  accent: string,
+  tileRadius: number,
+  images: ReadonlyMap<string, HTMLImageElement | null>,
   palette: BoardPalette,
 ) {
-  const pieceSize = target.asset === "city" ? VERTEX_CITY_SIZE : VERTEX_SETTLEMENT_SIZE;
+  const accent = palette.players[target.theme];
 
   context.save();
   context.translate(target.point.x, target.point.y);
@@ -826,123 +1083,118 @@ function drawVertexTarget(
   if (target.highlighted) {
     drawTargetGlow(context, accent, () => {
       context.beginPath();
-      context.arc(0, 0, VERTEX_GLOW_RADIUS, 0, Math.PI * 2);
+      context.arc(0, 0, tileRadius * VERTEX_GLOW_RADIUS, 0, Math.PI * 2);
     });
+    const path = BOARD_PIECE_ART_PATHS[target.asset === "city" ? "city" : "settlement"];
+    const art = images.get(path) ?? null;
+    if (art) {
+      context.globalAlpha *= TARGET_PREVIEW_ALPHA;
+      drawBuildingArt(
+        context,
+        getPlayerPieceArt(art, path, accent),
+        tileRadius * (target.asset === "city" ? CITY_ART_SIZE : SETTLEMENT_ART_SIZE),
+        getPlacedShadow(palette),
+      );
+    }
   } else {
     drawMarkerRing(context, palette, () => {
       context.beginPath();
-      context.arc(0, 0, VERTEX_MARKER_RADIUS, 0, Math.PI * 2);
+      context.arc(0, 0, tileRadius * VERTEX_MARKER_RADIUS, 0, Math.PI * 2);
     });
   }
 
-  if (preview) {
-    drawGhostPiece(
-      context,
-      preview,
-      pieceSize * (target.highlighted ? VERTEX_HOVER_PIECE_SCALE : 1),
-      target.highlighted ?? false,
-      accent,
-      palette,
-    );
-  }
-
   context.restore();
 }
 
-/** Legal road edge: no marker ring, just the road piece ghosted along the edge. */
+/** Legal road edge: a slot along the edge at rest, the road itself on hover. */
 function drawRoadTarget(
   context: CanvasRenderingContext2D,
   target: BoardCanvasTarget,
-  preview: HTMLCanvasElement | null,
-  accent: string,
+  tileRadius: number,
+  texture: HTMLImageElement | null,
   palette: BoardPalette,
 ) {
-  if (!preview) {
-    return;
-  }
+  const accent = palette.players[target.theme];
+  const road = getRoadEnds(target.point, target.angle, tileRadius);
 
   context.save();
-  context.translate(target.point.x, target.point.y);
-  context.rotate((target.angle * Math.PI) / 180);
-  context.scale(1, ROAD_PIECE_SCALE_Y);
   context.globalAlpha = target.disabled ? TARGET_DISABLED_ALPHA : 1;
-  drawGhostPiece(
-    context,
-    preview,
-    ROAD_TARGET_SIZE * (target.highlighted ? ROAD_HOVER_PIECE_SCALE : 1),
-    target.highlighted ?? false,
-    accent,
-    palette,
-  );
-  context.restore();
-}
+  context.lineCap = "round";
 
-/**
- * A preview of the piece the click would build. At rest it is translucent, so a
- * board full of options still reads as terrain; the dark rim is what keeps it
- * legible over both the pale desert and the dark forest. Hovering promotes it to
- * a solid piece sitting in a player-tinted glow.
- */
-function drawGhostPiece(
-  context: CanvasRenderingContext2D,
-  preview: HTMLCanvasElement,
-  size: number,
-  highlighted: boolean,
-  accent: string,
-  palette: BoardPalette,
-) {
-  const rimOffset = Math.max(1.2, size * 0.017);
-  const alpha = context.globalAlpha * (highlighted ? 1 : TARGET_RESTING_PIECE_ALPHA);
-
-  context.save();
-  // A hairline rim rather than a full outline: enough to separate the ghost from
-  // pale sand and dark forest alike without reading as a solid placed piece.
-  context.globalAlpha = alpha * 0.7;
-  context.filter = "brightness(0.24) saturate(0.7)";
-  for (const [offsetX, offsetY] of [
-    [-rimOffset, 0],
-    [rimOffset, 0],
-    [0, -rimOffset],
-    [0, rimOffset],
-  ]) {
-    context.drawImage(preview, -size / 2 + offsetX, -size / 2 + offsetY, size, size);
+  if (target.highlighted) {
+    context.save();
+    context.shadowBlur = 22;
+    context.shadowColor = withAlpha(accent, 0.85);
+    traceRoad(context, road);
+    context.lineWidth = tileRadius * ROAD_WIDTH;
+    context.strokeStyle = withAlpha(accent, 0.3);
+    context.stroke();
+    context.restore();
+    drawSeeThrough(context, TARGET_PREVIEW_ALPHA, (layer) =>
+      drawRoadSegments(
+        layer,
+        [{ ...road, color: accent }],
+        tileRadius,
+        texture,
+        palette,
+        getPlacedShadow(palette),
+      ),
+    );
+  } else {
+    // A soft, see-through bar a little shorter than the edge, so the corner
+    // rings stay clear; the target's CSS ripple makes it pulse.
+    context.save();
+    context.translate(target.point.x, target.point.y);
+    context.rotate((target.angle * Math.PI) / 180);
+    const length = tileRadius * 0.62;
+    const width = tileRadius * ROAD_WIDTH;
+    createRoundedRectPath(
+      context,
+      -length / 2 - width / 2,
+      -width / 2,
+      length + width,
+      width,
+      width / 2,
+    );
+    context.fillStyle = withAlpha(palette.target, 0.55);
+    context.fill();
+    context.restore();
   }
 
-  context.globalAlpha = alpha;
-  context.filter = "none";
-  context.shadowBlur = highlighted ? 14 : 6;
-  context.shadowColor = highlighted ? withAlpha(accent, 0.9) : withAlpha(palette.pieceShadow, 0.5);
-  context.shadowOffsetY = highlighted ? 0 : 2;
-  context.drawImage(preview, -size / 2, -size / 2, size, size);
   context.restore();
 }
 
 function drawRobberTarget(
   context: CanvasRenderingContext2D,
   target: BoardCanvasTarget,
+  tileRadius: number,
+  hasNumber: boolean,
   image: HTMLImageElement | null,
   palette: BoardPalette,
 ) {
+  const point = getRobberPoint(target.point, tileRadius, hasNumber);
+  const size = tileRadius * ROBBER_SIZE;
+
   context.save();
-  context.translate(target.point.x, target.point.y);
+  context.translate(point.x, point.y);
   context.globalAlpha = target.disabled ? TARGET_DISABLED_ALPHA : 1;
 
   if (target.highlighted) {
     drawTargetGlow(context, palette.robberGlow, () => {
       context.beginPath();
-      context.arc(0, 0, 58, 0, Math.PI * 2);
+      context.arc(0, 0, size * 0.5, 0, Math.PI * 2);
     });
 
     if (image) {
       context.globalAlpha *= 0.94;
       context.shadowBlur = 12;
       context.shadowColor = withAlpha(palette.robberGlow, 0.72);
-      context.drawImage(image, -46, -46, 92, 92);
+      context.drawImage(image, -size / 2, -size / 2, size, size);
     }
   } else {
     drawMarkerRing(context, palette, () => {
       context.beginPath();
-      context.arc(0, 0, 9, 0, Math.PI * 2);
+      context.arc(0, 0, tileRadius * VERTEX_MARKER_RADIUS * 0.6, 0, Math.PI * 2);
     });
   }
 
@@ -950,9 +1202,8 @@ function drawRobberTarget(
 }
 
 /**
- * The resting affordance: a translucent well with a dark keyline so it stays
- * legible over both the pale desert and the dark forest tiles, plus a warm
- * inner stroke that ties it to the board's gold trim.
+ * The resting affordance: a white ring with a firm dark keyline, so every legal
+ * spot stands out on the pale sand seams as well as on the dark forest tiles.
  */
 function drawMarkerRing(
   context: CanvasRenderingContext2D,
@@ -961,14 +1212,47 @@ function drawMarkerRing(
 ) {
   context.save();
   createPath();
-  context.fillStyle = withAlpha(palette.highlight, 0.16);
+  context.fillStyle = withAlpha(palette.target, 0.3);
   context.fill();
-  context.lineWidth = 4.5;
-  context.strokeStyle = withAlpha(palette.pieceShadow, 0.5);
+  context.lineWidth = 5.5;
+  context.strokeStyle = withAlpha(palette.pieceShadow, 0.78);
   context.stroke();
-  context.lineWidth = 2;
-  context.strokeStyle = withAlpha(palette.highlight, 0.72);
+  context.lineWidth = 2.6;
+  context.strokeStyle = palette.target;
   context.stroke();
+  context.restore();
+}
+
+let seeThroughLayer: HTMLCanvasElement | null = null;
+
+/**
+ * Draws a preview at full strength on a scratch layer, then lays the whole layer
+ * down at `alpha`, so the preview's overlapping parts do not stack into a solid piece.
+ */
+function drawSeeThrough(
+  context: CanvasRenderingContext2D,
+  alpha: number,
+  draw: (layer: CanvasRenderingContext2D) => void,
+) {
+  const { height, width } = context.canvas;
+  seeThroughLayer ??= document.createElement("canvas");
+  if (seeThroughLayer.width !== width || seeThroughLayer.height !== height) {
+    seeThroughLayer.width = width;
+    seeThroughLayer.height = height;
+  }
+  const layer = seeThroughLayer.getContext("2d");
+  if (!layer) {
+    return;
+  }
+
+  layer.resetTransform();
+  layer.clearRect(0, 0, width, height);
+  layer.setTransform(context.getTransform());
+  draw(layer);
+  context.save();
+  context.resetTransform();
+  context.globalAlpha *= alpha;
+  context.drawImage(seeThroughLayer, 0, 0);
   context.restore();
 }
 
@@ -980,201 +1264,6 @@ function drawTargetGlow(context: CanvasRenderingContext2D, accent: string, creat
   createPath();
   context.fillStyle = withAlpha(accent, 0.38);
   context.fill();
-  context.restore();
-}
-
-function withAlpha(color: string, alpha: number): string {
-  return `${color}${Math.round(alpha * 255)
-    .toString(16)
-    .padStart(2, "0")}`;
-}
-
-function drawPlayerPiece(
-  context: CanvasRenderingContext2D,
-  tintedPiece: HTMLCanvasElement,
-  point: PixelCoordinate,
-  size: number,
-  palette: BoardPalette,
-  angle = 0,
-  scaleY = 1,
-) {
-  context.save();
-  context.translate(point.x, point.y);
-  context.rotate((angle * Math.PI) / 180);
-  context.scale(1, scaleY);
-  const rimOffset = Math.max(1.8, size * 0.018);
-  context.filter = "brightness(0.28) saturate(0.72)";
-  context.globalAlpha = 0.88;
-  for (const [offsetX, offsetY] of [
-    [-rimOffset, 0],
-    [rimOffset, 0],
-    [0, -rimOffset],
-    [0, rimOffset],
-    [-rimOffset, -rimOffset],
-    [rimOffset, -rimOffset],
-    [-rimOffset, rimOffset],
-    [rimOffset, rimOffset],
-  ]) {
-    context.drawImage(tintedPiece, -size / 2 + offsetX, -size / 2 + offsetY, size, size);
-  }
-  context.filter = "none";
-  context.globalAlpha = 1;
-  context.shadowBlur = 4;
-  context.shadowColor = withAlpha(palette.pieceShadow, 0.34);
-  context.shadowOffsetY = 2;
-  context.drawImage(tintedPiece, -size / 2, -size / 2, size, size);
-  context.restore();
-}
-
-function getTintedPieceCanvas(
-  image: HTMLImageElement,
-  path: string,
-  color: string,
-): HTMLCanvasElement {
-  const key = `${path}:${color}`;
-  const cached = tintedPieceCanvases.get(key);
-  if (cached) {
-    return cached;
-  }
-
-  const canvas = document.createElement("canvas");
-  canvas.width = image.naturalWidth;
-  canvas.height = image.naturalHeight;
-  const context = canvas.getContext("2d");
-  if (!context) {
-    return canvas;
-  }
-
-  // Multiply preserves the modeled clay lighting while keeping player colors
-  // rich enough to distinguish at the board's smallest rendered sizes.
-  context.drawImage(image, 0, 0);
-  context.globalCompositeOperation = "multiply";
-  context.fillStyle = color;
-  context.fillRect(0, 0, canvas.width, canvas.height);
-  context.globalCompositeOperation = "screen";
-  context.globalAlpha = 0.16;
-  context.drawImage(image, 0, 0);
-  context.globalAlpha = 1;
-  context.globalCompositeOperation = "destination-in";
-  context.drawImage(image, 0, 0);
-  context.globalCompositeOperation = "source-over";
-  tintedPieceCanvases.set(key, canvas);
-  return canvas;
-}
-
-function drawPortTradeBadge(
-  context: CanvasRenderingContext2D,
-  point: PixelCoordinate,
-  trade: "any" | ResourceType,
-  resourceImage: HTMLImageElement | null,
-  palette: BoardPalette,
-) {
-  const { height, width } = PORT_TRADE_BADGE_SIZE;
-  const left = point.x - width / 2;
-  const top = point.y - height / 2;
-  const accent = palette.portAccents[trade];
-  const mark = { x: point.x - 19.5, y: point.y };
-  const plaque = context.createLinearGradient(left, top, left + width, top + height);
-  plaque.addColorStop(0, palette.plaqueFace);
-  plaque.addColorStop(0.56, palette.plaqueMid);
-  plaque.addColorStop(1, palette.plaqueEdge);
-
-  context.save();
-  createRoundedRectPath(context, left, top, width, height, 12);
-  context.fillStyle = plaque;
-  context.shadowBlur = 3;
-  context.shadowColor = withAlpha(palette.plaqueShadow, 0.34);
-  context.shadowOffsetY = 2;
-  context.fill();
-  context.shadowColor = "transparent";
-  context.lineWidth = 3;
-  context.strokeStyle = accent;
-  context.stroke();
-
-  createRoundedRectPath(context, left + 3, top + 3, width - 6, height - 6, 9);
-  context.lineWidth = 1.2;
-  context.strokeStyle = withAlpha(palette.highlight, 0.52);
-  context.stroke();
-
-  context.beginPath();
-  context.moveTo(point.x, top + 7);
-  context.lineTo(point.x, top + height - 7);
-  context.lineWidth = 1.4;
-  context.strokeStyle = withAlpha(accent, 0.4);
-  context.stroke();
-
-  if (trade === "any") {
-    drawAnyResourceMark(context, mark, palette);
-  } else if (resourceImage) {
-    drawCroppedResourceMark(context, mark, resourceImage, accent);
-  }
-
-  context.fillStyle = palette.plaqueInk;
-  context.font = "900 15px ui-sans-serif, system-ui, sans-serif";
-  context.textAlign = "center";
-  context.textBaseline = "middle";
-  context.fillText(trade === "any" ? "3:1" : "2:1", point.x + 19.5, point.y + 0.5);
-  context.restore();
-}
-
-function drawCroppedResourceMark(
-  context: CanvasRenderingContext2D,
-  point: PixelCoordinate,
-  image: HTMLImageElement,
-  accent: string,
-) {
-  const sourceSize = Math.min(image.naturalWidth * 0.68, image.naturalHeight * 0.46);
-  const sourceX = (image.naturalWidth - sourceSize) / 2;
-  const sourceY = (image.naturalHeight - sourceSize) / 2;
-  context.save();
-  context.beginPath();
-  context.arc(point.x, point.y, PORT_RESOURCE_MARK_SIZE / 2, 0, Math.PI * 2);
-  context.clip();
-  context.drawImage(
-    image,
-    sourceX,
-    sourceY,
-    sourceSize,
-    sourceSize,
-    point.x - PORT_RESOURCE_MARK_SIZE / 2,
-    point.y - PORT_RESOURCE_MARK_SIZE / 2,
-    PORT_RESOURCE_MARK_SIZE,
-    PORT_RESOURCE_MARK_SIZE,
-  );
-  context.restore();
-
-  context.beginPath();
-  context.arc(point.x, point.y, PORT_RESOURCE_MARK_SIZE / 2, 0, Math.PI * 2);
-  context.lineWidth = 1.5;
-  context.strokeStyle = accent;
-  context.stroke();
-}
-
-/** A ring of every resource's accent: the harbor takes any one of them. */
-function drawAnyResourceMark(
-  context: CanvasRenderingContext2D,
-  point: PixelCoordinate,
-  palette: BoardPalette,
-) {
-  context.save();
-  context.shadowBlur = 2;
-  context.shadowColor = withAlpha(palette.pieceShadow, 0.25);
-  RESOURCE_ORDER.forEach((resource, index) => {
-    const angle = -Math.PI / 2 + (index * Math.PI * 2) / RESOURCE_ORDER.length;
-    context.beginPath();
-    context.arc(
-      point.x + Math.cos(angle) * 7.2,
-      point.y + Math.sin(angle) * 7.2,
-      3.8,
-      0,
-      Math.PI * 2,
-    );
-    context.fillStyle = palette.portAccents[resource];
-    context.fill();
-    context.strokeStyle = withAlpha(palette.highlight, 0.95);
-    context.lineWidth = 1.2;
-    context.stroke();
-  });
   context.restore();
 }
 

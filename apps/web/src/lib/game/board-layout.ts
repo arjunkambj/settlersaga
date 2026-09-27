@@ -1,11 +1,7 @@
 import { axialToPixel, getBoardTopology } from "@settersaga/game";
 import type { AxialCoordinate, BoardTopology, PixelCoordinate } from "@settersaga/game";
 
-import {
-  BOARD_TILE,
-  PORT_BOAT_RENDER_SIZE,
-  PORT_TRADE_BADGE_SIZE,
-} from "@/constants/game/board-assets";
+import { BOARD_TILE, PORT_BOAT_RENDER_SIZE } from "@/constants/game/board-assets";
 
 export const BOARD_CANVAS = {
   centerX: 600,
@@ -161,11 +157,6 @@ export function getPortPlacement(layout: BoardLayout, edgeKey: string): PortPlac
   };
 }
 
-/** Center of the trade-ratio plaque that hangs below a harbor boat. */
-export function getPortTradeBadgePoint(port: PixelCoordinate): PixelCoordinate {
-  return { x: port.x, y: port.y + PORT_BOAT_RENDER_SIZE.height * 0.48 };
-}
-
 /**
  * The part of the canvas the island, its coastal pieces and its harbors cover. Maps differ in
  * shape (the wide isle is much wider than tall), so the view frames this box, not the canvas.
@@ -208,17 +199,12 @@ export function getBoardPlaneStyle(frame: BoardFrame) {
   };
 }
 
-/** The harbor boat and the trade plaque hanging below it. */
+/** The harbor ship; its trade is printed on the sail. */
 export function getPortBox(port: PixelCoordinate): BoardBox {
-  const badge = getPortTradeBadgePoint(port);
-  const halfWidth = Math.max(PORT_BOAT_RENDER_SIZE.width, PORT_TRADE_BADGE_SIZE.width) / 2;
   return {
-    bottom: Math.max(
-      port.y + PORT_BOAT_RENDER_SIZE.height / 2,
-      badge.y + PORT_TRADE_BADGE_SIZE.height / 2,
-    ),
-    left: port.x - halfWidth,
-    right: port.x + halfWidth,
+    bottom: port.y + PORT_BOAT_RENDER_SIZE.height / 2,
+    left: port.x - PORT_BOAT_RENDER_SIZE.width / 2,
+    right: port.x + PORT_BOAT_RENDER_SIZE.width / 2,
     top: port.y - PORT_BOAT_RENDER_SIZE.height / 2,
   };
 }

@@ -135,7 +135,7 @@ function createVertexTargets(
           id: `city:${vertexKey}`,
           label,
           point,
-          successMessage: "City completed.",
+          successMessage: "City built.",
           theme,
         }
       : {
@@ -245,17 +245,19 @@ function getTargetLabel(
 }
 
 function getTargetActionLabel(mode: BoardTargetMode, terrainContext: string): string {
-  const adjacentContext = terrainContext ? ` beside ${terrainContext}` : "";
+  const adjacentContext = terrainContext ? ` next to ${terrainContext}` : "";
+  // "here" only when there is no terrain to name, so the label never reads "here next to …".
+  const placeContext = adjacentContext || " here";
 
   switch (mode) {
     case "city":
-      return `Upgrade settlement to city${adjacentContext}`;
+      return `Upgrade this settlement to a city${adjacentContext}`;
     case "road":
-      return `Place road at legal edge${adjacentContext}`;
+      return `Place a road${placeContext}`;
     case "robber":
-      return terrainContext ? `Move robber to ${terrainContext} tile` : "Move robber to legal tile";
+      return terrainContext ? `Move the robber to ${terrainContext}` : "Move the robber here";
     case "settlement":
-      return `Place settlement at legal vertex${adjacentContext}`;
+      return `Place a settlement${placeContext}`;
   }
 }
 
