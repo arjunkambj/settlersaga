@@ -195,14 +195,14 @@ export const leaveRoom = mutation({
       return null;
     }
 
-    const hostText = isHost ? ` ${nextHost.displayName} is now the room host.` : "";
+    const hostText = isHost ? ` ${nextHost.displayName} is the host now.` : "";
     await Promise.all([
       convertGameSeatToBot(
         ctx,
         room,
         seat,
         seats,
-        `${seat.displayName} left the game and is now controlled by a bot.${hostText}`,
+        `${seat.displayName} left the game, so a bot is playing for them.${hostText}`,
       ),
       ...handOverHost,
     ]);

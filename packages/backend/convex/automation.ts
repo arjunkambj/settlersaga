@@ -71,7 +71,7 @@ export const runAutomatedAction = internalMutation({
       if (actor.isBot) {
         await pauseGameRecord(ctx, game, {
           actorSeatId: actorSeat._id,
-          text: `${actorSeat.displayName} could not act, so the game was paused.`,
+          text: `${actorSeat.displayName} couldn't make a move, so the game paused.`,
         });
       } else {
         await ctx.db.patch("games", game._id, { nextActionAt: undefined });
