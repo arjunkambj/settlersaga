@@ -6,6 +6,7 @@ export const UI_PREVIEW_MODES = [
   "game-actions",
   "game-cities",
   "game-discard",
+  "game-live",
   "game-paused",
   "game-results",
   "game-setup",

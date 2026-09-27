@@ -2,14 +2,21 @@
 
 import type { Id } from "@settersaga/backend/convex/_generated/dataModel";
 import {
+  commandEventKind,
+  commandTargetPlayerId,
+  commandText,
+} from "@settersaga/backend/convex/model/commands";
+import {
   applyCommand,
   assertGameState,
   assertPlayerGameView,
+  chooseAutomatedCommand,
   createDefaultGame,
   DEFAULT_BASE_GAME_SETTINGS,
   DEVELOPMENT_CARD_TYPES,
   emptyInventory,
   getLegalActions,
+  getRequiredPlayerIds,
   RESOURCE_TYPES,
   toPlayerView,
   type BaseGameSettings,
@@ -427,6 +434,9 @@ const PREVIEW_INCOMING_GAME_CHAT: PreviewChatLine = {
   playerColor: "orange",
 };
 
+/** In the live preview, the crew's moves come this far apart, so each one's cards can land. */
+const LIVE_CREW_MOVE_MS = 1_600;
+
 function GamePreview({
   mode,
   previewDeadline,
@@ -437,7 +447,7 @@ function GamePreview({
   seed?: string;
 }) {
   const [previewState, setPreviewState] = useState(() => createGamePreviewState(mode, seed));
-  const [previewEvents] = useState(() => createPreviewEvents(mode, previewState));
+  const [previewEvents, setPreviewEvents] = useState(() => createPreviewEvents(mode, previewState));
   const previewStateRef = useRef(previewState);
   const [isPaused, setIsPaused] = useState(mode === "game-paused");
   const chat = usePreviewChat({
@@ -446,18 +456,58 @@ function GamePreview({
     viewerColor: "red",
   });
 
-  const runCommand = async (command: GameCommand) => {
-    const nextState = applyCommand(previewStateRef.current, "player-1", command);
+  // Every move is logged as the server would log it, so the screen reacts as in a real game.
+  const applyPreviewCommand = (actorPlayerId: string, command: GameCommand) => {
+    const state = previewStateRef.current;
+    const nextState = applyCommand(state, actorPlayerId, command);
     assertGameState(nextState);
     previewStateRef.current = nextState;
     setPreviewState(nextState);
+    setPreviewEvents((events) => [
+      ...events,
+      createPreviewEvent(
+        events.length,
+        actorPlayerId,
+        commandText(command, actorPlayerId, state, nextState),
+        commandEventKind(command, actorPlayerId, state, nextState),
+        commandTargetPlayerId(command),
+      ),
+    ]);
   };
+
+  const runCommand = async (command: GameCommand) => {
+    applyPreviewCommand("player-1", command);
+  };
+
+  // The live table: whenever someone else is required, they move as a hard bot would.
+  const crewPlayerId =
+    mode === "game-live" && !isPaused
+      ? getRequiredPlayerIds(previewState).find((playerId) => playerId !== "player-1")
+      : undefined;
+  useEffect(() => {
+    if (!crewPlayerId) {
+      return;
+    }
+    const timeoutId = window.setTimeout(() => {
+      const state = previewStateRef.current;
+      const asBot = {
+        ...state,
+        players: state.players.map((player) =>
+          player.id === crewPlayerId
+            ? { ...player, botDifficulty: "hard" as const, isBot: true as const }
+            : player,
+        ),
+      };
+      applyPreviewCommand(crewPlayerId, chooseAutomatedCommand(asBot, crewPlayerId));
+    }, LIVE_CREW_MOVE_MS);
+    return () => window.clearTimeout(timeoutId);
+  }, [crewPlayerId, previewState]);
 
   return (
     <GameScreen
       audioSettings={DEFAULT_AUDIO_SETTINGS}
       botDifficulty="medium"
-      botThinking={false}
+      botThinking={crewPlayerId !== undefined}
       chat={chat}
       events={previewEvents}
       game={createPreviewView(previewState)}
@@ -481,6 +531,8 @@ function createGamePreviewState(mode: GamePreviewMode, seed?: string): GameState
   switch (mode) {
     case "game":
       return createPreviewGame(false, seed);
+    case "game-live":
+      return createPreviewGame(false);
     case "game-actions":
     case "game-paused":
       return createPreviewGame(true);
@@ -860,14 +912,27 @@ function createPreviewEvents(mode: GamePreviewMode, state: GameState): RoomEvent
     }
   }
 
-  return rows.map(([actorPlayerId, text, kind], index) => ({
+  return rows.map(([actorPlayerId, text, kind], index) =>
+    createPreviewEvent(index, actorPlayerId, text, kind),
+  );
+}
+
+function createPreviewEvent(
+  index: number,
+  actorPlayerId: string,
+  text: string,
+  kind: RoomEventView["kind"],
+  targetPlayerId?: string,
+): RoomEventView {
+  return {
     actorPlayerId,
     createdAt: PREVIEW_EVENT_ANCHOR + index * 45_000,
     // Fixture ids never reach Convex.
     id: `preview-event-${index + 1}` as Id<"gameActions">,
     kind,
+    ...(targetPlayerId ? { targetPlayerId } : {}),
     text,
-  }));
+  };
 }
 
 const PREVIEW_EVENT_ANCHOR = Date.UTC(2026, 6, 19, 22, 30);
