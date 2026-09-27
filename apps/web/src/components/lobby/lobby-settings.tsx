@@ -24,7 +24,7 @@ import Image from "next/image";
 import { useId, type ReactNode } from "react";
 
 import { MapPreview } from "@/components/lobby/map-preview";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { BOT_DIFFICULTY_DETAILS, BOT_DIFFICULTY_OPTIONS } from "@/lib/lobby/bot-difficulty";
 import { HOUSE_RULE_OPTIONS } from "@/lib/lobby/house-rules";
 import {
@@ -33,7 +33,6 @@ import {
   type LobbySettingsValue,
 } from "@/lib/lobby/lobby-settings-model";
 import { GAME_MAP_NAMES } from "@/lib/lobby/map-names";
-import { cn } from "@/lib/utils";
 
 const TURN_TIMER_CHOICES = TURN_TIMER_OPTIONS.map((seconds) => ({
   label: seconds === 0 ? "Off" : `${seconds}s`,
@@ -137,7 +136,7 @@ export function LobbySettings({
           </Setting>
         </div>
         <p className="lobby-hint">
-          Holding more than {settings.discardLimit} cards when a 7 is rolled? Discard half.
+          When a 7 is rolled, anyone with more than {settings.discardLimit} cards discards half.
         </p>
         <Setting icon={timerIcon} label="Turn timer">
           {(labelId) => (
@@ -253,7 +252,7 @@ function MapPicker({
             <span className="w-full truncate font-display text-base leading-tight tracking-wide">
               {GAME_MAP_NAMES[map.id]}
             </span>
-            <span className="w-full truncate text-xs font-bold text-muted-foreground">
+            <span className="w-full truncate text-xs font-bold text-muted-foreground in-data-checked:text-ui-text-soft">
               {tooSmall ? `Too small for ${humanCount}` : `${map.playerCounts.join("–")} players`}
             </span>
           </Radio.Root>
@@ -325,15 +324,7 @@ function ChoiceGroup<Value extends number | string>({
     >
       {choices.map((choice) => (
         <Radio.Root
-          className={(state) =>
-            cn(
-              buttonVariants({
-                size: "game-sm",
-                variant: state.checked ? "game" : "game-secondary",
-              }),
-              "min-w-0 px-2 data-readonly:pointer-events-none max-lg:h-11 pointer-coarse:h-11",
-            )
-          }
+          className="game-choice-option data-readonly:pointer-events-none"
           disabled={choice.disabled}
           key={choice.value}
           value={choice.value}
@@ -438,7 +429,10 @@ function RuleTile({
           </span>
           <span className="lobby-rule-state">{checked ? "On" : "Off"}</span>
         </span>
-        <span className="text-sm leading-snug text-muted-foreground" id={descriptionId}>
+        <span
+          className="text-sm leading-snug text-muted-foreground in-data-checked:text-ui-text-soft"
+          id={descriptionId}
+        >
           {description}
         </span>
       </span>

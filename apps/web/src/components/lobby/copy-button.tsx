@@ -85,7 +85,7 @@ export function CopyButton({
         </Tooltip.Trigger>
         <Tooltip.Portal>
           <Tooltip.Positioner collisionPadding={16} side="bottom" sideOffset={10}>
-            <Tooltip.Popup className="game-popover z-50 max-w-64 px-3 py-1.5 text-center text-sm font-bold outline-none motion-safe:animate-game-pop">
+            <Tooltip.Popup className="game-popover z-50 max-w-64 px-3 py-1.5 text-center text-sm font-bold outline-hidden motion-safe:animate-game-pop">
               {message}
             </Tooltip.Popup>
           </Tooltip.Positioner>

@@ -26,22 +26,23 @@
     "title title title title title"
     "code code code code code";
   align-items: center;
-  gap: 0.75rem 0.5rem;
+  gap: 0.5rem;
   width: 100%;
   max-width: 100rem;
   margin-inline: auto;
-  padding: max(1rem, env(safe-area-inset-top)) var(--lobby-inset-right) 0 var(--lobby-inset-left);
+  padding: max(0.75rem, env(safe-area-inset-top)) var(--lobby-inset-right) 0 var(--lobby-inset-left);
 }
 
 .lobby-header-start {
   display: contents;
 }
 
-.game-ribbon.lobby-header-title {
+.game-heading.lobby-header-title {
   display: flex;
   min-width: 0;
   grid-area: title;
   justify-self: center;
+  font-size: 1.5rem;
 }
 
 .lobby-header-code {
@@ -60,24 +61,22 @@
   flex: 1;
   grid-template-columns: minmax(0, 1fr);
   grid-template-areas: "crew" "rules" "launch";
-  /* Rows leave room for the ribbons riding the panels' top edges. */
-  gap: 2.25rem 1.25rem;
+  gap: var(--ui-space-4) var(--ui-space-5);
   width: 100%;
   max-width: 100rem;
   margin-inline: auto;
-  padding: 2.25rem var(--lobby-inset-right) max(var(--lobby-gutter), env(safe-area-inset-bottom))
-    var(--lobby-inset-left);
+  padding: var(--ui-space-4) var(--lobby-inset-right)
+    max(var(--lobby-gutter), env(safe-area-inset-bottom)) var(--lobby-inset-left);
 }
 
 .lobby-panel {
-  --lobby-panel-pad: 1rem;
+  --lobby-panel-pad: var(--ui-space-4);
   position: relative;
   display: flex;
   min-width: 0;
   flex-direction: column;
-  gap: 1rem;
-  /* The extra top room is the part of the ribbon that hangs inside the panel. */
-  padding: calc(var(--lobby-panel-pad) + 1.5rem) var(--lobby-panel-pad) var(--lobby-panel-pad);
+  gap: var(--ui-space-3);
+  padding: var(--lobby-panel-pad);
 }
 
 .lobby-area-crew {
@@ -94,30 +93,41 @@
   align-self: start;
 }
 
-/* A close knob on the chat's top edge, level with its ribbon. */
-.lobby-chat-close {
-  position: absolute;
-  top: -1.375rem;
-  right: 1rem;
+/* A panel's title row: the title on the left, a count, status or close button on the right,
+   and a divider under both. */
+.lobby-panel-head {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ui-space-3);
+  min-height: 2.5rem;
+  padding-bottom: var(--ui-space-3);
+  border-bottom: 1px solid var(--ui-divider);
 }
 
-/* The panel title rides the top edge like a banner nailed to the board. */
-.lobby-panel-ribbon {
-  position: absolute;
-  top: -1.1rem;
-  left: 50%;
-  max-width: calc(100% - 2rem);
+.game-heading.lobby-panel-title {
+  position: static;
+  min-width: 0;
+  max-width: none;
   overflow: hidden;
+  font-size: 1.25rem;
+  text-align: left;
   text-overflow: ellipsis;
-  transform: translateX(-50%);
+  transform: none;
   white-space: nowrap;
 }
 
-/* A count or status chip tucked into the panel's top-right corner, level with the ribbon. */
 .lobby-panel-aside {
-  position: absolute;
-  top: 0.625rem;
-  right: 0.75rem;
+  position: static;
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--ui-space-2);
+}
+
+.lobby-chat-close {
+  position: static;
 }
 
 /* A panel's body, which scrolls on its own once the screen fits the viewport. */
@@ -126,18 +136,42 @@
   flex: 1 1 auto;
 }
 
+/* Where the page scrolls, the start bar is a full-bleed tray pinned flush to the bottom edge,
+   so nothing shows under or beside it. It reaches past the layout's side and bottom padding. */
 .lobby-launch {
+  --lobby-launch-bottom: max(var(--lobby-gutter), env(safe-area-inset-bottom));
   position: sticky;
   z-index: 10;
-  bottom: max(0.75rem, env(safe-area-inset-bottom));
+  bottom: 0;
   grid-area: launch;
-  /* No ribbon above it, so it sits as close as the columns sit to each other. */
-  margin-top: -1rem;
-  padding: 1rem;
+  margin: 0 calc(-1 * var(--lobby-inset-right)) calc(-1 * var(--lobby-launch-bottom))
+    calc(-1 * var(--lobby-inset-left));
+  padding: var(--ui-space-3) var(--lobby-inset-right)
+    max(var(--ui-space-3), env(safe-area-inset-bottom)) var(--lobby-inset-left);
 }
 /* Opaque, since page content scrolls underneath it on phones. */
 .game-menu-panel.lobby-launch {
-  background: linear-gradient(var(--game-panel-top), var(--game-panel-bottom));
+  border-bottom-width: 0;
+  border-inline-width: 0;
+  border-radius: var(--ui-radius-hud) var(--ui-radius-hud) 0 0;
+  background: linear-gradient(var(--ui-panel-top), var(--ui-panel-bottom));
+  box-shadow:
+    0 -6px 16px color-mix(in srgb, var(--game-outline) 35%, transparent),
+    inset 0 1px 0 var(--ui-panel-highlight);
+}
+
+.game-menu-panel.lobby-launch::before {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: 100%;
+  left: 0;
+  height: 2.5rem;
+  background: linear-gradient(
+    transparent,
+    color-mix(in srgb, var(--game-outline) 70%, transparent)
+  );
+  pointer-events: none;
 }
 
 @media (width < 80rem) {
@@ -147,22 +181,24 @@
   }
 }
 
+/* The chat button's unread count: a small danger pill ringed in navy. */
 .lobby-unread {
   position: absolute;
   top: -0.375rem;
   right: -0.375rem;
   display: grid;
-  min-width: 1.375rem;
-  height: 1.375rem;
+  min-width: 1.25rem;
+  height: 1.25rem;
   place-items: center;
-  padding-inline: 0.25rem;
-  border: 2px solid var(--brand-gold-shade);
-  border-radius: 999px;
-  background: linear-gradient(var(--brand-gold-top), var(--brand-gold-bottom));
-  box-shadow: 0 2px 0 var(--game-panel-base);
-  color: var(--brand-outline);
-  font-family: var(--font-display);
+  padding-inline: var(--ui-space-1);
+  border: 0;
+  border-radius: 9999px;
+  background: var(--ui-danger-bottom);
+  box-shadow: 0 0 0 1.5px var(--game-outline);
+  color: var(--ui-ink-on-primary);
+  font-family: var(--font-sans);
   font-size: 0.75rem;
+  font-weight: 800;
   font-variant-numeric: tabular-nums;
   line-height: 1;
   text-shadow: none;
@@ -250,6 +286,29 @@
 
   .lobby-launch {
     position: static;
+    margin: 0;
+    padding: var(--ui-space-4);
+  }
+  .game-menu-panel.lobby-launch::before {
+    content: none;
+  }
+  .game-menu-panel.lobby-launch {
+    border-width: var(--ui-line);
+    border-radius: var(--ui-radius-panel);
+    box-shadow:
+      inset 0 1px 0 var(--ui-panel-highlight),
+      var(--ui-shadow-menu);
+  }
+
+  /* Seat plaques grow into a tall crew column instead of leaving an empty panel bottom. */
+  .lobby-area-crew .lobby-scroll > ol {
+    flex: 1 0 auto;
+  }
+  .lobby-area-crew .lobby-seat {
+    height: auto;
+    min-height: 4.5rem;
+    max-height: 6.75rem;
+    flex: 1 0 4.5rem;
   }
 
   .lobby-area-chat {
@@ -258,7 +317,7 @@
   }
 
   /* Gutters on both sides, so a classic scrollbar never pushes the content off center, and a
-     small bleed so focus rings and lips are not clipped. */
+     small bleed so focus rings and shadows are not clipped. */
   .lobby-scroll {
     margin: -0.25rem -0.5rem;
     padding: 0.25rem 0.5rem;
@@ -277,41 +336,63 @@
   scrollbar-width: thin;
 }
 
+/* The lobby's chat column is tall: bubbles get more of its width (and no lone last word). The
+   message list is the well from ChatPanel, with the lobby's control radius. */
+.lobby-area-chat .chat-log {
+  border-radius: var(--ui-radius-control);
+}
+.lobby-area-chat .chat-log li {
+  max-width: 94%;
+}
+.lobby-area-chat .chat-log li > p {
+  text-wrap: pretty;
+}
+
+/* A chat sender's name: the seat color lightened toward white, so every seat reads on the dark
+   well (6:1 or better), in bold DM Sans rather than display type. */
+.chat-name {
+  color: color-mix(in srgb, var(--player-color, var(--foreground)) 55%, var(--foreground));
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
 /* ---------------------------------------------------------------------------
    Chips, wells and counters
    ------------------------------------------------------------------------ */
 
+/* A count or status tag in a panel's title row: a plain rounded pill. */
 .lobby-chip {
   display: inline-flex;
-  height: 1.5rem;
-  flex-shrink: 0;
+  height: 1.375rem;
+  min-width: 1.375rem;
+  flex: none;
   align-items: center;
-  gap: 0.25rem;
-  padding-inline: 0.625rem;
-  border: 2px solid var(--game-panel-rim);
-  border-radius: 999px;
-  background: var(--game-panel-base);
-  box-shadow: 0 2px 0 var(--game-panel-lip);
+  justify-content: center;
+  gap: var(--ui-space-1);
+  padding: 0 var(--ui-space-2);
+  border: 0;
+  border-radius: 9999px;
+  background: var(--ui-well);
   color: var(--foreground);
-  font-family: var(--font-display);
-  font-size: 0.8125rem;
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 800;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.04em;
   line-height: 1;
+  text-shadow: none;
+  text-transform: uppercase;
   white-space: nowrap;
-}
-.lobby-chip-gold {
-  border-color: var(--brand-gold-shade);
-  background: linear-gradient(var(--brand-gold-top), var(--brand-gold-bottom));
-  color: var(--brand-outline);
 }
 
 /* A sunken tray for a row of controls (steppers, the bot count). */
 .lobby-well {
-  border: 2px solid var(--game-well-edge);
-  border-radius: 1rem;
-  background: var(--game-well);
-  box-shadow: inset 0 2px 0 var(--game-panel-lip);
+  border: var(--ui-line) solid var(--ui-well-border);
+  border-radius: var(--ui-radius-control);
+  background: var(--ui-well);
+  box-shadow: var(--ui-shadow-inset);
 }
 
 .lobby-counter {
@@ -320,24 +401,25 @@
   height: 2.75rem;
   place-items: center;
   color: var(--foreground);
-  font-family: var(--font-display);
-  font-size: 1.625rem;
+  font-family: var(--font-sans);
+  font-size: 1.5rem;
+  font-weight: 800;
   font-variant-numeric: tabular-nums;
   line-height: 1;
-  text-shadow: 0 2px 0 var(--game-panel-base);
+  text-shadow: none;
 }
 .lobby-counter-small {
   min-width: 2.5rem;
   height: 2.25rem;
-  font-size: 1.375rem;
+  font-size: 1.25rem;
 }
 
 .lobby-section-title {
   color: var(--brand-gold-top);
   font-family: var(--font-display);
   font-size: 0.9375rem;
-  letter-spacing: 0.1em;
-  text-shadow: 0 2px 0 var(--game-panel-base);
+  letter-spacing: 0.06em;
+  text-shadow: none;
   text-transform: uppercase;
 }
 
@@ -352,55 +434,115 @@
    Seats
    ------------------------------------------------------------------------ */
 
-/* A plaque per seat, rimmed and tinted all over in the seat's player color. Every plaque has
-   the same height, whatever it holds. */
+/* A card per seat: a neutral HUD panel with one navy line and a soft shadow. The seat's color
+   lives only in the portrait's 2px ring. Every card has the same height, whatever it holds. */
 .lobby-seat {
+  position: relative;
   display: flex;
   height: 4.5rem;
   flex-shrink: 0;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.5rem;
-  border: 2px solid var(--player-color);
-  border-radius: 1.25rem;
-  background: linear-gradient(
-    color-mix(in srgb, var(--player-color) 34%, var(--game-panel-top)),
-    color-mix(in srgb, var(--player-color) 20%, var(--game-panel-bottom))
-  );
+  gap: var(--ui-space-3);
+  padding: var(--ui-space-2);
+  border: var(--ui-line) solid var(--game-outline);
+  border-radius: var(--ui-radius-hud);
+  background: linear-gradient(var(--ui-panel-top), var(--ui-panel-bottom));
   box-shadow:
-    0 3px 0 color-mix(in srgb, var(--player-color) 40%, var(--game-panel-base)),
-    inset 0 1px color-mix(in srgb, var(--foreground) 18%, transparent);
+    inset 0 1px 0 var(--ui-panel-highlight),
+    var(--ui-shadow-raise);
+  container-type: inline-size;
 }
 
-/* Someone whose heartbeat went quiet: the plaque fades, the Away chip says why. */
-.lobby-seat-away {
-  border-color: color-mix(in srgb, var(--player-color) 40%, var(--game-panel-base));
-  background: color-mix(in srgb, var(--player-color) 12%, var(--game-panel-bottom));
+/* Names: clean bold DM Sans, one step smaller for a long name, then a second line, and only
+   then an ellipsis. */
+.lobby-seat-name {
+  display: -webkit-box;
+  min-width: 0;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+  text-shadow: none;
 }
+.lobby-seat-name[data-name-fit="long"] {
+  font-size: 0.9375rem;
+}
+.lobby-seat-name[data-name-fit="xlong"] {
+  font-size: 0.875rem;
+}
+
+/* A narrow crew column (tablets and small laptops): the portrait gives the name a little room. */
+@container (width < 16.5rem) {
+  .lobby-seat-portrait {
+    margin-inline-end: -0.25rem;
+  }
+}
+
+/* Someone whose heartbeat went quiet: the portrait greys, and "Away" sits in the line under
+   the name. */
 .lobby-seat-away .lobby-seat-portrait > img {
   filter: grayscale(0.85) brightness(0.75);
 }
 
-.lobby-away-badge {
-  position: absolute;
-  bottom: -0.4rem;
-  left: 50%;
-  padding: 0.125rem 0.375rem;
-  border: 2px solid var(--game-panel-rim);
-  border-radius: 999px;
-  background: var(--game-panel-base);
-  color: var(--foreground);
-  font-family: var(--font-display);
-  font-size: 0.6875rem;
-  letter-spacing: 0.06em;
+/* The line under the name: the role ("Host", "Player", "Medium bot"), then "You" or "Away" as
+   small pills in the same line, never on the portrait. */
+.lobby-seat-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  min-width: 0;
+  gap: var(--ui-space-1);
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.lobby-seat-tag {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  height: 1.125rem;
+  padding: 0 0.375rem;
+  border-radius: 9999px;
+  background: var(--ui-gold-top);
+  color: var(--ui-ink-on-gold);
+  font-size: 0.75rem;
+  font-weight: 800;
   line-height: 1;
-  text-transform: uppercase;
-  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.lobby-seat-tag[data-tone="away"] {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--muted-foreground);
+  color: var(--muted-foreground);
+}
+
+/* The host's "Remove" button: a small word button, with a 44px hit area on touch screens. */
+.lobby-seat-remove {
+  flex: none;
+  height: 1.75rem;
+  padding-inline: var(--ui-space-2);
+  font-size: 0.75rem;
+}
+
+@media (pointer: coarse) {
+  .lobby-seat-remove {
+    height: 2.75rem;
+  }
 }
 
 .lobby-seat-open {
-  border: 2px dashed color-mix(in srgb, var(--board-foam) 40%, transparent);
-  background: var(--game-well);
+  border: var(--ui-line) dashed color-mix(in srgb, var(--foreground) 30%, transparent);
+  background: var(--ui-well);
   box-shadow: none;
 }
 
@@ -411,19 +553,17 @@
   height: 3.5rem;
   flex-shrink: 0;
   place-items: center;
-  border: 3px solid var(--player-color, transparent);
-  border-radius: 1rem;
-  background: color-mix(
-    in srgb,
-    var(--player-color, var(--game-panel-top)) 45%,
-    var(--game-panel-base)
-  );
+  border: 2px solid var(--player-color, transparent);
+  border-radius: 0.875rem;
+  background: color-mix(in srgb, var(--player-color, var(--ui-panel-top)) 45%, var(--ui-well));
+  box-shadow: 0 0 0 1.5px var(--game-outline);
 }
 .lobby-seat-portrait > img {
-  border-radius: calc(1rem - 3px);
+  border-radius: calc(0.875rem - 2px);
 }
 .lobby-seat-open .lobby-seat-portrait {
   background: transparent;
+  box-shadow: none;
   opacity: 0.75;
 }
 
@@ -431,12 +571,13 @@
    Rule tiles: islands, bot difficulty, house rules
    ------------------------------------------------------------------------ */
 
-/* The kit's .game-choice-tile, minus the hover hint where the viewer can only look. */
-.game-choice-tile[data-readonly] {
+/* The kit's choice tiles and options, minus the hover hint where the viewer can only look. */
+:is(.game-choice-tile, .game-choice-option)[data-readonly] {
   cursor: default;
 }
-.game-choice-tile[data-readonly]:hover:not([data-checked]) {
-  border-color: var(--game-well-edge);
+:is(.game-choice-tile, .game-choice-option)[data-readonly]:hover:not([data-checked]) {
+  border-color: var(--ui-well-border);
+  background: var(--ui-well);
 }
 
 /* Island previews sit in a patch of shallow water. */
@@ -449,21 +590,121 @@
   );
 }
 
+/* A house rule's On or Off: a neutral pill, gold while the rule is on. */
 .lobby-rule-state {
-  flex-shrink: 0;
-  padding: 0.125rem 0.5rem;
-  border: 2px solid var(--game-well-edge);
-  border-radius: 999px;
-  background: var(--game-panel-base);
-  color: var(--muted-foreground);
-  font-family: var(--font-display);
+  display: inline-flex;
+  height: 1.375rem;
+  flex: none;
+  align-items: center;
+  padding: 0 var(--ui-space-2);
+  border: 0;
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--foreground) 10%, var(--ui-well));
+  color: var(--foreground);
+  font-family: var(--font-sans);
   font-size: 0.75rem;
-  letter-spacing: 0.08em;
-  line-height: 1.2;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  text-shadow: none;
   text-transform: uppercase;
 }
 .lobby-rule-tile[data-checked] .lobby-rule-state {
-  border-color: var(--brand-gold-shade);
-  background: linear-gradient(var(--brand-gold-top), var(--brand-gold-bottom));
-  color: var(--brand-outline);
+  background: var(--ui-gold-top);
+  color: var(--ui-ink-on-gold);
+}
+
+/* Tall desktop screens: roomier seat plaques to go with the taller crew column. */
+@media (width >= 80rem) and (height >= 50rem) {
+  .lobby-area-crew .lobby-seat {
+    gap: var(--ui-space-4);
+    padding-inline: var(--ui-space-3);
+  }
+  .lobby-area-crew .lobby-seat-portrait {
+    width: 4.25rem;
+    height: 4.25rem;
+  }
+  .lobby-area-crew .lobby-seat-name {
+    font-size: 1.0625rem;
+  }
+  .lobby-area-crew .lobby-seat-name[data-name-fit="long"] {
+    font-size: 1rem;
+  }
+  .lobby-area-crew .lobby-seat-name[data-name-fit="xlong"] {
+    font-size: 0.9375rem;
+  }
+}
+
+/* "More rules": while rules sit below the fold, the list fades out inside the panel and a
+   small cue sits in the clear strip under the fade. It follows the rules' scroll position and
+   is gone once the last rule is in view, or when the rules do not scroll at all. */
+.lobby-more-rules {
+  display: none;
+}
+
+@supports (animation-timeline: scroll()) {
+  @media (width >= 48rem) and (height >= 40rem) {
+    .lobby-area-rules {
+      timeline-scope: --lobby-rules-scroll;
+    }
+
+    /* An eased fade that is clear well before the edge: the strip under it holds the cue, and
+       a row cut by the edge dissolves rather than showing half its letters. */
+    .lobby-area-rules .lobby-scroll {
+      --scroll-fade-size: 4rem;
+      mask-image: linear-gradient(
+        transparent,
+        black var(--scroll-fade-top),
+        black calc(100% - var(--scroll-fade-bottom)),
+        color-mix(in srgb, black 40%, transparent) calc(100% - var(--scroll-fade-bottom) * 0.75),
+        color-mix(in srgb, black 8%, transparent) calc(100% - var(--scroll-fade-bottom) * 0.56),
+        transparent calc(100% - var(--scroll-fade-bottom) * 0.44)
+      );
+      scroll-timeline: --lobby-rules-scroll block;
+    }
+
+    .lobby-more-rules {
+      position: absolute;
+      bottom: calc(var(--lobby-panel-pad) - var(--ui-space-1));
+      left: 50%;
+      display: inline-flex;
+      height: 1.75rem;
+      align-items: center;
+      gap: var(--ui-space-1);
+      padding: 0 var(--ui-space-3);
+      border: 0;
+      border-radius: 9999px;
+      background: transparent;
+      color: var(--muted-foreground);
+      cursor: pointer;
+      font-family: var(--font-sans);
+      font-size: 0.8125rem;
+      font-weight: 800;
+      /* Hidden unless the timeline runs: an inactive timeline (nothing to scroll) keeps it off. */
+      opacity: 0;
+      visibility: hidden;
+      translate: -50% 0;
+      animation: lobby-more-below linear both;
+      animation-timeline: --lobby-rules-scroll;
+    }
+    .lobby-more-rules:hover {
+      color: var(--foreground);
+    }
+    .lobby-more-rules > svg {
+      width: 1rem;
+      height: 1rem;
+    }
+  }
+}
+
+@keyframes lobby-more-below {
+  0%,
+  90% {
+    opacity: 1;
+    visibility: visible;
+  }
+  100% {
+    opacity: 0;
+    visibility: hidden;
+  }
 }

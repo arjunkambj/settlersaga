@@ -116,38 +116,38 @@ export function RoomScreenContainer({ roomCode }: { roomCode: string }) {
   if (!isRoomCode(normalizedCode)) {
     return (
       <NoticeScreen
-        actionLabel="Return home"
-        message="That Island code doesn't look right. Check the link and try again."
+        actionLabel="Go home"
+        message="That game code doesn't look right. Check the link and try again."
         onAction={exitRoomLocally}
-        title="Invalid Island code"
+        title="That code won't work"
       />
     );
   }
 
   if (room === undefined) {
-    return <FullPageStatus label="Joining the Island…" />;
+    return <FullPageStatus label="Joining the game…" />;
   }
 
   if (room === null) {
     if (leaving) {
-      return <FullPageStatus label="Leaving the Island…" />;
+      return <FullPageStatus label="Leaving the game…" />;
     }
     if (roomClosed) {
       return (
         <NoticeScreen
-          actionLabel="Return home"
-          message="The host removed you, or the Island closed."
+          actionLabel="Go home"
+          message="The host removed you, or the game closed."
           onAction={exitRoomLocally}
-          title="Off the Island"
+          title="You're out of this game"
         />
       );
     }
     if (joinError === null) {
-      return <FullPageStatus label="Joining the Island…" />;
+      return <FullPageStatus label="Joining the game…" />;
     }
     return (
       <NoticeScreen
-        actionLabel="Return home"
+        actionLabel="Go home"
         message={joinError}
         onAction={exitRoomLocally}
         title="Couldn't join"
@@ -219,10 +219,10 @@ export function RoomScreenContainer({ roomCode }: { roomCode: string }) {
         confirmation={{
           confirmLabel: "Leave game",
           description:
-            "A bot takes your seat, and you can't come back to it. If no crew is left, the Island closes.",
+            "A bot takes your seat, and you can't come back to it. If no players are left, the game closes.",
           title: "Leave this game?",
         }}
-        message="This game couldn't be loaded. Refresh the page, or leave and start a new one."
+        message="We couldn't load this game. Refresh the page, or leave and start a new one."
         onAction={leaveRoom}
         title="Game didn't load"
       />

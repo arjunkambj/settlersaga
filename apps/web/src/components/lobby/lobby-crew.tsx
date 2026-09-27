@@ -4,7 +4,6 @@ import type { BotDifficulty } from "@settersaga/game";
 import addIcon from "@iconify-icons/solar/add-circle-bold";
 import crownIcon from "@iconify-icons/solar/crown-minimalistic-bold";
 import minusIcon from "@iconify-icons/solar/minus-circle-bold";
-import removeIcon from "@iconify-icons/solar/user-cross-rounded-bold";
 import { Icon } from "@iconify/react/offline";
 import Image from "next/image";
 
@@ -13,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Tooltip } from "@/components/ui/tooltip";
 import { getPlayerPortraitPath } from "@/constants/game/player-assets";
 import { EMPTY_SEAT_ASSET_PATH } from "@/constants/game/ui-assets";
+import { nameFit } from "@/lib/app/name-fit";
 import { BOT_DIFFICULTY_DETAILS } from "@/lib/lobby/bot-difficulty";
 import type { LobbySeatMember } from "@/lib/lobby/lobby-settings-model";
 import { cn } from "@/lib/utils";
@@ -47,7 +47,7 @@ export function LobbyCrew({
   const bot = BOT_DIFFICULTY_DETAILS[botDifficulty];
 
   return (
-    <div className="lobby-scroll @container flex flex-col gap-4">
+    <div className="lobby-scroll game-scroll-fade @container flex flex-col gap-4">
       {canManage ? (
         <div className="lobby-well flex items-center justify-between gap-2 p-2">
           <span className="flex min-w-0 items-center gap-2">
@@ -118,11 +118,9 @@ export function LobbyCrew({
                 />
               </span>
               <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                <span className="truncate font-display text-lg leading-tight tracking-wide">
-                  Open seat
-                </span>
+                <span className="lobby-seat-name">Open seat</span>
                 <span className="truncate text-xs font-bold text-muted-foreground">
-                  Waiting for crew…
+                  Waiting for a player…
                 </span>
               </span>
             </li>
@@ -133,7 +131,7 @@ export function LobbyCrew({
       <CopyButton
         className="w-full"
         copiedMessage="Invite link copied"
-        failedMessage={`Copy blocked. Share the code ${roomCode}`}
+        failedMessage={`Couldn't copy. Share the code ${roomCode}`}
         share
         size="game-md"
         value={() => `${window.location.origin}/room/${encodeURIComponent(roomCode)}`}
@@ -159,6 +157,8 @@ function CrewPlaque({
   onRemove?: () => void;
   removeDisabled: boolean;
 }) {
+  const role =
+    member.role === "host" ? "Host" : member.controller === "bot" ? `${botLabel} bot` : "Player";
   return (
     <li className={cn("lobby-seat", `player-${member.playerColor}`, away && "lobby-seat-away")}>
       <span className="lobby-seat-portrait">
@@ -169,39 +169,35 @@ function CrewPlaque({
           src={member.controller === "bot" ? botArt : getPlayerPortraitPath(member.playerColor)}
           width={112}
         />
-        {away ? <span className="lobby-away-badge">Away</span> : null}
       </span>
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <span className="flex min-w-0 items-center gap-1.5">
-          <span className="truncate font-display text-lg leading-tight tracking-wide">
-            {member.displayName}
-          </span>
-          {member.isViewer ? <span className="lobby-chip lobby-chip-gold">You</span> : null}
+        <span className="lobby-seat-name" data-name-fit={nameFit(member.displayName)}>
+          {member.displayName}
         </span>
-        <span className="flex min-w-0 items-center gap-1 truncate text-xs font-bold text-muted-foreground">
+        <span className="lobby-seat-meta">
           {member.role === "host" ? (
-            <>
-              <Icon className="size-4 shrink-0 text-gold" icon={crownIcon} />
-              Host
-            </>
-          ) : member.controller === "bot" ? (
-            `${botLabel} bot`
-          ) : (
-            "Crew"
-          )}
+            <Icon className="size-4 shrink-0 text-gold" icon={crownIcon} />
+          ) : null}
+          <span>{role}</span>
+          {member.isViewer ? <span className="lobby-seat-tag">You</span> : null}
+          {away ? (
+            <span className="lobby-seat-tag" data-tone="away">
+              Away
+            </span>
+          ) : null}
         </span>
       </span>
       {onRemove ? (
-        <Tooltip label={`Remove ${member.displayName}`}>
+        <Tooltip label={`Remove ${member.displayName} from the table`}>
           <Button
             aria-label={`Remove ${member.displayName}`}
-            className="max-lg:size-11 pointer-coarse:size-11"
+            className="lobby-seat-remove"
             disabled={removeDisabled}
             onClick={onRemove}
             size="game-sm"
-            variant="game-icon"
+            variant="game-secondary"
           >
-            <Icon icon={removeIcon} />
+            Remove
           </Button>
         </Tooltip>
       ) : null}

@@ -66,7 +66,7 @@ export function ChatPanel({ className, disabled, messages, onSend }: ChatPanelPr
       {/* column-reverse keeps the list pinned to the newest message as messages arrive. */}
       <div
         aria-label="Chat messages"
-        className="chat-log flex min-h-0 flex-1 flex-col-reverse overflow-y-auto rounded-2xl border-2 border-well-edge bg-well p-3 inset-shadow-well"
+        className="chat-log flex min-h-0 flex-1 flex-col-reverse overflow-y-auto rounded-2xl border-2 border-ui-well-border bg-ui-well p-3 inset-shadow-well"
         role="log"
       >
         <ol className="flex flex-col gap-3">
@@ -130,14 +130,7 @@ function ChatBubble({ message }: { readonly message: ChatMessage }) {
       )}
     >
       <span className="flex items-baseline gap-2 px-1 text-xs">
-        <span
-          className={cn(
-            "font-display text-sm tracking-wide",
-            message.playerColor ? "text-(--player-color)" : "text-foreground",
-          )}
-        >
-          {message.displayName}
-        </span>
+        <span className="chat-name">{message.displayName}</span>
         <time className="font-semibold text-muted-foreground" dateTime={sentAt.toISOString()}>
           {timeFormatter.format(sentAt)}
         </time>
@@ -146,8 +139,8 @@ function ChatBubble({ message }: { readonly message: ChatMessage }) {
         className={cn(
           "rounded-2xl px-3 py-2 text-sm font-medium break-words shadow-knob",
           message.isMine
-            ? "rounded-br-md bg-primary text-primary-foreground"
-            : "rounded-bl-md bg-panel-top text-foreground",
+            ? "rounded-br-md bg-ui-primary text-(--ui-ink-on-primary)"
+            : "rounded-bl-md border border-ui-divider bg-ui-bubble text-foreground",
         )}
       >
         {message.body}

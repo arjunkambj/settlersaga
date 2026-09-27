@@ -1,5 +1,6 @@
 "use client";
 
+import chevronDownIcon from "@iconify-icons/solar/alt-arrow-down-linear";
 import bookIcon from "@iconify-icons/solar/book-bookmark-bold";
 import chatIcon from "@iconify-icons/solar/chat-round-dots-bold";
 import closeIcon from "@iconify-icons/solar/close-circle-bold";
@@ -94,6 +95,7 @@ export function LobbyScreen({
   const chatPanelId = useId();
   const chatPanelRef = useRef<HTMLElement>(null);
   const chatToggleRef = useRef<HTMLButtonElement>(null);
+  const rulesScrollRef = useRef<HTMLDivElement>(null);
 
   const saved = roomToLobbyValue(room);
   const value = draft ?? saved;
@@ -176,10 +178,11 @@ export function LobbyScreen({
 
       <header className="lobby-header">
         <div className="lobby-header-start">
-          <Tooltip label="Leave Island">
+          <Tooltip label="Leave game">
             <Button
-              aria-label="Leave Island"
-              className="max-xl:w-11 max-xl:px-0"
+              aria-label="Leave game"
+              // Matches the 40px icon buttons beside it.
+              className="h-10 max-xl:w-10 max-xl:px-0"
               disabled={busy}
               onClick={() => openConfirmation({ kind: "leave" })}
               size="game-md"
@@ -220,24 +223,24 @@ export function LobbyScreen({
           </Tooltip>
           <CopyButton
             className="lobby-header-code w-auto gap-2 px-3"
-            copiedMessage="Island code copied"
-            failedMessage={`Copy blocked. Share the code ${room.code}`}
+            copiedMessage="Code copied"
+            failedMessage={`Couldn't copy. Share the code ${room.code}`}
             size="game-md"
             value={() => room.code}
             variant="game-icon"
           >
-            <span className="sr-only">Copy Island code </span>
+            <span className="sr-only">Copy game code </span>
             <span className="tracking-[0.18em]">{room.code}</span>
           </CopyButton>
         </div>
-        <h1 className="lobby-header-title game-ribbon">
+        <h1 className="lobby-header-title game-heading game-title-on-art">
           {room.isHost || !hostName ? (
-            "Your harbor"
+            "Your table"
           ) : (
-            // Only the name gives way, so a long one still reads as a harbor.
+            // Only the name gives way, so a long one still reads as a table.
             <>
               <span className="truncate">{hostName}</span>
-              <span className="shrink-0">&apos;s harbor</span>
+              <span className="shrink-0">&apos;s table</span>
             </>
           )}
         </h1>
@@ -293,7 +296,7 @@ export function LobbyScreen({
           className="lobby-area-rules"
           title="Rules"
         >
-          <div className="lobby-scroll">
+          <div className="lobby-scroll game-scroll-fade" ref={rulesScrollRef}>
             <LobbySettings
               disabled={locked}
               humanCount={humanCount}
@@ -302,9 +305,35 @@ export function LobbyScreen({
               value={value}
             />
           </div>
+          {/* A pointer shortcut, shown by CSS only while more rules sit below the fold. Keyboard
+              and screen reader users reach every rule by moving through the list itself. */}
+          <button
+            aria-hidden="true"
+            className="lobby-more-rules"
+            onClick={() => {
+              const list = rulesScrollRef.current;
+              list?.scrollBy({ behavior: "smooth", top: list.clientHeight * 0.75 });
+            }}
+            tabIndex={-1}
+            type="button"
+          >
+            More rules
+            <Icon icon={chevronDownIcon} />
+          </button>
         </LobbyPanel>
 
         <LobbyPanel
+          aside={
+            <Button
+              aria-label="Close chat"
+              className="lobby-chat-close"
+              onClick={closeChat}
+              size="game-md"
+              variant="game-icon"
+            >
+              <Icon icon={closeIcon} />
+            </Button>
+          }
           className="lobby-area-chat"
           id={chatPanelId}
           onKeyDown={(event) => {
@@ -314,15 +343,6 @@ export function LobbyScreen({
           tabIndex={-1}
           title="Chat"
         >
-          <Button
-            aria-label="Close chat"
-            className="lobby-chat-close"
-            onClick={closeChat}
-            size="game-md"
-            variant="game-icon"
-          >
-            <Icon icon={closeIcon} />
-          </Button>
           <ChatPanel
             className="flex-1"
             disabled={locked}
@@ -353,7 +373,7 @@ export function LobbyScreen({
               />
               <div className="flex min-w-0 flex-1 flex-col gap-1">
                 <p className="font-display text-base tracking-wide sm:text-lg">
-                  Waiting for {hostName ?? "the host"} to set sail
+                  Waiting for {hostName ?? "the host"} to start
                 </p>
                 <p className="text-sm font-semibold text-muted-foreground">
                   {occupiedSeatCount} of {value.settings.maxPlayers} seats taken
@@ -375,9 +395,9 @@ export function LobbyScreen({
           confirmLabel={confirmation.kind === "leave" ? "Leave" : "Remove"}
           description={
             confirmation.kind === "remove"
-              ? "They can't rejoin this Island, and a bot takes their seat."
+              ? "They can't rejoin this game, and a bot takes their seat."
               : !nextHostName
-                ? "You're the last one here, so the Island closes when you leave."
+                ? "You're the last one here, so the game closes when you leave."
                 : room.isHost
                   ? `${nextHostName} becomes the host when you leave.`
                   : "Your seat opens up for someone else."
@@ -387,8 +407,8 @@ export function LobbyScreen({
           onConfirm={() => void confirm(confirmation)}
           title={
             confirmation.kind === "remove"
-              ? `Remove ${confirmation.displayName} from the harbor?`
-              : "Leave this Island?"
+              ? `Remove ${confirmation.displayName} from the table?`
+              : "Leave this game?"
           }
         />
       ) : null}
@@ -410,10 +430,12 @@ function LobbyPanel({
       className={cn("lobby-panel game-menu-panel", className)}
       {...props}
     >
-      <h2 className="lobby-panel-ribbon game-ribbon" id={titleId}>
-        {title}
-      </h2>
-      {aside ? <div className="lobby-panel-aside">{aside}</div> : null}
+      <header className="lobby-panel-head">
+        <h2 className="lobby-panel-title game-heading" id={titleId}>
+          {title}
+        </h2>
+        {aside ? <div className="lobby-panel-aside">{aside}</div> : null}
+      </header>
       {children}
     </section>
   );
@@ -450,7 +472,7 @@ function HostLaunch({
   const openSeats = `${openSeatCount} open seat${openSeatCount === 1 ? "" : "s"}`;
   const hint =
     openSeatCount === 0
-      ? "Every seat is taken. Ready to set sail!"
+      ? "Every seat is taken. Start when you're ready."
       : shrinkMap
         ? `${openSeats}. Start with ${occupiedSeatCount}${newIsland}, or let bots fill in.`
         : `${openSeats}. Bots fill in when you start.`;
@@ -467,7 +489,7 @@ function HostLaunch({
       <div className="grid grow auto-cols-fr grid-flow-col gap-2">
         {starting ? (
           <Button className={buttonSize} disabled size="game-lg" variant="game-gold">
-            <Spinner className="size-6" /> Setting sail…
+            <Spinner className="size-6" /> Starting…
           </Button>
         ) : (
           options.map((option, index) => (
