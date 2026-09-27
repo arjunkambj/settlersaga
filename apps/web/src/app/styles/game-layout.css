@@ -890,12 +890,12 @@
 
 /* --------------------------------------------------------------------------
    md up: the dock is ONE row, --dock-height tall in every state: the hand
-   (from the left), Build & Trade (five tiles, laid out in game-dock.css) right
-   after it, open sea, then the turn column: the turn card over the clock and
-   the Roll or End turn button, side by side. The hand and Build & Trade each
-   keep their own width (game-dock.css), so the dock never shifts as cards
-   come and go; the sea takes what is left. The row is the dock parts' own
-   height (--dock-row-height, game-dock.css).
+   (from the left), then Build & Trade (five tiles, laid out in game-dock.css)
+   taking the rest of the row, then the turn column: the turn card over the
+   clock and the Roll or End turn button, side by side. The hand keeps its own
+   width (game-dock.css) and Build & Trade takes what is left, so no sea shows
+   in the dock and it never shifts as cards come and go. The row is the dock
+   parts' own height (--dock-row-height, game-dock.css).
      hand actions card
      hand actions turn
    ----------------------------------------------------------------------- */

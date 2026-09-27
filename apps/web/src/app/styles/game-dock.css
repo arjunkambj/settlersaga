@@ -7,11 +7,14 @@
    E1 glass: every panel is game glass with a 1px light hairline and one soft
    shadow; rows and tiles are wells. From md up the dock is ONE row: the hand
    (resource cards, a thin divider, then the room kept for development cards),
-   Build & Trade (five tiles: Road, Settlement, City, Dev card, Trade), then
-   open sea up to the turn column (md, lg) or the rail (xl). Neither panel
-   stretches: the hand keeps one width whatever it holds, and the tiles keep
-   theirs, so nothing in the dock moves as cards come and go. The sizes are
-   set per breakpoint on the shell:
+   then Build & Trade (five tiles: Road, Settlement, City, Dev card, Trade)
+   taking the rest of the row up to the turn column (md, lg) or the rail (xl),
+   so no open sea is left in the dock. The hand keeps one width whatever it
+   holds, and the build panel's width comes from the screen alone, so nothing
+   in the dock moves as cards come and go. The five tiles share the panel's
+   width, up to --dock-tile-max each (then they sit centered in it), and their
+   content grows with them (Build & trade, below). The sizes are set per
+   breakpoint on the shell:
 
      --turn-card-height      the turn card
      --turn-row-height       the clock and the Roll or End turn button
@@ -22,21 +25,21 @@
      --dock-fan-step         how far each development card sits from the last
                              when all five kinds are held (fewer spread out)
      --dock-dev-width        the room kept for development cards
-     --dock-tile-width       one Build & Trade tile
+     --dock-tile-max         the widest a Build & Trade tile gets
      --dock-tile-gap         between tiles
-     --dock-tile-pad         a tile's side padding
+     --dock-tile-pad         a tile's side padding (md, lg)
      --dock-panel-pad        the build panel's padding
-     --dock-art-size         a tile's art
-     --dock-icon-size        a price's resource icons
-     --dock-need-icon-size   the missing cards' icons on the state line
-     --dock-build-width      the whole build panel (the steal chooser matches it)
+     --dock-art-size         a tile's art (md, lg)
+     --dock-icon-size        a price's resource icons (md, lg)
+     --dock-need-icon-size   the missing cards' icons on the state line (md, lg)
 
-   The widest screens get everything; where the row runs short (1280), the
-   development fan overlaps more, then the gaps shrink, then the tiles lose
-   their art. Below xl the turn card shares the dock row, so the tiles keep
-   their state line first: lg drops the art beside the name for a small one
-   above it, md keeps the art and the state and drops the name and the price
-   (both are in the tooltip and the label).
+   Where the row runs short (1280), the development fan overlaps more, then
+   the gaps shrink, then the tiles lose their art. From xl up, on a tall
+   screen (from about 900px high) the row grows a little, up to 128px at
+   1000px, and the tiles fill it. Below xl the turn card shares the dock row,
+   so the tiles keep their state line first: they take a small art above the
+   name, and a tile narrower than its name (md) keeps the art and the state
+   and drops the name and the price (both are in the tooltip and the label).
    ========================================================================= */
 
 @media (width >= 48rem) {
@@ -49,17 +52,13 @@
     --dock-hand-pad: 0.375rem;
     --dock-fan-step: 0px;
     --dock-dev-width: var(--dock-hand-card-width);
-    --dock-tile-width: 2.875rem;
+    --dock-tile-max: 15rem;
     --dock-tile-gap: 0.125rem;
     --dock-tile-pad: 0.125rem;
     --dock-panel-pad: 0.1875rem;
     --dock-art-size: 2.75rem;
     --dock-icon-size: 0.875rem;
     --dock-need-icon-size: 0.875rem;
-    --dock-build-width: calc(
-      5 * var(--dock-tile-width) + 4 * var(--dock-tile-gap) + 2 * var(--dock-panel-pad) + 2 *
-        var(--ui-line)
-    );
   }
 }
 
@@ -70,41 +69,32 @@
     --dock-hand-gap: var(--ui-space-1);
     --dock-fan-step: calc(var(--dock-hand-card-width) * 0.3);
     --dock-dev-width: calc(var(--dock-hand-card-width) + 4 * var(--dock-fan-step));
-    --dock-tile-width: 5rem;
     --dock-tile-gap: 0.1875rem;
     --dock-tile-pad: 0.1875rem;
     --dock-art-size: 2.5rem;
   }
 }
 
-/* xl up to 1440: the turn card leaves the dock, and the row is its own height. The fan overlaps
-   more and the gaps are small, and the tiles give up their art so the names stay whole. */
+/* xl up to 1440: the turn card leaves the dock, and the row is its own height: 112px, growing
+   with a tall screen from 900px high to 128px at 1000px. The fan overlaps more and the gaps are
+   small. */
 @media (width >= 80rem) {
   .game-shell {
     --turn-card-height: 5.5rem;
     --turn-row-height: 3.25rem;
-    --dock-row-height: 7rem;
+    --dock-row-height: clamp(7rem, 7rem + (100dvh - 56.25rem) * 0.16, 8rem);
     --dock-hand-card-width: 2.875rem;
-    --dock-tile-width: 6rem;
-    --dock-tile-pad: var(--ui-space-1);
-    --dock-art-size: 1.5rem;
-    --dock-icon-size: 1.25rem;
-    --dock-need-icon-size: 1rem;
   }
 }
 
-/* 1440 and wider: the fan at 40% of a card, full gaps, and each tile's art (28px) beside its
-   name. */
+/* 1440 and wider: the fan at 40% of a card and full gaps. */
 @media (width >= 90rem) {
   .game-shell {
     --dock-hand-gap: var(--ui-space-2);
     --dock-hand-pad: var(--ui-space-2);
     --dock-fan-step: calc(var(--dock-hand-card-width) * 0.4);
-    --dock-tile-width: 6.875rem;
     --dock-tile-gap: 0.3125rem;
-    --dock-tile-pad: 0.1875rem;
     --dock-panel-pad: var(--ui-space-1);
-    --dock-art-size: 1.75rem;
   }
 }
 
@@ -1630,17 +1620,20 @@
   }
 }
 
-/* md up: the build panel keeps its own width (--dock-build-width) right after the hand, as tall
-   as the dock row; the sea takes whatever is left. Its five tiles sit in the order Road,
-   Settlement, City, Dev card, Trade. The steal chooser stands in at the same size. A tile reads
-   as short lines from its top-left corner: the art and the name, the price as resource icons,
-   then the state. Each line keeps its height on every tile, so the lines match across the row.
-   The selectors carry the panel so they beat the phone action bar's tile rules. */
+/* md up: the build panel takes the rest of the dock row after the hand, up to the turn column
+   (md, lg) or the rail (xl), as tall as the row, so no sea is left in the dock. Its five tiles
+   share the panel's width equally, in the order Road, Settlement, City, Dev card, Trade, up to
+   --dock-tile-max each; past that the five sit centered in the panel. The steal chooser stands in
+   at the same size. A tile reads as short lines from its top-left corner: the art and the name,
+   the price as resource icons, then the state. Each line keeps its height on every tile, so the
+   lines match across the row. The tile row is a size container (dock-tiles): each tile sizes its
+   content from its own width and, from xl up, the row's height (below). The selectors carry the
+   panel so they beat the phone action bar's tile rules. */
 @media (width >= 48rem) {
   .game-build-panel,
   .game-steal-chooser {
-    justify-self: start;
-    width: var(--dock-build-width);
+    justify-self: stretch;
+    width: auto;
     height: var(--dock-row-height);
   }
 
@@ -1650,14 +1643,17 @@
   }
 
   .game-build-panel .game-build-actions {
+    container: dock-tiles / size;
     display: flex;
     flex: 1;
+    justify-content: center;
     min-height: 0;
     gap: var(--dock-tile-gap);
   }
 
-  /* The state line keeps room for two lines (three on the narrowest tiles), so a state that wraps
-     never moves the other lines; the block is centered in the tile. */
+  /* Where a long state could wrap, the state line keeps room for a second line (a third on the
+     narrowest tiles), so a state that wraps never moves the other lines; the block is centered in
+     the tile. */
   .game-build-panel .game-build-actions .game-action-tile {
     --tile-art-height: var(--dock-art-size);
     --tile-status-height: 2rem;
@@ -1670,7 +1666,9 @@
       "status status";
     align-content: center;
     justify-items: start;
-    width: var(--dock-tile-width);
+    flex: 1 1 0;
+    width: auto;
+    max-width: var(--dock-tile-max);
     height: 100%;
     min-height: 0;
     gap: var(--ui-space-1);
@@ -1680,6 +1678,16 @@
 
   .game-build-panel .game-action-status {
     align-self: start;
+  }
+
+  /* The check or the lock keeps beside its words (a long note wraps its own words); only "Need"
+     sends its icons to a second line. */
+  .game-build-panel .game-action-status:not([data-tone="need"]) {
+    flex-wrap: nowrap;
+  }
+
+  .game-build-panel .game-action-status-text {
+    min-width: 0;
   }
 
   .game-build-panel .game-action-tile-cost {
@@ -1712,95 +1720,205 @@
   }
 }
 
-/* md: the narrowest tiles, beside the turn card at 768. Each keeps its art and its state, centered;
-   the check or the lock sits on the art, and a state too long for the tile takes two lines. The
-   name and the price are in its tooltip and label. */
-@media (48rem <= width < 64rem) {
+/* md and lg: the turn card shares the dock row, so the row is tall and the tiles are narrow (47px
+   at 768 up to 131px at 1279). A tile reads as a small art above the name (13px, a touch
+   tighter), then the price and the state, and grows with its width by --tile-grow (0 to 12px,
+   from an 82px tile to a 112px one): the name to 14px, the price's icons from 14 to 20px, and
+   the state line from 12 to 14px with its icons from 14 to 18px. Trade's "Bank or crew" shows
+   once it fits. */
+@media (48rem <= width < 80rem) {
   .game-build-panel .game-build-actions .game-action-tile {
-    --tile-status-height: 3rem;
+    /* The tile's width: a fifth of the row less the gaps. */
+    --tile-width: min(var(--dock-tile-max), (100cqi - 4 * var(--dock-tile-gap)) / 5);
+    --tile-grow: clamp(0px, (var(--tile-width) - 5.125rem) * 0.4, 0.75rem);
+    --tile-icon-size: calc(var(--dock-icon-size) + var(--tile-grow) / 2);
+    --tile-status-icon: calc(0.875rem + var(--tile-grow) / 3);
+    --tile-status-line: calc(1rem + var(--tile-grow) / 6);
+    --tile-status-height: calc(var(--tile-status-line) * 2);
 
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: var(--tile-art-height) var(--tile-status-height);
-    grid-template-areas:
-      "art"
-      "status";
-    justify-items: center;
-    padding-block: var(--ui-space-2);
-    text-align: center;
-  }
-
-  .game-build-panel :is(.game-action-label, .game-action-tile-cost, .game-action-status-icon) {
-    display: none;
-  }
-
-  .game-build-panel .game-action-badge {
-    display: grid;
-  }
-
-  .game-build-panel .game-action-status {
-    justify-content: center;
-  }
-}
-
-/* lg: a small art above the name (13px, a touch tighter), then the price and the state. */
-@media (64rem <= width < 80rem) {
-  .game-build-panel .game-build-actions .game-action-tile {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: var(--tile-art-height) 1rem var(--dock-icon-size) var(--tile-status-height);
+    grid-template-rows: var(--tile-art-height) 1rem var(--tile-icon-size) var(--tile-status-height);
     grid-template-areas:
       "art"
       "label"
       "cost"
       "status";
+    padding-inline: calc(var(--dock-tile-pad) + var(--tile-grow) / 4);
   }
 
   .game-build-panel .game-action-label {
-    font-size: 0.8125rem;
+    font-size: calc(0.8125rem + var(--tile-grow) / 12);
     letter-spacing: -0.01em;
+  }
+
+  .game-build-panel .game-action-tile-cost .game-resource-icons {
+    --resource-icon-size: var(--tile-icon-size);
+  }
+
+  .game-build-panel .game-resource-icon-count {
+    font-size: calc(0.75rem + var(--tile-grow) / 12);
+  }
+
+  .game-build-panel .game-action-status {
+    font-size: calc(0.75rem + var(--tile-grow) / 6);
+    line-height: var(--tile-status-line);
+  }
+
+  .game-build-panel .game-action-status-icon {
+    width: var(--tile-status-icon);
+    height: var(--tile-status-icon);
+  }
+
+  .game-build-panel .game-action-status .game-resource-icons {
+    --resource-icon-size: calc(var(--dock-need-icon-size) + var(--tile-grow) / 3);
   }
 
   .game-build-panel .game-action-caption {
     display: none;
   }
-}
 
-/* xl up to 1440: the name heads the tile on its own (the art gives way), then the price and the
-   state. */
-@media (80rem <= width < 90rem) {
-  .game-build-panel .game-build-actions .game-action-tile {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: 1.125rem var(--dock-icon-size) var(--tile-status-height);
-    grid-template-areas:
-      "label"
-      "cost"
-      "status";
+  @container dock-tiles (width >= 29rem) {
+    .game-build-panel .game-action-caption {
+      display: inline;
+    }
   }
 
-  .game-build-panel .game-action-tile-art {
-    display: none;
+  /* A tile narrower than its name (under 80px: md below about 940) keeps its art and its state,
+     centered; the check or the lock sits on the art, and a state too long for the tile takes two
+     lines. The name and the price are in its tooltip and label. */
+  @container dock-tiles (width < 25.5rem) {
+    .game-build-panel .game-build-actions .game-action-tile {
+      --tile-status-height: 3rem;
+
+      grid-template-rows: var(--tile-art-height) var(--tile-status-height);
+      grid-template-areas:
+        "art"
+        "status";
+      justify-items: center;
+      padding-block: var(--ui-space-2);
+      text-align: center;
+    }
+
+    .game-build-panel :is(.game-action-label, .game-action-tile-cost, .game-action-status-icon) {
+      display: none;
+    }
+
+    .game-build-panel .game-action-badge {
+      display: grid;
+    }
+
+    .game-build-panel .game-action-status {
+      justify-content: center;
+    }
   }
 }
 
-/* xl: the state line a step larger (13px), its missing cards at 16px. */
+/* xl: everything in a tile grows with it, by one measure (--tile-grow, 0 to 20px): the art from
+   28 to 48px, the name from 14 to 17px, the price's icons from 20 to 28px with their counts from
+   13 to 15px, and the state line from 14 to 16px with its icons from 18 to 22px. The tile's width
+   bounds the growth so the longest state line ("Need" and four icons) stays on one line, and its
+   height so the three lines fit with 5px of padding; a 164px tile on a 118px row (from about 1720
+   on a tall screen) holds the largest sizes. The tile's padding grows with it, so the content
+   keeps to the tile's top-left corner at every size. */
 @media (width >= 80rem) {
-  .game-build-panel .game-action-status {
-    font-size: 0.8125rem;
-    line-height: 1rem;
-  }
-}
-
-/* 1440 and wider: a little more air between the art and the name. */
-@media (width >= 90rem) {
   .game-build-panel .game-build-actions .game-action-tile {
-    column-gap: 0.3125rem;
+    /* The tile's width: a fifth of the row less the gaps, up to --dock-tile-max. */
+    --tile-width: min(var(--dock-tile-max), (100cqi - 4 * var(--dock-tile-gap)) / 5);
+    --tile-grow: clamp(
+      0px,
+      min((var(--tile-width) - 8rem) * 0.55, (100cqb - 5.375rem) * 0.625),
+      1.25rem
+    );
+    --tile-art-height: calc(1.75rem + var(--tile-grow));
+    --tile-name-size: calc(0.875rem + var(--tile-grow) * 0.15);
+    --tile-icon-size: calc(1.25rem + var(--tile-grow) * 0.4);
+    --tile-count-size: calc(0.8125rem + var(--tile-grow) * 0.1);
+    --tile-caption-size: calc(0.75rem + var(--tile-grow) * 0.1);
+    --tile-status-size: calc(0.875rem + var(--tile-grow) * 0.1);
+    --tile-status-icon: calc(1.125rem + var(--tile-grow) * 0.2);
+    --tile-status-height: var(--tile-status-icon);
+
+    grid-template-rows: var(--tile-art-height) var(--tile-icon-size) var(--tile-status-height);
+    gap: var(--ui-space-1) calc(0.3125rem + var(--tile-grow) * 0.15);
+    padding: 0.3125rem calc(0.1875rem + var(--tile-grow) * 0.35);
+  }
+
+  .game-build-panel .game-action-label {
+    font-size: var(--tile-name-size);
+    line-height: 1.25;
+  }
+
+  .game-build-panel .game-action-tile-cost .game-resource-icons {
+    --resource-icon-size: var(--tile-icon-size);
+  }
+
+  .game-build-panel .game-resource-icon-count {
+    font-size: var(--tile-count-size);
+  }
+
+  .game-build-panel .game-action-caption {
+    font-size: var(--tile-caption-size);
+    line-height: var(--tile-icon-size);
+  }
+
+  /* One line as tall as its icons, so a state that wraps takes exactly a second one. */
+  .game-build-panel .game-action-status {
+    row-gap: 0;
+    font-size: var(--tile-status-size);
+    line-height: var(--tile-status-icon);
+  }
+
+  .game-build-panel .game-action-status-icon {
+    width: var(--tile-status-icon);
+    height: var(--tile-status-icon);
+  }
+
+  .game-build-panel .game-action-status .game-resource-icons {
+    --resource-icon-size: var(--tile-status-icon);
+  }
+
+  /* A tile too narrow for the longest state line on one line (below about 1536): the content
+     keeps its least size, and the state line keeps room for a second line, so a long one wraps
+     without moving the other lines. A one-line state sits in the middle of that room, so the
+     three lines spread evenly over the tile and match across the row. */
+  @container dock-tiles (width < 41.25rem) {
+    .game-build-panel .game-build-actions .game-action-tile {
+      --tile-grow: 0px;
+      --tile-status-height: calc(var(--tile-status-icon) * 2);
+
+      padding-block: var(--ui-space-1);
+    }
+
+    .game-build-panel .game-action-status {
+      align-self: center;
+    }
+  }
+
+  /* Narrower still (below about 1370): the name heads the tile on its own (the art gives way),
+     then the price and the state. */
+  @container dock-tiles (width < 35.75rem) {
+    .game-build-panel .game-build-actions .game-action-tile {
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: 1.125rem var(--tile-icon-size) var(--tile-status-height);
+      grid-template-areas:
+        "label"
+        "cost"
+        "status";
+    }
+
+    .game-build-panel .game-action-tile-art {
+      display: none;
+    }
   }
 }
 
 /* The opening round from md up: the lead on one line over the four steps, each a small tile (art,
-   then its number and name). */
+   then its number and name). On the widest screens they keep to the width of the tiles under
+   them, centered in the panel. */
 @media (width >= 48rem) {
   .game-build-setup {
-    inset: var(--dock-panel-pad);
+    inset: var(--dock-panel-pad)
+      max(var(--dock-panel-pad), (100% - 5 * var(--dock-tile-max) - 4 * var(--dock-tile-gap)) / 2);
     gap: 0.3125rem;
   }
 
@@ -1899,6 +2017,49 @@
 
   .game-setup-step-label {
     font-size: 0.8125rem;
+  }
+}
+
+/* xl: the opening round grows with a tall row, like the tiles under it. The steps' content grows
+   by --setup-grow (0 to 12px), bounded by the row's height and by each step's width so a name
+   stays whole: the art from 28 to 40px, the numbers from 22 to 24px, the names from 14 to 16px
+   and the lead a step larger. */
+@media (width >= 80rem) {
+  .game-build-setup {
+    --setup-grow: clamp(
+      0px,
+      min((100cqb - 6.375rem) * 0.75, ((100cqi - 1.5rem) / 4 - 7.25rem) * 0.9),
+      0.75rem
+    );
+
+    container: dock-setup / size;
+  }
+
+  .game-build-setup-lead > strong {
+    font-size: calc(0.9375rem + var(--setup-grow) / 12);
+  }
+
+  .game-build-setup-lead > span {
+    font-size: calc(0.8125rem + var(--setup-grow) / 12);
+  }
+
+  .game-setup-step-art {
+    width: calc(1.75rem + var(--setup-grow));
+    height: calc(1.75rem + var(--setup-grow));
+  }
+
+  .game-setup-step-number,
+  .game-setup-step-number svg {
+    width: calc(1.375rem + var(--setup-grow) / 6);
+    height: calc(1.375rem + var(--setup-grow) / 6);
+  }
+
+  .game-setup-step-number {
+    font-size: calc(0.75rem + var(--setup-grow) / 12);
+  }
+
+  .game-setup-step-label {
+    font-size: calc(0.875rem + var(--setup-grow) / 6);
   }
 }
 

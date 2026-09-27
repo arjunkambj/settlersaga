@@ -77,7 +77,7 @@ export function ResourceIcons({ cards }: { cards: Readonly<ResourceInventory> })
             draggable={false}
             height={256}
             loading="eager"
-            sizes="1.25rem"
+            sizes="1.75rem"
             src={RESOURCE_ICON_ASSET_PATHS[resource]}
             width={256}
           />

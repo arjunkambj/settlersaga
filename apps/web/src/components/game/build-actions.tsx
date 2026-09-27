@@ -154,7 +154,7 @@ function SetupSteps({ game }: { game: PlayerGameView }) {
                 className="game-setup-step-art"
                 draggable={false}
                 height={768}
-                sizes="1.75rem"
+                sizes="2.5rem"
                 src={ACTION_CARD_ASSET_PATHS[step.piece]}
                 width={512}
               />
