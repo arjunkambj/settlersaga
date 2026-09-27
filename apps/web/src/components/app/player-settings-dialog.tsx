@@ -97,10 +97,7 @@ export function PlayerSettingsDialog({
           }}
         >
           <Field className="gap-2">
-            <FieldLabel
-              className="font-display text-base font-normal tracking-wide"
-              htmlFor="display-name-input"
-            >
+            <FieldLabel className="text-[0.9375rem] font-bold" htmlFor="display-name-input">
               Your name
             </FieldLabel>
             <Input

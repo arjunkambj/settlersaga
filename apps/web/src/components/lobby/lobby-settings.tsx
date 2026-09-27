@@ -188,7 +188,7 @@ function SettingsSection({ children, title }: { children: ReactNode; title: stri
   const titleId = useId();
   return (
     <section aria-labelledby={titleId} className="flex flex-col gap-3">
-      <h3 className="lobby-section-title" id={titleId}>
+      <h3 className="game-eyebrow" id={titleId}>
         {title}
       </h3>
       {children}
@@ -208,7 +208,7 @@ function Setting({
   const labelId = useId();
   return (
     <div className="flex flex-col gap-2">
-      <p className="flex items-center gap-2 text-sm font-extrabold" id={labelId}>
+      <p className="flex items-center gap-2 text-sm font-bold" id={labelId}>
         <Icon className="size-5 text-accent" icon={icon} />
         {label}
       </p>
@@ -249,7 +249,7 @@ function MapPicker({
             value={map.id}
           >
             <MapPreview className="h-20 w-full @xl:h-28" mapId={map.id} />
-            <span className="w-full truncate font-display text-base leading-tight tracking-wide">
+            <span className="w-full truncate text-[0.9375rem] leading-tight font-bold">
               {GAME_MAP_NAMES[map.id]}
             </span>
             <span className="w-full truncate text-xs font-bold text-muted-foreground in-data-checked:text-ui-text-soft">
@@ -293,7 +293,7 @@ function DifficultyPicker({
             src={option.artSrc}
             width={160}
           />
-          <span className="font-display text-base leading-tight tracking-wide">{option.label}</span>
+          <span className="text-[0.9375rem] leading-tight font-bold">{option.label}</span>
         </Radio.Root>
       ))}
     </RadioGroup>
@@ -354,11 +354,7 @@ function Stepper({
   value: number;
 }) {
   return (
-    <div
-      aria-labelledby={labelId}
-      className="lobby-well flex items-center gap-2 p-1.5"
-      role="group"
-    >
+    <div aria-labelledby={labelId} className="game-well flex items-center gap-2 p-1.5" role="group">
       {readOnly ? null : (
         <Button
           aria-label={`Lower ${name}`}
@@ -410,7 +406,7 @@ function RuleTile({
       aria-describedby={descriptionId}
       aria-labelledby={labelId}
       checked={checked}
-      className="game-choice-tile lobby-rule-tile grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3 p-3 text-left @min-[34rem]:grid-cols-1 @min-[34rem]:justify-items-center @min-[34rem]:text-center"
+      className="game-choice-tile grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3 p-3 text-left @min-[34rem]:grid-cols-1 @min-[34rem]:justify-items-center @min-[34rem]:text-center"
       disabled={disabled}
       onCheckedChange={onChange}
       readOnly={readOnly}
@@ -424,10 +420,12 @@ function RuleTile({
       />
       <span className="flex min-w-0 flex-col gap-1 @min-[34rem]:items-center">
         <span className="flex items-center gap-2">
-          <span className="font-display text-base leading-tight tracking-wide" id={labelId}>
+          <span className="text-[0.9375rem] leading-tight font-bold" id={labelId}>
             {label}
           </span>
-          <span className="lobby-rule-state">{checked ? "On" : "Off"}</span>
+          <span className="game-pill" data-tone={checked ? "ready" : "quiet"}>
+            {checked ? "On" : "Off"}
+          </span>
         </span>
         <span
           className="text-sm leading-snug text-muted-foreground in-data-checked:text-ui-text-soft"

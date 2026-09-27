@@ -90,7 +90,7 @@ export function AuthScreenView({
         </Button>
         <div
           aria-hidden="true"
-          className="flex items-center gap-3 text-xs font-extrabold tracking-[0.08em] text-muted-foreground uppercase"
+          className="flex items-center gap-3 text-xs font-extrabold tracking-[0.08em] text-ui-text-soft uppercase"
         >
           <span className="h-px flex-1 bg-ui-divider" />
           or

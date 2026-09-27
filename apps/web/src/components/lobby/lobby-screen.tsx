@@ -50,6 +50,12 @@ import { cn } from "@/lib/utils";
 
 // Coalesces quick taps (a stepper held down, several chips in a row) into one save.
 const SETTINGS_SAVE_DELAY_MS = 300;
+/** A rules section that starts within this many rem of the list's bottom stays out of view. */
+const RULES_REST_BAND_REM = 7;
+
+function getRootFontSize(): number {
+  return Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+}
 
 type LobbyConfirmation =
   | { kind: "leave" }
@@ -142,6 +148,42 @@ export function LobbyScreen({
     return () => window.clearTimeout(timer);
   }, [draft, locked, saving]);
 
+  // At rest, the rules end on a whole section: one that only starts in the bottom strip (its
+  // heading and a sliver under the fade) is left out of view until the list scrolls.
+  useEffect(() => {
+    const list = rulesScrollRef.current;
+    if (!list) return;
+    const measure = () => {
+      const band = RULES_REST_BAND_REM * getRootFontSize();
+      const listBottom = list.getBoundingClientRect().bottom;
+      let cut = 0;
+      if (list.scrollTop < 1 && list.scrollHeight > list.clientHeight + 1) {
+        for (const section of list.querySelectorAll(":scope > * > section")) {
+          const fromBottom = listBottom - section.getBoundingClientRect().top;
+          if (fromBottom > 0 && fromBottom < band) {
+            cut = fromBottom;
+            break;
+          }
+        }
+      }
+      if (cut > 0) {
+        list.style.setProperty("--rules-rest-cut", `${Math.ceil(cut)}px`);
+        list.dataset.restCut = "";
+      } else {
+        delete list.dataset.restCut;
+      }
+    };
+    const resizeObserver = new ResizeObserver(measure);
+    resizeObserver.observe(list);
+    if (list.firstElementChild) resizeObserver.observe(list.firstElementChild);
+    list.addEventListener("scroll", measure, { passive: true });
+    measure();
+    return () => {
+      resizeObserver.disconnect();
+      list.removeEventListener("scroll", measure);
+    };
+  }, []);
+
   // Until wide screens give the chat its own column, it opens from the header in the crew's place.
   const openChat = () => {
     flushSync(() => setChatOpen(true));
@@ -181,15 +223,12 @@ export function LobbyScreen({
           <Tooltip label="Leave game">
             <Button
               aria-label="Leave game"
-              // Matches the 40px icon buttons beside it.
-              className="h-10 max-xl:w-10 max-xl:px-0"
               disabled={busy}
               onClick={() => openConfirmation({ kind: "leave" })}
               size="game-md"
-              variant="game-danger"
+              variant="game-icon-danger"
             >
               {leaving ? <Spinner className="size-5" /> : <Icon icon={logoutIcon} />}
-              <span className="max-xl:sr-only">Leave</span>
             </Button>
           </Tooltip>
           <Tooltip label="How to play">
@@ -230,7 +269,7 @@ export function LobbyScreen({
             variant="game-icon"
           >
             <span className="sr-only">Copy game code </span>
-            <span className="tracking-[0.18em]">{room.code}</span>
+            <span className="tracking-[0.12em] tabular-nums">{room.code}</span>
           </CopyButton>
         </div>
         <h1 className="lobby-header-title game-heading game-title-on-art">
@@ -252,7 +291,7 @@ export function LobbyScreen({
       <div className="lobby-layout" data-chat-open={chatOpen || undefined}>
         <LobbyPanel
           aside={
-            <span className="lobby-chip">
+            <span className="game-pill">
               <span aria-hidden>
                 {occupiedSeatCount}/{value.settings.maxPlayers}
               </span>
@@ -288,9 +327,9 @@ export function LobbyScreen({
           aside={
             room.isHost ? (
               // Keeps its space while hidden so the settings do not jump on every save.
-              <span className={cn("lobby-chip", !draft && "invisible")}>Saving…</span>
+              <span className={cn("game-pill", !draft && "invisible")}>Saving…</span>
             ) : (
-              <span className="lobby-chip">Set by host</span>
+              <span className="game-pill">Set by host</span>
             )
           }
           className="lobby-area-rules"
@@ -372,10 +411,10 @@ export function LobbyScreen({
                 width={96}
               />
               <div className="flex min-w-0 flex-1 flex-col gap-1">
-                <p className="font-display text-base tracking-wide sm:text-lg">
+                <p className="text-base font-bold sm:text-lg">
                   Waiting for {hostName ?? "the host"} to start
                 </p>
-                <p className="text-sm font-semibold text-muted-foreground">
+                <p className="text-sm font-semibold text-ui-text-soft">
                   {occupiedSeatCount} of {value.settings.maxPlayers} seats taken
                 </p>
                 <LiveMessage message={error} />
@@ -483,7 +522,7 @@ function HostLaunch({
   return (
     <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
       <div className="flex min-w-0 grow-999 basis-48 flex-col gap-1">
-        <p className="font-display text-base tracking-wide sm:text-lg">{hint}</p>
+        <p className="text-base font-bold sm:text-lg">{hint}</p>
         <LiveMessage className="text-left" message={error} />
       </div>
       <div className="grid grow auto-cols-fr grid-flow-col gap-2">

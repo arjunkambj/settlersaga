@@ -66,7 +66,7 @@ export function ChatPanel({ className, disabled, messages, onSend }: ChatPanelPr
       {/* column-reverse keeps the list pinned to the newest message as messages arrive. */}
       <div
         aria-label="Chat messages"
-        className="chat-log flex min-h-0 flex-1 flex-col-reverse overflow-y-auto rounded-2xl border-2 border-ui-well-border bg-ui-well p-3 inset-shadow-well"
+        className="chat-log game-well flex min-h-0 flex-1 flex-col-reverse overflow-y-auto p-3"
         role="log"
       >
         <ol className="flex flex-col gap-3">
@@ -77,7 +77,7 @@ export function ChatPanel({ className, disabled, messages, onSend }: ChatPanelPr
         {messages.length === 0 ? (
           <div className="m-auto flex flex-col items-center gap-1 p-3 text-center">
             <Icon className="mb-1 size-9 text-accent" icon={chatIcon} />
-            <p className="font-display text-lg tracking-wide">No messages yet</p>
+            <p className="text-base font-bold">No messages yet</p>
             <p className="text-sm text-muted-foreground">Say hi to your crew</p>
           </div>
         ) : null}

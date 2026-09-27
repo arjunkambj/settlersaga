@@ -1,7 +1,10 @@
 "use client";
 
 import bookIcon from "@iconify-icons/solar/book-bookmark-bold";
-import { Icon } from "@iconify/react/offline";
+import linkIcon from "@iconify-icons/solar/link-round-bold";
+import playIcon from "@iconify-icons/solar/play-bold";
+import usersIcon from "@iconify-icons/solar/users-group-rounded-bold";
+import { Icon, type IconifyIcon } from "@iconify/react/offline";
 import { ROOM_CODE_LENGTH } from "@settersaga/backend/convex/model/constants";
 import { DEFAULT_BASE_GAME_SETTINGS, type BotDifficulty } from "@settersaga/game";
 import Image, { type StaticImageData } from "next/image";
@@ -81,66 +84,68 @@ export function HomeScreen({
     <main className="home-screen relative" id="main-content">
       <SceneBackdrop />
 
-      {/* Three rows: header and lead above, the cards in the middle, an equal row below. The
-          outer rows share the leftover height, so the cards stay centered in the viewport
-          whether or not the rejoin notice is showing. */}
-      <div className="home-top relative z-20">
-        <header className="home-header">
-          <BrandWordmark className="w-32 shrink-0 sm:w-48 lg:w-56" priority />
-          <div className="flex items-center gap-2 sm:gap-3">
-            <Button
-              className="sm:w-auto sm:px-4"
-              onClick={() => setShowHelp(true)}
-              size="game-md"
-              variant="game-icon"
-            >
-              <Icon icon={bookIcon} />
-              <span className="sr-only sm:not-sr-only">How to play</span>
-            </Button>
-            <AccountToolbar />
-          </div>
-        </header>
+      <header className="home-header relative z-20">
+        <BrandWordmark className="w-32 shrink-0 sm:w-48 lg:w-56" priority />
+        <div className="flex items-center gap-2 sm:gap-3">
+          <Button
+            className="sm:w-auto sm:px-4 lg:h-12 lg:px-5 lg:text-[0.9375rem]"
+            onClick={() => setShowHelp(true)}
+            size="game-md"
+            variant="game-icon"
+          >
+            <Icon icon={bookIcon} />
+            <span className="sr-only sm:not-sr-only">How to play</span>
+          </Button>
+          <AccountToolbar roomy />
+        </div>
+      </header>
 
-        <div className="home-lead">
-          {rejoinRoom ? <RejoinStrip room={rejoinRoom} /> : null}
+      {/* Three rows under the header: the lead, the cards, and an equal row below. The outer
+          rows share the leftover height, so the cards stay centered whether or not the rejoin
+          bar is showing. */}
+      <div className="home-stage">
+        <div className="home-lead relative z-20">
+          {rejoinRoom ? <RejoinBar room={rejoinRoom} /> : null}
           <h1 className="game-heading game-title-on-art home-title">Pick a way to play</h1>
         </div>
-      </div>
 
-      <div className="home-modes relative z-10">
-        <PlayModeCard
-          art={hostIslandArt}
-          buttonLabel="Host"
-          description="Invite your friends"
-          disabled={isPending}
-          onClick={() => void onCreateRoom()}
-          pending={pendingAction === "create"}
-          title="Host a Game"
-        />
-        <PlayModeCard
-          art={quickMatchArt}
-          buttonLabel="Play"
-          description="Play against bots now"
-          disabled={isPending}
-          featured={!rejoinRoom}
-          onClick={() => setDialogOpen(setShowBotSetup, true)}
-          pending={pendingAction === "quick"}
-          primary
-          title="Quick Match"
-        />
-        <PlayModeCard
-          art={joinCrewArt}
-          buttonLabel="Join"
-          description="Got a code? Join in"
-          disabled={isPending}
-          onClick={() => setDialogOpen(setShowJoinRoom, true)}
-          pending={pendingAction === "join"}
-          title="Join a Game"
-        />
-      </div>
+        <div className="home-modes relative z-10">
+          <PlayModeCard
+            art={hostIslandArt}
+            buttonIcon={usersIcon}
+            buttonLabel="Host"
+            description="Invite your friends"
+            disabled={isPending}
+            onClick={() => void onCreateRoom()}
+            pending={pendingAction === "create"}
+            title="Host a Game"
+          />
+          <PlayModeCard
+            art={quickMatchArt}
+            buttonIcon={playIcon}
+            buttonLabel="Play"
+            description="Play against bots now"
+            disabled={isPending}
+            featured={!rejoinRoom}
+            onClick={() => setDialogOpen(setShowBotSetup, true)}
+            pending={pendingAction === "quick"}
+            title="Quick Match"
+          />
+          <PlayModeCard
+            art={joinCrewArt}
+            buttonIcon={linkIcon}
+            buttonLabel="Join"
+            description="Got a code? Join in"
+            disabled={isPending}
+            onClick={() => setDialogOpen(setShowJoinRoom, true)}
+            pending={pendingAction === "join"}
+            title="Join a Game"
+          />
+        </div>
 
-      <div className="home-foot relative z-10">
-        <LiveMessage message={showJoinRoom || showBotSetup ? "" : error} />
+        <div className="home-foot relative z-10">
+          <LiveMessage message={showJoinRoom || showBotSetup ? "" : error} />
+        </div>
       </div>
 
       <Dialog
@@ -171,7 +176,7 @@ export function HomeScreen({
                 autoComplete="off"
                 autoFocus
                 // The indent balances the letter spacing that trails the last character.
-                className="h-14 indent-[0.3em] text-center font-display text-3xl tracking-[0.3em] uppercase placeholder:font-display"
+                className="h-14 indent-[0.3em] text-center text-3xl font-extrabold tracking-[0.3em] tabular-nums uppercase"
                 id="room-code"
                 maxLength={ROOM_CODE_LENGTH}
                 onChange={(event) => {
@@ -182,7 +187,7 @@ export function HomeScreen({
                 spellCheck={false}
                 value={joinCode}
               />
-              <p className="text-center text-sm font-semibold">
+              <p className="text-center text-sm font-semibold text-ui-text-soft">
                 {joinCode.length === 0
                   ? `${ROOM_CODE_LENGTH} letters or numbers`
                   : isRoomCode(joinCode)
@@ -238,37 +243,35 @@ export function HomeScreen({
   );
 }
 
-function RejoinStrip({ room }: { room: RejoinRoom }) {
+function RejoinBar({ room }: { room: RejoinRoom }) {
   return (
     <Link
-      className="game-menu-panel game-card-button home-rejoin flex w-full items-center gap-3 p-2 text-left motion-safe:animate-game-rise"
+      className="game-menu-panel game-card-button home-rejoin motion-safe:animate-game-rise"
       href={`/room/${encodeURIComponent(room.code)}`}
     >
-      <span className="game-art-stage relative grid size-12 shrink-0 place-items-center rounded-full max-[22.5rem]:hidden">
+      <span className="game-art-stage home-rejoin-thumb max-[22.5rem]:hidden">
         <Image
           alt=""
-          className="size-10 object-contain"
+          className="size-9 object-contain"
           placeholder="blur"
-          sizes="40px"
+          sizes="36px"
           src={hostIslandArt}
         />
-        <span
-          aria-hidden="true"
-          className="absolute -top-0.5 -right-0.5 flex size-3.5 rounded-full border-2 border-game-outline bg-gold"
-        >
-          <span className="size-full rounded-full bg-gold motion-safe:animate-ping" />
-        </span>
+        <span aria-hidden="true" className="home-rejoin-live" />
       </span>
-      <span className="flex min-w-0 flex-1 flex-col">
-        <span className="game-title truncate text-sm min-[24rem]:text-base sm:text-lg">
+      <span className="home-rejoin-text">
+        <span className="game-title home-rejoin-title">
           {room.status === "waiting" ? "Your crew is waiting" : "Your game is still on"}
         </span>
-        <span className="truncate text-sm font-semibold text-muted-foreground">
-          Code <span className="font-display tracking-wider text-foreground">{room.code}</span>
+        <span className="home-rejoin-code">
+          Code <span>{room.code}</span>
         </span>
       </span>
       <span
-        className={cn(buttonVariants({ size: "game-md", variant: "game-gold" }), "px-3 sm:px-5")}
+        className={cn(
+          buttonVariants({ size: "game-md", variant: "game-gold" }),
+          "home-rejoin-button",
+        )}
       >
         Rejoin
       </span>
@@ -278,59 +281,64 @@ function RejoinStrip({ room }: { room: RejoinRoom }) {
 
 function PlayModeCard({
   art,
+  buttonIcon,
   buttonLabel,
   description,
   disabled,
   featured = false,
   onClick,
   pending,
-  primary = false,
   title,
 }: {
   art: StaticImageData;
+  buttonIcon: IconifyIcon;
   buttonLabel: string;
   description: string;
   disabled: boolean;
-  /** The screen's one gold action; only when no rejoin strip is showing its own. */
+  /** The screen's one gold action; only when no rejoin bar is showing its own. */
   featured?: boolean;
   onClick(): void;
   pending: boolean;
-  /** The card most players want: a filled button while its siblings stay quiet. */
-  primary?: boolean;
   title: string;
 }) {
-  const variant = featured ? "game-gold" : primary ? "game" : "game-ghost";
   return (
     <button
-      className="game-menu-panel game-card-button home-mode-card group w-full"
+      className="game-menu-panel game-card-button home-mode-card"
       disabled={disabled}
       onClick={onClick}
       type="button"
     >
-      <span className="game-art-stage home-mode-art">
+      <span className="home-mode-art">
         <Image
           alt=""
-          className="object-contain p-1 drop-shadow-lg sm:p-2"
           fill
           loading="eager"
           placeholder="blur"
-          sizes="(min-width: 640px) 272px, 72px"
+          sizes="(min-width: 768px) 220px, 96px"
           src={art}
         />
       </span>
-      <span className="flex min-w-0 flex-col gap-0.5">
-        <span className="game-title home-mode-title truncate">{title}</span>
-        <span className="home-mode-description line-clamp-2 text-balance">{description}</span>
+      <span className="home-mode-text">
+        <span className="game-title home-mode-title">{title}</span>
+        <span className="home-mode-description">{description}</span>
       </span>
       {/* A span, not a Button: the whole card is already the button. */}
-      <span className={cn(buttonVariants({ size: "game-md", variant }), "home-mode-button")}>
+      <span
+        className={cn(
+          buttonVariants({ size: "game-md", variant: featured ? "game-gold" : "game" }),
+          "home-mode-button",
+        )}
+      >
         {pending ? (
           <>
             <Spinner className="size-5" />
             <span className="sr-only">Working…</span>
           </>
         ) : (
-          buttonLabel
+          <>
+            <Icon aria-hidden="true" icon={buttonIcon} />
+            {buttonLabel}
+          </>
         )}
       </span>
     </button>

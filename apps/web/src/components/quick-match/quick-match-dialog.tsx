@@ -76,7 +76,7 @@ export function QuickMatchDialog({
                 src={option.artSrc}
                 width={512}
               />
-              <span className="font-display text-lg tracking-wide">{option.label}</span>
+              <span className="text-base font-bold">{option.label}</span>
             </Radio.Root>
           ))}
         </RadioGroup>

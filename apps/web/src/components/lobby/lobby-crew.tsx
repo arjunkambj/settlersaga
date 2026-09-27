@@ -49,7 +49,7 @@ export function LobbyCrew({
   return (
     <div className="lobby-scroll game-scroll-fade @container flex flex-col gap-4">
       {canManage ? (
-        <div className="lobby-well flex items-center justify-between gap-2 p-2">
+        <div className="game-well flex items-center justify-between gap-2 p-2">
           <span className="flex min-w-0 items-center gap-2">
             <Image
               alt=""
@@ -58,9 +58,7 @@ export function LobbyCrew({
               src={bot.artSrc}
               width={80}
             />
-            <span className="truncate font-display text-lg tracking-wide @max-[16rem]:pl-2">
-              Bots
-            </span>
+            <span className="truncate text-base font-extrabold @max-[16rem]:pl-2">Bots</span>
           </span>
           <div className="flex items-center gap-2">
             <Button
@@ -119,9 +117,7 @@ export function LobbyCrew({
               </span>
               <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                 <span className="lobby-seat-name">Open seat</span>
-                <span className="truncate text-xs font-bold text-muted-foreground">
-                  Waiting for a player…
-                </span>
+                <span className="lobby-seat-meta truncate">Waiting for a player…</span>
               </span>
             </li>
           ),
@@ -171,20 +167,26 @@ function CrewPlaque({
         />
       </span>
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <span className="lobby-seat-name" data-name-fit={nameFit(member.displayName)}>
-          {member.displayName}
-        </span>
-        <span className="lobby-seat-meta">
-          {member.role === "host" ? (
-            <Icon className="size-4 shrink-0 text-gold" icon={crownIcon} />
+        <span className="lobby-seat-title">
+          <span className="lobby-seat-name" data-name-fit={nameFit(member.displayName)}>
+            {member.displayName}
+          </span>
+          {member.isViewer ? (
+            <span className="game-pill" data-tone="you">
+              You
+            </span>
           ) : null}
-          <span>{role}</span>
-          {member.isViewer ? <span className="lobby-seat-tag">You</span> : null}
           {away ? (
-            <span className="lobby-seat-tag" data-tone="away">
+            <span className="game-pill" data-tone="quiet">
               Away
             </span>
           ) : null}
+        </span>
+        <span className="lobby-seat-meta">
+          {member.role === "host" ? (
+            <Icon className="size-4 shrink-0 text-ui-text-soft" icon={crownIcon} />
+          ) : null}
+          <span className="truncate">{role}</span>
         </span>
       </span>
       {onRemove ? (
