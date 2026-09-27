@@ -60,14 +60,20 @@ export function RoomScreenContainer({ roomCode }: { roomCode: string }) {
   const [joinError, setJoinError] = useState<string | null>(null);
   const [roomClosed, setRoomClosed] = useState(false);
   const [leaving, setLeaving] = useState(false);
+  const [noticeCode, setNoticeCode] = useState(normalizedCode);
   const hadRoomRef = useRef(false);
   const joinAttemptedRef = useRef<string | null>(null);
+
+  // A join error or closed notice belongs to its room, so another room never paints with it.
+  if (noticeCode !== normalizedCode) {
+    setNoticeCode(normalizedCode);
+    setJoinError(null);
+    setRoomClosed(false);
+  }
 
   useEffect(() => {
     hadRoomRef.current = false;
     joinAttemptedRef.current = null;
-    setJoinError(null);
-    setRoomClosed(false);
   }, [normalizedCode]);
 
   // The home screen offers to rejoin the stored room, so only remember a room this player

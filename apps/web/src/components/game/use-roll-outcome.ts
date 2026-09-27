@@ -50,7 +50,7 @@ export function useRollOutcome(game: PlayerGameView, me: PrivatePlayerState): Ro
       gains[resource] = Math.max(0, me.resources[resource] - previous.resources[resource]);
     }
     setOutcome({ actionNumber: game.actionNumber, gains, sum: roll.sum });
-    // Only a new move can be a roll, so the hand is read once per move.
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- only a new move can be a roll, so the hand is read once per move
   }, [game.actionNumber]);
 
   useEffect(() => {

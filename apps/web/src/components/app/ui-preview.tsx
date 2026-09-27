@@ -88,6 +88,7 @@ export function UiPreview({ mode, seed }: { mode: UiPreviewMode; seed?: string }
 
   useEffect(() => {
     if (!mode.startsWith("game")) {
+      // oxlint-disable-next-line react/set-state-in-effect -- the deadline reads the clock, so it is set after hydration
       setPreviewDeadline(undefined);
       return;
     }
@@ -97,6 +98,7 @@ export function UiPreview({ mode, seed }: { mode: UiPreviewMode; seed?: string }
 
   useEffect(() => {
     if (mode !== "game" || seed) {
+      // oxlint-disable-next-line react/set-state-in-effect -- the seed is random, so it is set after hydration
       setRandomGameSeed(undefined);
       return;
     }

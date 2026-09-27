@@ -411,6 +411,8 @@ export function useBoardCamera(): BoardCamera {
     if (!shell || !stage) {
       return;
     }
+    const activePointers = activePointersRef.current;
+    const pointerCaptureTargets = pointerCaptureTargetsRef.current;
 
     const updateStageBounds = () => {
       const rect = stage.getBoundingClientRect();
@@ -456,8 +458,8 @@ export function useBoardCamera(): BoardCamera {
         suppressedClickTimerRef.current = null;
       }
 
-      activePointersRef.current.clear();
-      pointerCaptureTargetsRef.current.clear();
+      activePointers.clear();
+      pointerCaptureTargets.clear();
       pointerGestureRef.current = null;
       wheelInteractingRef.current = false;
       draggingRef.current = false;

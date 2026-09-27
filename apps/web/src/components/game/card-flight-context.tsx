@@ -77,6 +77,7 @@ export function CardFlightProvider({
       events,
       game,
       isConnected,
+      // oxlint-disable-next-line react/purity -- a burst is timed from the render that first shows its move
       now: performance.now(),
       visible: document.visibilityState !== "hidden",
     });

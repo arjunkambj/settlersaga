@@ -216,7 +216,11 @@ function useCanvasLayer<Scene>(
   const drawRevisionRef = useRef(0);
   const sceneRef = useRef(scene);
   const scheduleDrawRef = useRef<() => void>(() => undefined);
-  sceneRef.current = scene;
+
+  // Before the redraw below, so a draw always paints the committed scene.
+  useLayoutEffect(() => {
+    sceneRef.current = scene;
+  });
 
   useEffect(() => {
     const canvas = canvasRef.current;

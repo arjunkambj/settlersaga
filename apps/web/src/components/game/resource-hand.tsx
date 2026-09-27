@@ -265,6 +265,7 @@ export function ResourceHand({
       ...current.filter((animation) => animation.missed),
       ...animations,
     ]);
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- reruns when a count changes, not when the resources object is replaced
   }, [
     actionNumber,
     flightStore,

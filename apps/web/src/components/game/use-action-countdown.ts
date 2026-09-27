@@ -24,6 +24,7 @@ export function useActionCountdown({
 
   useEffect(() => {
     if (isPaused || !nextActionAt) {
+      // oxlint-disable-next-line react/set-state-in-effect -- reads the clock, which a render can't
       setRemainingMs(nextActionAt ? Math.max(0, nextActionAt - Date.now()) : null);
       return;
     }

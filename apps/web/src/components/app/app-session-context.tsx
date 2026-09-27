@@ -110,6 +110,7 @@ export function AppSessionProvider({ children }: { children: ReactNode }) {
   }
 
   useEffect(() => {
+    // oxlint-disable-next-line react/set-state-in-effect -- localStorage is only readable after hydration
     setAudioSettings(readAudioSettings(window.localStorage));
   }, []);
 
@@ -166,6 +167,7 @@ export function AppSessionProvider({ children }: { children: ReactNode }) {
     if (!claims || !canPlay(claims)) {
       return;
     }
+    // oxlint-disable-next-line react/set-state-in-effect -- the stored session is read from localStorage once the player is known
     setSession(readPlayerSession(window.localStorage, claims.id, getDefaultDisplayName(claims)));
   }, [claims]);
 
