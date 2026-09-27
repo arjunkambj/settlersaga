@@ -81,58 +81,65 @@ export function HomeScreen({
     <main className="home-screen relative" id="main-content">
       <SceneBackdrop />
 
-      <header className="home-header relative z-20">
-        <BrandWordmark className="w-32 shrink-0 sm:w-48 lg:w-56" priority />
-        <div className="flex items-center gap-2 sm:gap-3">
-          <Button
-            className="sm:w-auto sm:px-4"
-            onClick={() => setShowHelp(true)}
-            size="game-md"
-            variant="game-icon"
-          >
-            <Icon icon={bookIcon} />
-            <span className="sr-only sm:not-sr-only">How to play</span>
-          </Button>
-          <AccountToolbar />
+      {/* Three rows: header and lead above, the cards in the middle, an equal row below. The
+          outer rows share the leftover height, so the cards stay centered in the viewport
+          whether or not the rejoin notice is showing. */}
+      <div className="home-top relative z-20">
+        <header className="home-header">
+          <BrandWordmark className="w-32 shrink-0 sm:w-48 lg:w-56" priority />
+          <div className="flex items-center gap-2 sm:gap-3">
+            <Button
+              className="sm:w-auto sm:px-4"
+              onClick={() => setShowHelp(true)}
+              size="game-md"
+              variant="game-icon"
+            >
+              <Icon icon={bookIcon} />
+              <span className="sr-only sm:not-sr-only">How to play</span>
+            </Button>
+            <AccountToolbar />
+          </div>
+        </header>
+
+        <div className="home-lead">
+          {rejoinRoom ? <RejoinStrip room={rejoinRoom} /> : null}
+          <h1 className="game-heading game-title-on-art home-title">Pick a way to play</h1>
         </div>
-      </header>
+      </div>
 
-      <div className="home-body relative z-10">
-        {rejoinRoom ? <RejoinStrip room={rejoinRoom} /> : null}
+      <div className="home-modes relative z-10">
+        <PlayModeCard
+          art={hostIslandArt}
+          buttonLabel="Host"
+          description="Invite your friends"
+          disabled={isPending}
+          onClick={() => void onCreateRoom()}
+          pending={pendingAction === "create"}
+          title="Host a Game"
+        />
+        <PlayModeCard
+          art={quickMatchArt}
+          buttonLabel="Play"
+          description="Play against bots now"
+          disabled={isPending}
+          featured={!rejoinRoom}
+          onClick={() => setDialogOpen(setShowBotSetup, true)}
+          pending={pendingAction === "quick"}
+          primary
+          title="Quick Match"
+        />
+        <PlayModeCard
+          art={joinCrewArt}
+          buttonLabel="Join"
+          description="Got a code? Join in"
+          disabled={isPending}
+          onClick={() => setDialogOpen(setShowJoinRoom, true)}
+          pending={pendingAction === "join"}
+          title="Join a Game"
+        />
+      </div>
 
-        <h1 className="game-ribbon">Choose your voyage</h1>
-
-        <div className="home-modes">
-          <PlayModeCard
-            art={hostIslandArt}
-            buttonLabel="Host"
-            description="Invite your crew"
-            disabled={isPending}
-            onClick={() => void onCreateRoom()}
-            pending={pendingAction === "create"}
-            title="Host Island"
-          />
-          <PlayModeCard
-            art={quickMatchArt}
-            buttonLabel="Play"
-            description="Sail now against bots"
-            disabled={isPending}
-            featured={!rejoinRoom}
-            onClick={() => setDialogOpen(setShowBotSetup, true)}
-            pending={pendingAction === "quick"}
-            title="Quick Match"
-          />
-          <PlayModeCard
-            art={joinCrewArt}
-            buttonLabel="Join"
-            description="Got a code? Hop aboard"
-            disabled={isPending}
-            onClick={() => setDialogOpen(setShowJoinRoom, true)}
-            pending={pendingAction === "join"}
-            title="Join Crew"
-          />
-        </div>
-
+      <div className="home-foot relative z-10">
         <LiveMessage message={showJoinRoom || showBotSetup ? "" : error} />
       </div>
 
@@ -144,8 +151,8 @@ export function HomeScreen({
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Join Crew</DialogTitle>
-            <DialogDescription>Type the Island code your host shared.</DialogDescription>
+            <DialogTitle>Join a Game</DialogTitle>
+            <DialogDescription>Type the code your host shared.</DialogDescription>
           </DialogHeader>
           <form
             className="flex flex-col gap-3"
@@ -157,7 +164,7 @@ export function HomeScreen({
           >
             <Field className="gap-2">
               <FieldLabel className="justify-center" htmlFor="room-code">
-                Island code
+                Game code
               </FieldLabel>
               <Input
                 autoCapitalize="characters"
@@ -179,7 +186,7 @@ export function HomeScreen({
                 {joinCode.length === 0
                   ? `${ROOM_CODE_LENGTH} letters or numbers`
                   : isRoomCode(joinCode)
-                    ? "Ready to board!"
+                    ? "Looks good"
                     : `${ROOM_CODE_LENGTH - joinCode.length} more to go`}
               </p>
             </Field>
@@ -203,7 +210,7 @@ export function HomeScreen({
             >
               {pendingAction === "join" ? (
                 <>
-                  <Spinner data-icon="inline-start" /> Boarding…
+                  <Spinner data-icon="inline-start" /> Joining…
                 </>
               ) : (
                 "Join"
@@ -234,7 +241,7 @@ export function HomeScreen({
 function RejoinStrip({ room }: { room: RejoinRoom }) {
   return (
     <Link
-      className="game-menu-panel game-card-button flex w-full max-w-xl items-center gap-3 p-2 text-left motion-safe:animate-game-rise"
+      className="game-menu-panel game-card-button home-rejoin flex w-full items-center gap-3 p-2 text-left motion-safe:animate-game-rise"
       href={`/room/${encodeURIComponent(room.code)}`}
     >
       <span className="game-art-stage relative grid size-12 shrink-0 place-items-center rounded-full max-[22.5rem]:hidden">
@@ -247,7 +254,7 @@ function RejoinStrip({ room }: { room: RejoinRoom }) {
         />
         <span
           aria-hidden="true"
-          className="absolute -top-0.5 -right-0.5 flex size-3.5 rounded-full border-2 border-panel bg-gold"
+          className="absolute -top-0.5 -right-0.5 flex size-3.5 rounded-full border-2 border-game-outline bg-gold"
         >
           <span className="size-full rounded-full bg-gold motion-safe:animate-ping" />
         </span>
@@ -257,7 +264,7 @@ function RejoinStrip({ room }: { room: RejoinRoom }) {
           {room.status === "waiting" ? "Your crew is waiting" : "Your game is still on"}
         </span>
         <span className="truncate text-sm font-semibold text-muted-foreground">
-          Island <span className="font-display tracking-wider text-foreground">{room.code}</span>
+          Code <span className="font-display tracking-wider text-foreground">{room.code}</span>
         </span>
       </span>
       <span
@@ -277,17 +284,22 @@ function PlayModeCard({
   featured = false,
   onClick,
   pending,
+  primary = false,
   title,
 }: {
   art: StaticImageData;
   buttonLabel: string;
   description: string;
   disabled: boolean;
+  /** The screen's one gold action; only when no rejoin strip is showing its own. */
   featured?: boolean;
   onClick(): void;
   pending: boolean;
+  /** The card most players want: a filled button while its siblings stay quiet. */
+  primary?: boolean;
   title: string;
 }) {
+  const variant = featured ? "game-gold" : primary ? "game" : "game-ghost";
   return (
     <button
       className="game-menu-panel game-card-button home-mode-card group w-full"
@@ -298,7 +310,7 @@ function PlayModeCard({
       <span className="game-art-stage home-mode-art">
         <Image
           alt=""
-          className="object-contain p-1 drop-shadow-lg transition-transform duration-300 motion-safe:group-hover:scale-105 sm:p-3"
+          className="object-contain p-1 drop-shadow-lg sm:p-2"
           fill
           loading="eager"
           placeholder="blur"
@@ -308,17 +320,10 @@ function PlayModeCard({
       </span>
       <span className="flex min-w-0 flex-col gap-0.5">
         <span className="game-title home-mode-title truncate">{title}</span>
-        <span className="home-mode-description line-clamp-2 font-semibold text-balance text-muted-foreground">
-          {description}
-        </span>
+        <span className="home-mode-description line-clamp-2 text-balance">{description}</span>
       </span>
       {/* A span, not a Button: the whole card is already the button. */}
-      <span
-        className={cn(
-          buttonVariants({ size: "game-md", variant: featured ? "game-gold" : "game" }),
-          "home-mode-button",
-        )}
-      >
+      <span className={cn(buttonVariants({ size: "game-md", variant }), "home-mode-button")}>
         {pending ? (
           <>
             <Spinner className="size-5" />

@@ -64,7 +64,7 @@ export function AuthScreenView({
   return (
     <MenuScreen title="Welcome aboard">
       <MenuScreenText>
-        Sign in with Google to play on any device, or jump straight in as a guest.
+        Sign in with Google to play on any device, or play right away as a guest.
       </MenuScreenText>
 
       <div className="flex w-full flex-col gap-3">
@@ -72,7 +72,7 @@ export function AuthScreenView({
           className="w-full gap-3"
           disabled={pending !== null}
           onClick={() => void onSignIn()}
-          size="game-md"
+          size="game-lg"
           variant="game"
         >
           {pending === "google" ? (
@@ -90,22 +90,22 @@ export function AuthScreenView({
         </Button>
         <div
           aria-hidden="true"
-          className="flex items-center gap-3 font-display text-sm tracking-wide text-muted-foreground uppercase"
+          className="flex items-center gap-3 text-xs font-extrabold tracking-[0.08em] text-muted-foreground uppercase"
         >
-          <span className="h-0.5 flex-1 rounded-full bg-panel-rim/50" />
+          <span className="h-px flex-1 bg-ui-divider" />
           or
-          <span className="h-0.5 flex-1 rounded-full bg-panel-rim/50" />
+          <span className="h-px flex-1 bg-ui-divider" />
         </div>
         <Button
           className="w-full gap-2"
           disabled={pending !== null}
           onClick={() => void onPlayAsGuest()}
-          size="game-md"
-          variant="game-secondary"
+          size="game-lg"
+          variant="game-ghost"
         >
           {pending === "guest" ? (
             <>
-              <Spinner className="size-5" data-icon="inline-start" /> Setting sail…
+              <Spinner className="size-5" data-icon="inline-start" /> Starting…
             </>
           ) : (
             "Play as guest"
@@ -166,7 +166,7 @@ export function RestrictedAccountScreen({
     >
       <MenuScreenText>
         {needsVerification
-          ? "Open the link we emailed you, then come back and set sail."
+          ? "Open the link we emailed you, then come back here to play."
           : "This account can't join games right now. Sign out to use another account, or play as a guest."}
       </MenuScreenText>
       <LiveMessage className="w-full" message={error} />

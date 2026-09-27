@@ -52,8 +52,7 @@ export function QuickMatchDialog({
         <DialogHeader>
           <DialogTitle>Quick Match</DialogTitle>
           <DialogDescription>
-            No waiting: you&apos;ll set sail right away against {QUICK_MATCH_BOT_COUNT} bots. How
-            tough should they be?
+            Start right away against {QUICK_MATCH_BOT_COUNT} bots. Pick how tough they are.
           </DialogDescription>
         </DialogHeader>
         <RadioGroup<BotDifficulty>
@@ -95,7 +94,7 @@ export function QuickMatchDialog({
           >
             {pending ? (
               <>
-                <Spinner className="size-6" data-icon="inline-start" /> Setting sail…
+                <Spinner className="size-6" data-icon="inline-start" /> Starting…
               </>
             ) : (
               "Start game"
