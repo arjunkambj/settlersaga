@@ -7,17 +7,17 @@ export const BOT_DIFFICULTY_DETAILS: Readonly<
   >
 > = {
   easy: {
-    artSrc: "/game-assets/bots/bot-easy.png",
-    description: "Relaxed bots, great for learning the ropes.",
+    artSrc: "/game-assets/avatars/bot-easy.png",
+    description: "Relaxed bots, good for learning the game.",
     label: "Easy",
   },
   medium: {
-    artSrc: "/game-assets/bots/bot-medium.png",
+    artSrc: "/game-assets/avatars/bot-medium.png",
     description: "Steady bots that build and trade.",
     label: "Medium",
   },
   hard: {
-    artSrc: "/game-assets/bots/bot-hard.png",
+    artSrc: "/game-assets/avatars/bot-hard.png",
     description: "Sharp bots that plan ahead.",
     label: "Hard",
   },

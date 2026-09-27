@@ -51,7 +51,7 @@ describe("player portraits", () => {
 
   test("shows a bot's difficulty art", () => {
     expect(getPlayerPortraitSrc({ isBot: true, isViewer: false, seatIndex: 1 }, sources)).toBe(
-      "/game-assets/bots/bot-hard.png",
+      "/game-assets/avatars/bot-hard.png",
     );
   });
 
@@ -61,9 +61,9 @@ describe("player portraits", () => {
         { isBot: false, isViewer: true, seatIndex: 1 },
         { ...sources, viewerProfileImageUrl: null },
       ),
-    ).toBe("/game-assets/players/blue-cartographer.png");
+    ).toBe("/game-assets/avatars/blue-cartographer.png");
     expect(getPlayerPortraitSrc({ isBot: false, isViewer: false, seatIndex: 0 }, sources)).toBe(
-      "/game-assets/players/red-navigator.png",
+      "/game-assets/avatars/red-navigator.png",
     );
   });
 });
