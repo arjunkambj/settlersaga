@@ -22,6 +22,14 @@ export function serializeCommand(command: GameCommand): string {
   );
 }
 
+/**
+ * The other player a logged move names in its text, so the room may know them: a confirmed
+ * trade's partner. Nothing for any other move.
+ */
+export function commandTargetPlayerId(command: GameCommand): string | undefined {
+  return command.kind === "confirm_trade" ? command.partnerPlayerId : undefined;
+}
+
 export function countOf(count: number, noun: string): string {
   return `${count} ${noun}${count === 1 ? "" : "s"}`;
 }

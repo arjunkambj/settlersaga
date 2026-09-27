@@ -2,7 +2,12 @@ import { describe, expect, test } from "bun:test";
 
 import { createDefaultGame, type GameCommand, type GameState } from "@settersaga/game";
 
-import { commandEventKind, commandText, serializeCommand } from "../convex/model/commands";
+import {
+  commandEventKind,
+  commandTargetPlayerId,
+  commandText,
+  serializeCommand,
+} from "../convex/model/commands";
 
 const STATE = createDefaultGame(
   ["one", "two", "three"].map((id, index) => ({
@@ -77,6 +82,17 @@ describe("game command events", () => {
         STATE,
       ),
     ).toBe("Player 1 traded with Player 3.");
+  });
+
+  test("shows only a confirmed trade's partner as the move's other player", () => {
+    expect(
+      commandTargetPlayerId({
+        kind: "confirm_trade",
+        offerActionNumber: 4,
+        partnerPlayerId: "three",
+      }),
+    ).toBe("three");
+    expect(commandTargetPlayerId({ kind: "roll" })).toBeUndefined();
   });
 
   test("serializes a retried command identically whatever its key order", () => {

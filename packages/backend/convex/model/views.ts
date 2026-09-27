@@ -1,5 +1,12 @@
-import { PLAYER_COLORS, toPlayerView, type GameState, type PlayerColor } from "@settersaga/game";
+import {
+  PLAYER_COLORS,
+  toPlayerView,
+  type GameCommand,
+  type GameState,
+  type PlayerColor,
+} from "@settersaga/game";
 
+import { commandTargetPlayerId } from "./commands";
 import { fail } from "./errors";
 import { requiredAutomatedActor, resumedRemainingMs } from "./scheduling";
 import { parseGameState } from "./storage";
@@ -19,13 +26,21 @@ async function listGameEvents(ctx: ReadCtx, gameId: GameId): Promise<GameEventVi
     .withIndex("by_game_and_after_revision", (index) => index.eq("gameId", gameId))
     .order("desc")
     .take(EVENT_LIMIT);
-  return events.reverse().map((event) => ({
-    actorPlayerId: event.actorSeatId,
-    createdAt: event._creationTime,
-    id: event._id,
-    kind: event.eventKind,
-    text: event.text,
-  }));
+  return events.reverse().map((event) => {
+    // Only a trade's partner is read back from the command: its text already names them.
+    const targetPlayerId =
+      event.eventKind === "confirm_trade" && event.commandJson
+        ? commandTargetPlayerId(JSON.parse(event.commandJson) as GameCommand)
+        : undefined;
+    return {
+      actorPlayerId: event.actorSeatId,
+      createdAt: event._creationTime,
+      id: event._id,
+      kind: event.eventKind,
+      ...(targetPlayerId ? { targetPlayerId } : {}),
+      text: event.text,
+    };
+  });
 }
 
 /** What the paused clock shows: the time left for the next move once play resumes. */

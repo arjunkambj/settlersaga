@@ -139,6 +139,8 @@ const gameEventViewValidator = v.object({
   createdAt: v.number(),
   id: v.id("gameActions"),
   kind: gameEventKindValidator,
+  /** The other player the move names, where its text already does: a trade's partner. */
+  targetPlayerId: v.optional(v.string()),
   text: v.string(),
 });
 
