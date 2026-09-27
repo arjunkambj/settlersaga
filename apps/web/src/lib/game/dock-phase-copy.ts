@@ -44,7 +44,7 @@ export function getPhaseCopy(game: PlayerGameView): PhaseCopy {
       const discardCount = game.legalActions.discardCount;
       if (discardCount !== null) {
         return {
-          detail: `The robber strikes! Discard ${discardCount} ${discardCount === 1 ? "card" : "cards"}`,
+          detail: `A 7 was rolled. Discard ${discardCount} ${discardCount === 1 ? "card" : "cards"}`,
           title,
         };
       }
@@ -81,9 +81,9 @@ export function getPhaseCopy(game: PlayerGameView): PhaseCopy {
       };
     case "finished":
       return game.winnerPlayerId === game.viewerPlayerId
-        ? { detail: "The island is yours!", title: { name: null, rest: "You win!" } }
+        ? { detail: "The island is yours", title: { name: null, rest: "You win!" } }
         : {
-            detail: "Better luck next voyage",
+            detail: "Better luck next game",
             // A no-break space: a plain one would be trimmed from the start of the title's end.
             title: { name: nameOf(game.winnerPlayerId), rest: "\u00a0wins!" },
           };

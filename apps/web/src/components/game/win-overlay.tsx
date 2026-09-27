@@ -26,6 +26,7 @@ import {
 } from "@/constants/game/card-assets";
 import { VICTORY_FLOURISH_ASSET_PATH } from "@/constants/game/ui-assets";
 import { toActionableError } from "@/lib/app/action-errors";
+import { nameFit } from "@/lib/app/name-fit";
 import { getPlayerPortraitSrc, type PortraitSources } from "@/lib/game/hud-portraits";
 import {
   getDisplayedVictoryPoints,
@@ -126,7 +127,7 @@ export function WinOverlay({
       </div>
 
       <div className="game-menu-panel game-results-panel motion-safe:animate-game-pop">
-        <div className="game-results-body p-5 sm:p-6">
+        <div className="game-results-body game-scroll-fade p-5 sm:p-6">
           <header className="grid justify-items-center text-center">
             <Image
               alt=""
@@ -137,11 +138,11 @@ export function WinOverlay({
               src={isViewerWin ? VICTORY_FLOURISH_ASSET_PATH : DEFEAT_FLOURISH_ASSET_PATH}
               width={1536}
             />
-            <h2 className="game-ribbon -mt-3" id="win-title">
+            <h2 className="game-eyebrow mt-1 text-base tracking-[0.12em]" id="win-title">
               {copy.ribbon}
             </h2>
             <p
-              className="game-title mt-3 mb-0 max-w-full text-2xl text-balance sm:text-3xl"
+              className="game-title mt-2 mb-0 max-w-full text-2xl leading-tight text-balance sm:text-3xl"
               id="win-headline"
             >
               {copy.headline}
@@ -182,8 +183,13 @@ export function WinOverlay({
                   <span className="game-medal game-podium-medal" data-place={place}>
                     {place}
                   </span>
-                  <span className="game-podium-name">
-                    {player.isViewer ? "You" : player.displayName}
+                  <span
+                    className="game-podium-name"
+                    data-name-fit={
+                      player.isViewer ? undefined : nameFit(podiumName(player.displayName))
+                    }
+                  >
+                    {player.isViewer ? "You" : podiumName(player.displayName)}
                   </span>
                 </div>
               ))}
@@ -214,8 +220,13 @@ export function WinOverlay({
                       src={getPlayerPortraitSrc(player, portraits)}
                     />
                     <span className="grid min-w-0 gap-0.5">
-                      <strong className="game-standing-name">{player.displayName}</strong>
-                      {tags ? <span className="game-standing-meta">{tags}</span> : null}
+                      <strong
+                        className="game-standing-name"
+                        data-name-fit={nameFit(player.displayName)}
+                      >
+                        {player.displayName}
+                      </strong>
+                      <span className="game-standing-meta">{tags || "Player"}</span>
                     </span>
                     <span className="game-standing-score">
                       {score}
@@ -314,7 +325,7 @@ export function WinOverlay({
           confirmLabel="Leave"
           description={
             isLastHuman
-              ? "You’re the last one here, so the Island closes."
+              ? "You’re the last one here, so the game closes."
               : "A bot takes your seat for the next game."
           }
           error={actionError}
@@ -323,7 +334,7 @@ export function WinOverlay({
             setActionError("");
           }}
           onConfirm={() => void run("leave", onLeave)}
-          title="Leave the Island?"
+          title="Leave this game?"
         />
       ) : null}
     </section>
@@ -358,23 +369,23 @@ function getResultCopy({
 }): { detail: string; headline: string; ribbon: string } {
   if (!winner) {
     return {
-      detail: `No one reached ${victoryTarget} points this time.`,
-      headline: "The island rests",
+      detail: `No one reached ${victoryTarget} points.`,
+      headline: "No winner this time",
       ribbon: "Game over",
     };
   }
 
   if (isViewerWin) {
     return {
-      detail: `${winner.score} points in ${turns} turns. Well sailed!`,
-      headline: "You rule the island!",
-      ribbon: "Victory!",
+      detail: `${winner.score} points in ${turns} turns. Nicely played.`,
+      headline: "The island is yours",
+      ribbon: "You won",
     };
   }
 
   return {
     detail: `${winner.player.displayName} reached ${winner.score} points in ${turns} turns.`,
-    headline: `${winner.player.displayName} takes the island!`,
+    headline: `${winner.player.displayName} takes the island`,
     ribbon: "Game over",
   };
 }
@@ -384,7 +395,7 @@ function getStandingTags(
   { isAway, isHost, isWinner }: { isAway: boolean; isHost: boolean; isWinner: boolean },
 ): string {
   return [
-    isWinner ? "Champion" : null,
+    isWinner ? "Winner" : null,
     player.isViewer ? "You" : null,
     isHost ? "Host" : null,
     player.isBot ? "Bot" : null,
@@ -441,7 +452,7 @@ function getPointSources(
     },
     {
       asset: AWARD_ASSET_PATHS.longestRoad,
-      detail: `${roadLength} ${roadLength === 1 ? "road" : "roads"} long`,
+      detail: `Road length: ${roadLength}`,
       label: "Longest Road",
       points: game.longestRoadPlayerId === player.id ? LONGEST_ROAD_VICTORY_POINTS : 0,
       shape: "award",
@@ -456,9 +467,19 @@ function getPointSources(
     {
       asset: DEVELOPMENT_CARD_ASSET_PATHS["victory-point"],
       detail: `${victoryPointCards} ${victoryPointCards === 1 ? "card" : "cards"}`,
-      label: "Victory cards",
+      label: "VP cards",
       points: victoryPointCards,
       shape: "card",
     },
   ];
+}
+
+/**
+ * The name on a podium plate: short names whole, long ones by their first word, so the plate reads
+ * "Bartholomew" rather than "Bartholomew …". The standings beside it carry the full name.
+ */
+function podiumName(displayName: string): string {
+  return nameFit(displayName) === undefined
+    ? displayName
+    : (displayName.split(/\s+/)[0] ?? displayName);
 }

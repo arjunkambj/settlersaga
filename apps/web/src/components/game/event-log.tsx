@@ -6,7 +6,7 @@ import { Icon } from "@iconify/react/offline";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { eventActionLabel, groupRoomEvents } from "@/lib/game/event-log-model";
+import { eventActionLabel, groupRoomEvents, noticeText } from "@/lib/game/event-log-model";
 import { getPlayerPortraitSrc } from "@/lib/game/hud-portraits";
 import type { RoomEventView } from "@/lib/game/types";
 import { getPlayerColor } from "@/lib/game/view";
@@ -65,7 +65,7 @@ export function EventLog({
   return (
     <div className="game-event-log">
       <ol
-        className="game-event-log-list"
+        className="game-event-log-list game-scroll-fade"
         onScroll={(event) => {
           const list = event.currentTarget;
           const atBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 40;
@@ -87,7 +87,7 @@ export function EventLog({
                   key={entry.key}
                 >
                   <EventKindBadge kind={entry.event.kind} />
-                  <p className="m-0 min-w-0">{entry.event.text}</p>
+                  <p className="m-0 min-w-0">{noticeText(entry.event.text)}</p>
                 </li>
               );
             }
@@ -118,8 +118,12 @@ export function EventLog({
                 <div className="game-log-bubble">
                   <p className="game-log-head">
                     <strong className="game-log-name">{actor?.displayName ?? "Crew"}</strong>
+                    {/* One tag at most, so the name keeps its room: "You" on the viewer's
+                        bubbles, "Latest" on another player's newest one. */}
                     {actor?.id === viewerPlayerId ? (
                       <span className="game-you-tag">You</span>
+                    ) : index === entries.length - 1 ? (
+                      <span className="game-log-latest">Latest</span>
                     ) : null}
                     {latest ? (
                       <time

@@ -32,6 +32,7 @@ import {
   toCommandRejection,
   type SendCommand,
 } from "@/lib/game/command-errors";
+import { getDockPhaseCopy, summarizeLatestMove } from "@/lib/game/dock-actions";
 import { getPhaseCopy, phaseTitleText } from "@/lib/game/dock-phase-copy";
 import type { RoomEventView } from "@/lib/game/types";
 import { getLongestRoadLengths, getViewerAndActivePlayer } from "@/lib/game/view";
@@ -49,6 +50,7 @@ import { ResourceHand } from "./resource-hand";
 import { ActiveTradeOffer } from "./trade-center";
 import { useAttentionTitle, type AttentionRequest } from "./use-attention-title";
 import { useMediaQuery } from "./use-media-query";
+import { useRollOutcome } from "./use-roll-outcome";
 import { WinOverlay } from "./win-overlay";
 
 type GameConfirmation =
@@ -104,6 +106,7 @@ export function GameScreen({
   viewerProfileImageUrl: string | null;
 }) {
   const { activePlayer, me } = getViewerAndActivePlayer(game);
+  const rollOutcome = useRollOutcome(game, me);
   // A chosen build mode belongs to the action it was picked in; any new action clears it.
   const [buildSelection, setBuildSelection] = useState<{
     actionNumber: number;
@@ -300,8 +303,11 @@ export function GameScreen({
 
   const isViewerTurn = activePlayer.id === me.id;
   useAttentionTitle(getAttentionRequest(game, isViewerTurn));
-  const phaseCopy = getPhaseCopy(game);
+  const phaseCopy = getDockPhaseCopy(game, getPhaseCopy(game), rollOutcome);
   const latestEvent = events.at(-1)?.text;
+  // The phase line also says what just happened (unless it is already reporting the roll), at
+  // every width: the log beside the board is small, and a glance at the dock should answer it.
+  const latestMove = rollOutcome ? null : summarizeLatestMove(events.at(-1), game.players);
   const phaseLiveMessage = [
     phaseTitleText(phaseCopy.title),
     phaseCopy.detail,
@@ -310,7 +316,13 @@ export function GameScreen({
     .filter((part) => part !== null)
     .map((part) => (/[.!?…]$/.test(part) ? part : `${part}.`))
     .join(" ");
-  const placementLabel = getPlacementLabel(game, resolveBoardTargetMode(game, buildMode));
+  // Placements the phase asks for (setup, the robber, free roads) are already prompted by the
+  // turn plaque, so the pill over the board only names a build the player picked, beside Cancel.
+  const boardTargetMode = resolveBoardTargetMode(game, buildMode);
+  const placementLabel =
+    buildMode !== null && boardTargetMode === buildMode && !PHASE_PLACEMENTS.has(game.phase.kind)
+      ? getPlacementLabel(buildMode)
+      : null;
   const changeBuildMode = (mode: BoardBuildMode) => {
     if (isPaused) {
       showPausedNotice();
@@ -336,7 +348,7 @@ export function GameScreen({
       setConfirmationError(
         confirmation.kind === "leave"
           ? toActionableError(cause)
-          : "That seat could not be handed to a bot. Try again.",
+          : "We couldn't hand that seat to a bot. Try again.",
       );
     } finally {
       confirmationInFlightRef.current = false;
@@ -380,6 +392,8 @@ export function GameScreen({
             <PlayerStrip
               activePlayerId={game.activePlayerId}
               botDifficulty={botDifficulty}
+              largestArmyPlayerId={game.largestArmyPlayerId}
+              longestRoadPlayerId={game.longestRoadPlayerId}
               offlineSeatIndexes={offlineSeatIndexes}
               players={game.players}
               turnOrder={game.turnOrder}
@@ -400,17 +414,15 @@ export function GameScreen({
 
             <div className="game-board-notices">
               {placementLabel ? (
-                <div className="game-placement-banner motion-safe:animate-game-pop">
-                  <p className="game-ribbon m-0">{placementLabel}</p>
-                  {buildMode ? (
-                    <Button
-                      onClick={() => setBuildSelection(null)}
-                      size="game-md"
-                      variant="game-secondary"
-                    >
-                      Cancel
-                    </Button>
-                  ) : null}
+                <div className="game-placement-row motion-safe:animate-game-pop">
+                  <p className="game-placement-pill m-0">{placementLabel}</p>
+                  <Button
+                    onClick={() => setBuildSelection(null)}
+                    size="game-md"
+                    variant="game-secondary"
+                  >
+                    Cancel
+                  </Button>
                 </div>
               ) : null}
               {pausedNoticeVisible && isPaused ? (
@@ -454,6 +466,7 @@ export function GameScreen({
                 buildMode={buildMode}
                 game={game}
                 isPaused={isPaused}
+                latestMove={latestMove}
                 me={me}
                 nextActionAt={nextActionAt}
                 onBuildMode={changeBuildMode}
@@ -551,7 +564,7 @@ export function GameScreen({
           confirmLabel={confirmation.kind === "leave" ? "Leave game" : "Hand to a bot"}
           description={
             confirmation.kind === "leave"
-              ? "A bot takes your seat, and you can't come back to it. If no crew is left, the Island closes."
+              ? "A bot takes your seat, and you can't come back to it. If no players are left, the game closes."
               : `${confirmation.displayName} loses this seat right away, and a bot finishes the game for them.`
           }
           error={confirmationError}
@@ -598,25 +611,23 @@ function acquireSingleFlight(lock: { current: boolean }): boolean {
   return true;
 }
 
-/** The banner over the board while the viewer is choosing a spot. */
-function getPlacementLabel(game: PlayerGameView, mode: BoardTargetMode | null): string | null {
-  switch (mode) {
-    case null:
-      return null;
+/** Phases whose board placement the turn plaque prompts for. */
+const PHASE_PLACEMENTS: ReadonlySet<PlayerGameView["phase"]["kind"]> = new Set([
+  "move_robber",
+  "road_building",
+  "setup_road",
+  "setup_settlement",
+]);
+
+/** The pill over the board while the viewer is choosing a spot for a piece they picked. */
+function getPlacementLabel(piece: NonNullable<BoardBuildMode>): string {
+  switch (piece) {
     case "city":
       return "Upgrade a settlement";
-    case "robber":
-      return "Move the robber";
     case "settlement":
-      return game.phase.kind === "setup_settlement"
-        ? "Place your settlement"
-        : "Place a settlement";
+      return "Place a settlement";
     case "road":
-      return game.phase.kind === "road_building"
-        ? "Place a free road"
-        : game.phase.kind === "setup_road"
-          ? "Place your road"
-          : "Place a road";
+      return "Place a road";
   }
 }
 

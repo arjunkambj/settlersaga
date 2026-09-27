@@ -61,8 +61,22 @@ function getResourceFlightStyle(animation: ResourceAnimation): ResourceFlightSty
 
 interface ScrollEdges {
   end: boolean;
+  /** Cards scrolled out of view past each end, and whether any of them can be played now. */
+  hiddenAfter: number;
+  hiddenBefore: number;
+  playableAfter: boolean;
+  playableBefore: boolean;
   start: boolean;
 }
+
+const NO_SCROLL: ScrollEdges = {
+  end: false,
+  hiddenAfter: 0,
+  hiddenBefore: 0,
+  playableAfter: false,
+  playableBefore: false,
+  start: false,
+};
 
 function CardArt({ path }: { path: string }) {
   return (
@@ -113,7 +127,7 @@ export function ResourceHand({
   const cardListRef = useRef<HTMLUListElement>(null);
   const previousSnapshotRef = useRef<ResourceSnapshot | null>(null);
   const [resourceAnimations, setResourceAnimations] = useState<ResourceAnimation[]>([]);
-  const [scrollEdges, setScrollEdges] = useState<ScrollEdges>({ end: false, start: false });
+  const [scrollEdges, setScrollEdges] = useState<ScrollEdges>(NO_SCROLL);
   const overflows = scrollEdges.start || scrollEdges.end;
   const developmentCardCounts = DEVELOPMENT_CARD_ASSETS.flatMap((asset) => {
     const count = me.developmentCards.filter((card) => card === asset.id).length;
@@ -188,7 +202,10 @@ export function ResourceHand({
       return;
     }
 
-    const measure = () => setScrollEdges((current) => getScrollEdges(current, cardList));
+    const measure = () => {
+      fitCardGap(cardList);
+      setScrollEdges((current) => getScrollEdges(current, cardList));
+    };
     const resizeObserver = new ResizeObserver(measure);
     resizeObserver.observe(cardList);
     measure();
@@ -294,12 +311,16 @@ export function ResourceHand({
                 aria-label={`${card.label}: ${card.count}. ${note}`}
                 className="game-hand-card motion-safe:animate-game-pop"
                 data-development
+                data-playable={playable || undefined}
                 key={card.id}
               >
                 <span aria-hidden="true" className="game-hand-card-face">
                   <CardArt path={card.path} />
                 </span>
                 <CountChip count={card.count} key={card.count} />
+                <span aria-hidden="true" className="game-hand-card-label">
+                  {DEVELOPMENT_CARD_SHORT_LABELS[card.id]}
+                </span>
                 {playable ? (
                   <button
                     aria-label={`Play ${card.label}: ${card.description}`}
@@ -312,40 +333,26 @@ export function ResourceHand({
                       Play
                     </span>
                   </button>
-                ) : (
-                  <span aria-hidden="true" className="game-hand-card-label">
-                    {DEVELOPMENT_CARD_SHORT_LABELS[card.id]}
-                  </span>
-                )}
+                ) : null}
               </li>
             );
           })}
         </ul>
         {scrollEdges.start ? (
-          <Button
-            aria-label="Show earlier cards"
-            className="game-hand-scroll"
-            data-edge="start"
+          <ScrollArrow
+            edge="start"
+            hidden={scrollEdges.hiddenBefore}
             onClick={() => scrollCards(-1)}
-            size="game-md"
-            tabIndex={-1}
-            variant="game-icon"
-          >
-            <Icon aria-hidden="true" icon={arrowLeftIcon} />
-          </Button>
+            playable={scrollEdges.playableBefore}
+          />
         ) : null}
         {scrollEdges.end ? (
-          <Button
-            aria-label="Show more cards"
-            className="game-hand-scroll"
-            data-edge="end"
+          <ScrollArrow
+            edge="end"
+            hidden={scrollEdges.hiddenAfter}
             onClick={() => scrollCards(1)}
-            size="game-md"
-            tabIndex={-1}
-            variant="game-icon"
-          >
-            <Icon aria-hidden="true" icon={arrowRightIcon} />
-          </Button>
+            playable={scrollEdges.playableAfter}
+          />
         ) : null}
         <div aria-hidden="true" className="resource-flight-layer">
           {resourceAnimations.map((animation) => (
@@ -380,9 +387,96 @@ export function ResourceHand({
   );
 }
 
-/** Which ends of the card row are scrolled out of view. */
+/**
+ * While the row scrolls, widen the gap between cards so the cards in view fill the row edge to
+ * edge: no card is cut in half at the arrow, and no dead space is left before it. A row that
+ * fits keeps the resting gap.
+ */
+function fitCardGap(list: HTMLElement) {
+  const card = list.querySelector<HTMLElement>(".game-hand-card");
+  if (!card) {
+    return;
+  }
+  const rem = Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+  // --ui-space-2: the row's resting gap and its inline padding.
+  const restingGap = 0.5 * rem;
+  const cardWidth = card.offsetWidth;
+  const cardCount = list.children.length;
+  const room = list.clientWidth - 2 * restingGap;
+  const fits = cardCount * cardWidth + (cardCount - 1) * restingGap <= room + 1;
+  const inView = Math.floor((room + restingGap + 1) / (cardWidth + restingGap));
+  const gap = fits || inView < 2 ? restingGap : (room - inView * cardWidth) / (inView - 1);
+  list.style.setProperty("--hand-gap", `${gap}px`);
+}
+
+/**
+ * An arrow at one end of the card row, with a "+3" chip for the cards past it: gold when one of
+ * them can be played now, so a playable card is never out of sight unnoticed.
+ */
+function ScrollArrow({
+  edge,
+  hidden,
+  onClick,
+  playable,
+}: {
+  edge: "end" | "start";
+  hidden: number;
+  onClick(): void;
+  playable: boolean;
+}) {
+  const where = edge === "end" ? "more" : "earlier";
+  return (
+    <Button
+      aria-label={`Show ${hidden > 0 ? `${hidden} ` : ""}${where} ${hidden === 1 ? "card" : "cards"}${
+        playable ? ", one you can play" : ""
+      }`}
+      className="game-hand-scroll"
+      data-edge={edge}
+      onClick={onClick}
+      size="game-md"
+      tabIndex={-1}
+      variant="game-icon"
+    >
+      <Icon aria-hidden="true" icon={edge === "end" ? arrowRightIcon : arrowLeftIcon} />
+      {hidden > 0 ? (
+        <span
+          aria-hidden="true"
+          className="game-hand-scroll-count"
+          data-playable={playable || undefined}
+        >
+          +{hidden}
+        </span>
+      ) : null}
+    </Button>
+  );
+}
+
+/** Which ends of the card row are scrolled out of view, and how many cards lie past each. */
 function getScrollEdges(current: ScrollEdges, list: HTMLElement): ScrollEdges {
-  const start = list.scrollLeft > 1;
-  const end = list.scrollLeft + list.clientWidth < list.scrollWidth - 1;
-  return current.start === start && current.end === end ? current : { end, start };
+  const viewStart = list.scrollLeft;
+  const viewEnd = viewStart + list.clientWidth;
+  const next: ScrollEdges = {
+    ...NO_SCROLL,
+    end: viewEnd < list.scrollWidth - 1,
+    start: viewStart > 1,
+  };
+  for (const card of list.children) {
+    if (!(card instanceof HTMLElement)) {
+      continue;
+    }
+    // A card counts as hidden once more than half of it is out of view.
+    const center = card.offsetLeft - list.offsetLeft + card.offsetWidth / 2;
+    const playable = card.dataset.playable !== undefined;
+    if (center > viewEnd) {
+      next.hiddenAfter += 1;
+      next.playableAfter ||= playable;
+    } else if (center < viewStart) {
+      next.hiddenBefore += 1;
+      next.playableBefore ||= playable;
+    }
+  }
+  const same = (Object.keys(next) as (keyof ScrollEdges)[]).every(
+    (key) => current[key] === next[key],
+  );
+  return same ? current : next;
 }

@@ -42,6 +42,26 @@ export function groupRoomEvents(events: readonly RoomEventView[]): EventLogEntry
   return entries;
 }
 
+const GAME_STARTED_TEXT = /^game started with (\d+) human players? and (\d+) bots?\.?$/i;
+
+/**
+ * A table notice in plain words. The server's "Game started with 3 human players and 1 bot."
+ * reads "Game on: 3 people and 1 bot at the table."; every other notice stays as it is.
+ */
+export function noticeText(text: string): string {
+  const trimmed = text.trim();
+  const started = GAME_STARTED_TEXT.exec(trimmed);
+  if (!started) {
+    return trimmed;
+  }
+  const humans = Number(started[1]);
+  const bots = Number(started[2]);
+  const people = `${humans} ${humans === 1 ? "person" : "people"}`;
+  return bots > 0
+    ? `Game on: ${people} and ${bots} ${bots === 1 ? "bot" : "bots"} at the table.`
+    : `Game on: ${people} at the table.`;
+}
+
 /** A move's text under its player's name: the name prefix goes, the rest reads as a sentence. */
 export function eventActionLabel(text: string, displayName?: string): string {
   const trimmed = text.trim();

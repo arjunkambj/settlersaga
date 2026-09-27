@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { HandDockPortal } from "./hand-dock";
 
 /**
- * The panel every dock sheet (trade composer, trade offer, discard) uses: a ribbon title centered
+ * The panel every dock sheet (trade composer, trade offer, discard) uses: a clean title centered
  * between equal side slots, the body, and a footer whose buttons share the width equally. It
  * renders into the sheet slot above the dock, so the hand stays in view.
  */
@@ -40,7 +40,7 @@ export function DockSheet({
         tabIndex={-1}
       >
         <header className="game-dock-sheet-head">
-          <h2 className="game-ribbon" id={titleId}>
+          <h2 className="game-heading" id={titleId}>
             {title}
           </h2>
           {onClose ? (

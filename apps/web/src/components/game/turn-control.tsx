@@ -83,7 +83,7 @@ export function TurnControl({
                   draggable={false}
                   height={256}
                   loading="eager"
-                  sizes="3rem"
+                  sizes="4.5rem"
                   src={END_TURN_ICON_ASSET_PATH}
                   width={256}
                 />
@@ -103,7 +103,7 @@ export function TurnControl({
               draggable={false}
               height={256}
               loading="eager"
-              sizes="3rem"
+              sizes="4.5rem"
               src={state.art}
               width={256}
             />
@@ -121,7 +121,7 @@ export function TurnControl({
               draggable={false}
               height={256}
               loading="eager"
-              sizes="3rem"
+              sizes="4.5rem"
               src={WAIT_ICON_ASSET_PATH}
               width={256}
             />

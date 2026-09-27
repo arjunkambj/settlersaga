@@ -439,7 +439,7 @@ function getComposerStatus({
     }
   }
   if (!legal.canProposeTrade) {
-    return { text: "Offers to the crew are closed right now", tone: "neutral" };
+    return { text: "You can't offer trades right now", tone: "neutral" };
   }
   if (!hasGive && !hasWant) {
     return { text: "Pick what you give and what you want", tone: "neutral" };
@@ -829,7 +829,7 @@ function getOfferStatus({
             };
       }
       return offer.acceptedPlayerIds.includes(me.id)
-        ? { text: `Accepted — waiting for ${proposerName}`, tone: "ready" }
+        ? { text: `Accepted. Waiting for ${proposerName}`, tone: "ready" }
         : { text: "You passed on this offer", tone: "neutral" };
     case "proposer": {
       const [onlyPartnerId, ...otherPartnerIds] = legal.tradePartnerPlayerIds;
@@ -838,7 +838,7 @@ function getOfferStatus({
           text:
             otherPartnerIds.length === 0
               ? `Trade with ${nameOf(onlyPartnerId)} to swap cards`
-              : "Pick who gets the cards",
+              : "Pick who to trade with",
           tone: "ready",
         };
       }

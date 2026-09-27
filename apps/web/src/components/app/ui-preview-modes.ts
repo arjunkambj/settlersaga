@@ -14,6 +14,7 @@ export const UI_PREVIEW_MODES = [
   "game-won",
   "help",
   "home",
+  "home-fresh",
   "lobby",
   "lobby-full",
   "lobby-guest",

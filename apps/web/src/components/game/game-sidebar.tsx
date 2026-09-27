@@ -136,7 +136,6 @@ export function GameSidebar({
         hostSeatIndex={hostSeatIndex}
         isHost={isHost}
         largestArmyPlayerId={game.largestArmyPlayerId}
-        lastDiceRoll={game.lastDiceRoll}
         longestRoadByPlayerId={longestRoadByPlayerId}
         longestRoadPlayerId={game.longestRoadPlayerId}
         offlineSeatIndexes={offlineSeatIndexes}

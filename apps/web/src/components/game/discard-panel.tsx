@@ -105,20 +105,21 @@ export function DiscardPanel({
         </Button>
       }
       id="discard-tray"
-      title="Robber!"
+      title="Too many cards"
       titleId="discard-tray-title"
     >
       <p className="game-trade-lead">
         <span>
-          Pick {count} {count === 1 ? "card" : "cards"} to give back, here or in your hand
+          Pick {count} {count === 1 ? "card" : "cards"} to discard, here or in your hand
         </span>
       </p>
-      <section aria-label="Cards to discard" className="game-trade-well">
+      <section aria-label="Cards to discard" className="game-trade-well game-discard-well">
         <ResourcePicker
           canAdd={(resource) =>
             selectedCount < count && selection[resource] < me.resources[resource]
           }
           disabled={pending}
+          held={me.resources}
           label="Cards to discard"
           onAdd={addResource}
           onRemove={(resource) =>
@@ -175,7 +176,7 @@ function getAutoDiscardLabel(status: CountdownStatus, seconds: number | null): s
         ? "Automatic discard paused"
         : `Automatic discard paused with ${seconds} seconds left`;
     case "expired":
-      return "Time is up, picking cards for you";
+      return "Time's up. Picking cards for you";
     case "starting":
       return "Automatic discard timer starting";
     case "running":

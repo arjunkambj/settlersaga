@@ -6,6 +6,7 @@ import type { Ref } from "react";
 import { Button } from "@/components/ui/button";
 import type { BoardBuildMode } from "@/lib/game/board-canvas-model";
 import type { SendCommand } from "@/lib/game/command-errors";
+import { nameFit } from "@/lib/app/name-fit";
 import { getActionDockLockReason } from "@/lib/game/dock-actions";
 import { phaseTitleText, type PhaseCopy } from "@/lib/game/dock-phase-copy";
 import { getPlayerColor } from "@/lib/game/view";
@@ -17,15 +18,18 @@ import { StealChooser } from "./steal-chooser";
 import { TurnClock, TurnControl } from "./turn-control";
 
 /**
- * The turn controls beside the hand. Each part sits in a named grid area
- * (styles/game-layout.css) so a missing clock never shifts the others. Once the game is over
- * only the phase line stays, with "Show results" in the turn slot while the results are hidden.
+ * The turn controls beside the hand: the turn plaque (whose turn it is and the one thing to do
+ * now, with what just happened as a quiet last line), the clock, Build & Trade, and the Roll or
+ * End turn button. Each part sits in a named grid area (styles/game-layout.css) so a missing
+ * clock never shifts the others. Once the game is over only the plaque stays, with "Show
+ * results" in the turn slot while the results are hidden.
  */
 export function CommandDock({
   botThinking,
   buildMode,
   game,
   isPaused,
+  latestMove = null,
   me,
   nextActionAt,
   onBuildMode,
@@ -41,6 +45,8 @@ export function CommandDock({
   buildMode: BoardBuildMode;
   game: PlayerGameView;
   isPaused: boolean;
+  /** What just happened, in a few words ("Peter Bot rolled 6"). */
+  latestMove?: string | null;
   me: PrivatePlayerState;
   nextActionAt?: number;
   onBuildMode(mode: BoardBuildMode): void;
@@ -62,6 +68,9 @@ export function CommandDock({
       (player) => player.id === (isFinished ? game.winnerPlayerId : game.activePlayerId),
     ) ?? me;
   // The dice show once this turn's roll is in (a knight played before rolling keeps them hidden).
+  // A long name shrinks a step, then only the name shortens; "'s turn" stays whole
+  // (styles/game-dock.css).
+  const titleName = phaseCopy.title.name ?? null;
   const rolledThisTurn =
     phase.kind === "build_and_trade" ||
     phase.kind === "discard" ||
@@ -74,21 +83,24 @@ export function CommandDock({
         className={`game-phase-panel player-${getPlayerColor(spotlightPlayer)}`}
       >
         <DockPortrait player={spotlightPlayer} />
-        <div className="game-phase-copy">
-          <h1
-            aria-label={phaseTitleText(phaseCopy.title)}
-            className="game-phase-title"
-            id="phase-title"
-            ref={phaseHeadingRef}
-            tabIndex={-1}
-          >
-            {phaseCopy.title.name ? (
-              <span className="game-phase-name">{phaseCopy.title.name}</span>
-            ) : null}
-            {phaseCopy.title.rest}
-          </h1>
-          <p className="game-phase-detail">{phaseCopy.detail}</p>
-        </div>
+        <h1
+          aria-label={phaseTitleText(phaseCopy.title)}
+          className="game-phase-title"
+          data-name-fit={titleName ? nameFit(titleName) : undefined}
+          id="phase-title"
+          ref={phaseHeadingRef}
+          tabIndex={-1}
+        >
+          {titleName ? <span className="game-phase-name">{titleName}</span> : null}
+          <span className="game-phase-rest">{phaseCopy.title.rest}</span>
+        </h1>
+        <p className="game-phase-detail">{phaseCopy.detail}</p>
+        {latestMove ? (
+          <p className="game-phase-last" title={latestMove}>
+            <span className="game-phase-last-label">Last move</span>
+            <span className="game-phase-last-text">{latestMove}</span>
+          </p>
+        ) : null}
         {rolledThisTurn && game.lastDiceRoll ? (
           <DiceRoll
             className="game-phase-dice"

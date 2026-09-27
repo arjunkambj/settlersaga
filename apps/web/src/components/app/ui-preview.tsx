@@ -27,6 +27,7 @@ import {
   PreviewAppSessionProvider,
   type AppSessionContextValue,
 } from "@/components/app/app-session-context";
+import { SceneBackdrop } from "@/components/app/scene-backdrop";
 import type { UiPreviewMode } from "@/components/app/ui-preview-modes";
 import { AuthScreenView } from "@/components/auth/auth-screen";
 import { ActionTile } from "@/components/game/action-tile";
@@ -102,6 +103,7 @@ export function UiPreview({ mode, seed }: { mode: UiPreviewMode; seed?: string }
         <AuthScreenView onPlayAsGuest={async () => undefined} onSignIn={async () => undefined} />
       );
     case "home":
+    case "home-fresh":
       return (
         <PreviewAppSessionProvider value={PREVIEW_SESSION}>
           <HomeScreen
@@ -111,13 +113,14 @@ export function UiPreview({ mode, seed }: { mode: UiPreviewMode; seed?: string }
             onJoinRoom={async () => undefined}
             onQuickPlay={async () => undefined}
             pendingAction={null}
-            rejoinRoom={{ code: "DGZ9J6", status: "active" }}
+            rejoinRoom={mode === "home" ? { code: "DGZ9J6", status: "active" } : null}
           />
         </PreviewAppSessionProvider>
       );
     case "help":
       return (
-        <main className="min-h-dvh bg-background" id="main-content">
+        <main className="min-h-dvh" id="main-content">
+          <SceneBackdrop />
           <GameHelpDialog onClose={() => undefined} settings={DEFAULT_BASE_GAME_SETTINGS} />
         </main>
       );
@@ -434,6 +437,7 @@ function GamePreview({
   seed?: string;
 }) {
   const [previewState, setPreviewState] = useState(() => createGamePreviewState(mode, seed));
+  const [previewEvents] = useState(() => createPreviewEvents(mode, previewState));
   const previewStateRef = useRef(previewState);
   const [isPaused, setIsPaused] = useState(mode === "game-paused");
   const chat = usePreviewChat({
@@ -455,7 +459,7 @@ function GamePreview({
       botDifficulty="medium"
       botThinking={false}
       chat={chat}
-      events={PREVIEW_EVENTS}
+      events={previewEvents}
       game={createPreviewView(previewState)}
       hostSeatIndex={0}
       isHost
@@ -468,7 +472,7 @@ function GamePreview({
       onRematch={async () => undefined}
       onReplacePlayer={async () => undefined}
       pausedRemainingMs={isPaused ? 42_000 : undefined}
-      viewerProfileImageUrl="/game-assets/players/red-navigator.png"
+      viewerProfileImageUrl="/game-assets/avatars/red-navigator.png"
     />
   );
 }
@@ -728,55 +732,110 @@ function completePreviewSetup(initialState: GameState) {
   return state;
 }
 
-// The table so far, in the backend's words: setup, then one round of turns.
-const PREVIEW_EVENT_ANCHOR = Date.UTC(2026, 6, 19, 22, 30);
-const PREVIEW_EVENTS: RoomEventView[] = (
+type PreviewEventRow = readonly [actorPlayerId: string, text: string, kind: RoomEventView["kind"]];
+
+const PREVIEW_GAME_STARTED: PreviewEventRow = [
+  "player-1",
+  "Game started with 3 human players and 1 bot.",
+  "game_started",
+];
+
+// The table up to the viewer's fifth turn, in the backend's words: setup, then one round.
+const PREVIEW_HISTORY: readonly PreviewEventRow[] = [
+  PREVIEW_GAME_STARTED,
+  ["player-1", `${VIEWER_NAME} placed a settlement.`, "place_settlement"],
+  ["player-1", `${VIEWER_NAME} placed a road.`, "place_road"],
+  ["player-2", "Mira placed a settlement.", "place_settlement"],
+  ["player-2", "Mira placed a road.", "place_road"],
+  ["player-3", "Bartholomew Longbeard placed a settlement.", "place_settlement"],
+  ["player-3", "Bartholomew Longbeard placed a road.", "place_road"],
+  ["player-4", "Peter Bot placed a settlement.", "place_settlement"],
+  ["player-4", "Peter Bot placed a road.", "place_road"],
+  ["player-4", "Peter Bot placed a settlement.", "place_settlement"],
+  ["player-4", "Peter Bot placed a road.", "place_road"],
+  ["player-3", "Bartholomew Longbeard placed a settlement.", "place_settlement"],
+  ["player-3", "Bartholomew Longbeard placed a road.", "place_road"],
+  ["player-2", "Mira placed a settlement.", "place_settlement"],
+  ["player-2", "Mira placed a road.", "place_road"],
+  ["player-1", `${VIEWER_NAME} placed a settlement.`, "place_settlement"],
+  ["player-1", `${VIEWER_NAME} placed a road.`, "place_road"],
+  ["player-1", `${VIEWER_NAME} rolled 4 + 3 (7).`, "roll"],
   [
-    ["player-1", "Game started with 3 human players and 1 bot.", "game_started"],
-    ["player-1", `${VIEWER_NAME} placed a settlement.`, "place_settlement"],
-    ["player-1", `${VIEWER_NAME} placed a road.`, "place_road"],
-    ["player-2", "Mira placed a settlement.", "place_settlement"],
-    ["player-2", "Mira placed a road.", "place_road"],
-    ["player-3", "Bartholomew Longbeard placed a settlement.", "place_settlement"],
-    ["player-3", "Bartholomew Longbeard placed a road.", "place_road"],
-    ["player-4", "Peter Bot placed a settlement.", "place_settlement"],
-    ["player-4", "Peter Bot placed a road.", "place_road"],
-    ["player-4", "Peter Bot placed a settlement.", "place_settlement"],
-    ["player-4", "Peter Bot placed a road.", "place_road"],
-    ["player-3", "Bartholomew Longbeard placed a settlement.", "place_settlement"],
-    ["player-3", "Bartholomew Longbeard placed a road.", "place_road"],
-    ["player-2", "Mira placed a settlement.", "place_settlement"],
-    ["player-2", "Mira placed a road.", "place_road"],
-    ["player-1", `${VIEWER_NAME} placed a settlement.`, "place_settlement"],
-    ["player-1", `${VIEWER_NAME} placed a road.`, "place_road"],
-    ["player-1", `${VIEWER_NAME} rolled 4 + 3 (7).`, "roll"],
-    [
-      "player-1",
-      `${VIEWER_NAME} moved the robber and stole a resource from Peter Bot.`,
-      "move_robber_and_steal",
-    ],
-    ["player-1", `${VIEWER_NAME} ended the turn.`, "end_turn"],
-    ["player-2", `Mira rolled 6 + 2 (8). ${VIEWER_NAME} +1 Wood, Mira +1 Wheat.`, "roll"],
-    ["player-2", "Mira traded 4 Sheep for 1 Stone.", "trade_bank"],
-    ["player-2", "Mira ended the turn.", "end_turn"],
-    [
-      "player-3",
-      "Bartholomew Longbeard rolled 5 + 5 (10). Bartholomew Longbeard +2 Brick.",
-      "roll",
-    ],
-    ["player-3", "Bartholomew Longbeard bought a development card.", "buy_development_card"],
-    ["player-3", "Bartholomew Longbeard ended the turn.", "end_turn"],
-    ["player-4", "Peter Bot rolled 3 + 3 (6).", "roll"],
-    ["player-4", "Peter Bot ended the turn.", "end_turn"],
-  ] as const
-).map(([actorPlayerId, text, kind], index) => ({
-  actorPlayerId,
-  createdAt: PREVIEW_EVENT_ANCHOR + index * 45_000,
-  // Fixture ids never reach Convex.
-  id: `preview-event-${index + 1}` as Id<"gameActions">,
-  kind,
-  text,
-}));
+    "player-1",
+    `${VIEWER_NAME} moved the robber and stole a resource from Peter Bot.`,
+    "move_robber_and_steal",
+  ],
+  ["player-1", `${VIEWER_NAME} ended the turn.`, "end_turn"],
+  ["player-2", `Mira rolled 6 + 2 (8). ${VIEWER_NAME} +1 Wood, Mira +1 Wheat.`, "roll"],
+  ["player-2", "Mira traded 4 Sheep for 1 Stone.", "trade_bank"],
+  ["player-2", "Mira ended the turn.", "end_turn"],
+  ["player-3", "Bartholomew Longbeard rolled 5 + 5 (10). Bartholomew Longbeard +2 Brick.", "roll"],
+  ["player-3", "Bartholomew Longbeard bought a development card.", "buy_development_card"],
+  ["player-3", "Bartholomew Longbeard ended the turn.", "end_turn"],
+  ["player-4", "Peter Bot rolled 3 + 3 (6).", "roll"],
+  ["player-4", "Peter Bot ended the turn.", "end_turn"],
+];
+
+const PREVIEW_OFFER_TEXT = "offered 1 Sheep for 1 Wood.";
+
+/**
+ * The log that goes with a preview state, so it never contradicts the table: nothing but the
+ * start during the opening placements; otherwise the history, then this turn's roll (the dice on
+ * the phase line) and the trade moves that led to the state.
+ */
+function createPreviewEvents(mode: GamePreviewMode, state: GameState): RoomEventView[] {
+  const nameOf = (playerId: string) =>
+    PREVIEW_PLAYERS.find((player) => player.id === playerId)?.displayName ?? "Crew";
+  const rows: PreviewEventRow[] = [];
+  if (mode === "game-setup") {
+    rows.push(PREVIEW_GAME_STARTED);
+  } else {
+    rows.push(...PREVIEW_HISTORY);
+    const roll = state.lastDiceRoll;
+    if (roll && state.phase.kind !== "roll" && state.phase.kind !== "finished") {
+      const actor = state.activePlayerId;
+      // The fixture's hand holds one more Wood once the dice are in (createPreviewState).
+      const production = roll.sum === 7 ? "" : ` ${VIEWER_NAME} +1 Wood.`;
+      rows.push([
+        actor,
+        `${nameOf(actor)} rolled ${roll.first} + ${roll.second} (${roll.sum}).${production}`,
+        "roll",
+      ]);
+    }
+    const offer = state.tradeOffer;
+    if (offer) {
+      rows.push([
+        offer.proposerPlayerId,
+        `${nameOf(offer.proposerPlayerId)} ${PREVIEW_OFFER_TEXT}`,
+        "propose_trade",
+      ]);
+      for (const playerId of offer.acceptedPlayerIds) {
+        rows.push([playerId, `${nameOf(playerId)} accepted the trade offer.`, "respond_trade"]);
+      }
+      for (const playerId of offer.rejectedPlayerIds) {
+        rows.push([playerId, `${nameOf(playerId)} declined the trade offer.`, "respond_trade"]);
+      }
+    }
+    if (state.phase.kind === "finished" && state.winnerPlayerId) {
+      rows.push([
+        state.winnerPlayerId,
+        `${nameOf(state.winnerPlayerId)} bought a development card.`,
+        "buy_development_card",
+      ]);
+    }
+  }
+
+  return rows.map(([actorPlayerId, text, kind], index) => ({
+    actorPlayerId,
+    createdAt: PREVIEW_EVENT_ANCHOR + index * 45_000,
+    // Fixture ids never reach Convex.
+    id: `preview-event-${index + 1}` as Id<"gameActions">,
+    kind,
+    text,
+  }));
+}
+
+const PREVIEW_EVENT_ANCHOR = Date.UTC(2026, 6, 19, 22, 30);
 
 /* ---------------------------------------------------------------------------------------------
    Action card poster

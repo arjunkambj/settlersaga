@@ -1,15 +1,16 @@
 import type { PlayerGameView } from "@settersaga/game";
 import chatIcon from "@iconify-icons/solar/chat-round-dots-bold";
+import goalIcon from "@iconify-icons/solar/cup-star-bold";
 import helpIcon from "@iconify-icons/solar/help-bold";
 import menuIcon from "@iconify-icons/solar/hamburger-menu-bold";
 import logoutIcon from "@iconify-icons/solar/logout-2-bold";
 import pauseIcon from "@iconify-icons/solar/pause-bold";
 import playIcon from "@iconify-icons/solar/play-bold";
-import settingsIcon from "@iconify-icons/solar/settings-minimalistic-bold";
+import settingsIcon from "@iconify-icons/solar/settings-bold";
 import { Icon } from "@iconify/react/offline";
 import type { Ref } from "react";
 
-import { BrandWordmark } from "@/components/app/brand-logo";
+import { BrandMark, BrandWordmark } from "@/components/app/brand-logo";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -25,8 +26,8 @@ import { GAME_HELP_DIALOG_ID } from "./game-help-dialog";
 export const GAME_SIDEBAR_ID = "game-table-drawer";
 
 /**
- * Brand, match chip and table buttons. The two side slots share the leftover width equally, so
- * the chip stays centered. Phones fold pause, settings, help and leave into one menu.
+ * Brand on the left; the goal (turn and points to win) beside the table buttons on the right, so
+ * the board's top edge stays clear. Phones fold pause, settings, help and leave into one menu.
  */
 export function GameHeader({
   drawerOpen,
@@ -60,21 +61,26 @@ export function GameHeader({
   const canPause = isHost && game.phase.kind !== "finished";
   const isSetup = game.phase.kind === "setup_settlement" || game.phase.kind === "setup_road";
   const pauseLabel = isPaused ? "Resume game" : "Pause game";
+  const goalLabel = `${GAME_MAP_NAMES[game.settings.map]}, ${isSetup ? "opening round" : `turn ${game.turnNumber}`}. First to ${game.settings.victoryPoints} victory points wins.`;
 
   return (
     <header className="game-header">
       <div className="game-header-start">
+        {/* Phones get the hex mark alone; the wordmark's letters would be too small there. */}
+        <BrandMark className="game-brand-mark" />
         <BrandWordmark className="game-brand" priority />
       </div>
 
-      <p className="game-match-chip">
-        <span className="game-match-map">{GAME_MAP_NAMES[game.settings.map]}</span>
-        <span className="game-match-turn">
-          {isSetup ? "Setup" : `Turn ${game.turnNumber}`} · {game.settings.victoryPoints} VP to win
-        </span>
-      </p>
-
       <div className="game-header-end">
+        <Tooltip label={goalLabel}>
+          <p aria-label={goalLabel} className="game-goal-chip" role="img">
+            <Icon aria-hidden="true" className="game-goal-icon" icon={goalIcon} />
+            <span className="game-goal-turn">{isSetup ? "Setup" : `Turn ${game.turnNumber}`}</span>
+            <span className="game-goal-points">
+              <strong>{game.settings.victoryPoints} VP</strong> to win
+            </span>
+          </p>
+        </Tooltip>
         <div className="game-header-tools">
           {canPause ? (
             <Tooltip label={pauseLabel}>

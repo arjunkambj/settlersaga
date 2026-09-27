@@ -117,7 +117,7 @@ export function DevelopmentCardDialog({
       kicker={
         isMonopoly
           ? "Name a resource. Everyone hands you all of theirs."
-          : "Take any two cards from the bank. Doubles are fine."
+          : "Take any two resources from the bank. Two of the same is fine."
       }
       onClose={onClose}
       title={isMonopoly ? "Monopoly" : "Year of Plenty"}
@@ -164,7 +164,7 @@ export function DevelopmentCardDialog({
           {rejection ??
             (isMonopoly
               ? monopolyResource
-                ? `Claim every ${RESOURCE_LABELS[monopolyResource]} at the table`
+                ? `Take every ${RESOURCE_LABELS[monopolyResource]} from the other players`
                 : "Pick one resource"
               : ready
                 ? `Take ${formatInventory(plentyResources)}`

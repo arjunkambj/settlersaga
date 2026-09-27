@@ -15,16 +15,19 @@
 
    The board keeps one size through the game: the dock row is at least
    --dock-height tall in every state, and a band at the top of the board area
-   is kept free for the placement banner whether or not it is showing.
+   is kept free for the placement pill whether or not it is showing.
    ========================================================================= */
 
 .game-shell {
   --game-gutter: clamp(0.5rem, 1.2vw, 1rem);
   --game-gap: clamp(0.5rem, 1vw, 0.75rem);
-  --game-rail: clamp(300px, 24vw, 360px);
+  --game-rail: clamp(330px, 26vw, 384px);
   --hand-card-width: 2.75rem;
-  --action-tile-width: 3.25rem;
-  --action-tile-art-height: 3.5rem;
+  /* Build & Trade tiles are 5rem wide by default. The phone action bar, which fits three tiles
+     beside the clock, uses 4.5rem and its building tray 5.75rem; md tiles share the row's width.
+     From lg up the building and card tiles are wide rows (--action-row-*) in a 2×2 grid. */
+  --action-tile-width: 5rem;
+  --action-tile-art-height: 2.5rem;
   --board-banner-band: 2.75rem;
   --dock-height: 0px;
 
@@ -48,8 +51,11 @@
     max(var(--game-gutter), env(safe-area-inset-bottom))
     max(var(--game-gutter), env(safe-area-inset-left));
   overflow: hidden;
-  background: var(--board-shallows) url("/game-assets/ui/ocean-board-canvas.webp") center / cover
-    no-repeat;
+  /* Open sea: a quiet wave pattern, deepening toward the edges so the island leads. */
+  background:
+    radial-gradient(ellipse at 50% 45%, transparent 35%, var(--board-ocean-deep) 115%),
+    url("/game-assets/ui/ocean-tile.webp") center / 640px repeat,
+    var(--board-ocean);
   color: var(--foreground);
 }
 
@@ -84,13 +90,38 @@
   min-width: 0;
 }
 
+/* Always the last column: the middle one stays free over the board. */
 .game-header-end {
+  grid-column: -2 / -1;
   justify-self: end;
 }
 
 .game-brand {
   width: clamp(6.5rem, 12vw, 11rem);
   max-width: 100%;
+}
+
+/* Phones show the hex mark alone: at 390px the full wordmark's letters shrink
+   to about 10px. From md up the wordmark has room and the mark steps aside. */
+.game-brand-mark {
+  display: none;
+  width: 2.75rem;
+  flex: none;
+}
+
+@media (width < 48rem) {
+  .game-brand {
+    display: none;
+  }
+
+  .game-brand-mark {
+    display: block;
+  }
+
+  /* Phones keep the goal to the points to win; the turn number is in its label. */
+  .game-goal-turn {
+    display: none;
+  }
 }
 
 /* --------------------------------------------------------------------------
@@ -109,8 +140,8 @@
    Board area: the board, and what floats over it
    ----------------------------------------------------------------------- */
 
-/* The top padding is the banner's band; the stage is sized from the content
-   box (container query units), so the island never sits under the banner. */
+/* The top padding is the placement pill's band; the stage is sized from the
+   content box (container query units), so the island never sits under it. */
 .board-shell {
   grid-area: board;
   position: relative;
@@ -146,7 +177,30 @@
   visibility: hidden;
 }
 
-/* Placement banner (in the board area's top band) and toasts under it. */
+/* An open sheet dims the board under it, so the offer reads as the thing to answer. Taps
+   still reach the board. */
+.board-shell::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  /* Darkest under the sheet, fading out before the board area's edges. */
+  background: radial-gradient(
+    ellipse farthest-side at 50% 55%,
+    var(--game-scrim) 0 40%,
+    var(--game-scrim-soft) 75%,
+    transparent 100%
+  );
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 200ms ease-out;
+}
+
+.game-shell:has(.game-sheet-root:not(:empty)) .board-shell::after {
+  opacity: 1;
+}
+
+/* Placement pill (in the board area's top band) and toasts under it. */
 .game-board-notices {
   grid-area: board;
   z-index: 20;
@@ -163,12 +217,12 @@
   pointer-events: auto;
 }
 
-/* The banner lets taps through to the board targets under it; only Cancel is live. */
-.game-board-notices > .game-placement-banner {
+/* The placement row lets taps through to the board targets under it; only Cancel is live. */
+.game-board-notices > .game-placement-row {
   pointer-events: none;
 }
 
-.game-placement-banner > button {
+.game-placement-row > button {
   pointer-events: auto;
 }
 
@@ -259,7 +313,50 @@
 
 @media (width < 48rem) {
   .game-shell {
-    --dock-height: 18.125rem;
+    --dock-height: 21.375rem;
+  }
+
+  /* Three tiles share the action bar; a step wider than their art so the Dev card's three
+     22px coins fit on one line (still narrower on the smallest phones). */
+  .game-build-actions {
+    --action-tile-width: min(4.625rem, calc((100% - 0.5rem) / 3));
+    --action-tile-art-height: 2rem;
+  }
+
+  /* Trade has no price or status: its art and name sit in the middle of the tile. */
+  .game-build-actions .game-action-tile[data-action-kind="trade"] {
+    align-content: center;
+  }
+
+  /* A compact clock, so the turn column stays as short as the action bar. */
+  .game-turn-clock {
+    gap: 0.375rem;
+    padding-block: 0.125rem;
+  }
+
+  .game-turn-clock .game-clock-ring {
+    max-height: 1.75rem;
+  }
+
+  .game-turn-clock-time {
+    font-size: 1rem;
+  }
+
+  .game-action-tile[data-action-kind="development-card"] {
+    --cost-coin-size: 1.375rem;
+  }
+
+  .game-action-tile[data-action-kind="development-card"] .game-cost-pips {
+    gap: 0.125rem;
+  }
+
+  .game-build-pieces {
+    --action-tile-width: 5.75rem;
+  }
+
+  /* Phone pills are narrow: a step less room between the portrait and the points. */
+  .game-strip-player {
+    gap: 0.375rem;
   }
 
   .game-header-tools,
@@ -285,11 +382,15 @@
     display: contents;
   }
 
-  .game-build-panel > .game-panel-heading {
-    display: none;
+  /* This turn's roll takes the portrait's place, so the plaque keeps its height. */
+  .game-phase-panel:has(.game-phase-dice) {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "title dice"
+      "detail dice"
+      "last dice";
   }
 
-  /* This turn's roll takes the portrait's place, so the phase line stays one row tall. */
   .game-phase-panel:has(.game-phase-dice) > .game-dock-portrait {
     display: none;
   }
@@ -323,10 +424,12 @@
     justify-content: center;
     gap: 0.5rem;
     padding: 0.75rem;
-    border: 2px solid var(--game-panel-rim);
-    border-radius: 1rem;
-    background: linear-gradient(var(--game-panel-top), var(--game-panel-bottom));
-    box-shadow: 0 4px 0 var(--game-panel-lip);
+    border: var(--ui-line) solid var(--game-outline);
+    border-radius: var(--ui-radius-hud);
+    background: linear-gradient(var(--ui-panel-top), var(--ui-panel-bottom));
+    box-shadow:
+      inset 0 1px 0 var(--ui-panel-highlight),
+      var(--ui-shadow-float);
   }
 
   .game-build-pieces[data-open] {
@@ -340,6 +443,52 @@
 
   .game-turn-control {
     align-self: stretch;
+  }
+
+  .game-footer:has(.game-turn-clock) .game-turn-control[data-kind] {
+    border-radius: 9999px;
+  }
+
+  .game-footer:has(.game-turn-clock) .game-turn-control[data-kind] .game-turn-art {
+    display: none;
+  }
+
+  /* The opening round in the narrow action bar: the title, then the four steps as a short list
+     of number and name. */
+  .game-build-setup {
+    gap: var(--ui-space-1);
+  }
+
+  .game-build-setup-lead > span,
+  .game-setup-step-art {
+    display: none;
+  }
+
+  .game-setup-steps {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.125rem;
+  }
+
+  .game-setup-step {
+    gap: var(--ui-space-2);
+    padding: 0 var(--ui-space-1);
+    border-width: 1.5px;
+    border-radius: 9999px;
+  }
+
+  .game-setup-step-number {
+    width: 1.125rem;
+    height: 1.125rem;
+  }
+
+  .game-setup-step-number svg {
+    width: 1.125rem;
+    height: 1.125rem;
+  }
+
+  /* The status pill beside the clock keeps its words whole. */
+  .game-footer:has(.game-turn-clock) .game-turn-control[data-kind] {
+    padding-inline: var(--ui-space-1);
   }
 
   .game-turn-control .game-turn-button {
@@ -367,9 +516,7 @@
 @media (48rem <= width < 64rem) {
   .game-shell {
     --hand-card-width: 3.5rem;
-    --action-tile-width: 3.75rem;
-    --action-tile-art-height: 4rem;
-    --dock-height: 17.25rem;
+    --dock-height: 23rem;
   }
 
   .game-player-strip .game-strip-player {
@@ -385,20 +532,201 @@
 
   .game-command-dock {
     grid-area: command;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Build & trade tiles, md up: the phone Build tile stays hidden
+   ----------------------------------------------------------------------- */
+
+@media (width >= 48rem) {
+  .game-shell {
+    --action-row-gap: var(--ui-space-1);
+    --build-panel-pad: 0.375rem;
+    --turn-button-width: 7.25rem;
+  }
+
+  .game-build-panel {
+    padding: var(--build-panel-pad);
+  }
+
+  /* Road and Settlement over City and Dev card as wide rows (art, then the name and a quiet
+     caption over the price, then the status line), and a slim Trade bar under them. The rows
+     share the panel on md and take a fixed width from lg up (--action-row-width), where the dock
+     column hugs them. */
+  .game-build-actions {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto minmax(7.5rem, auto);
+    flex: 1;
+    grid-template-columns: repeat(2, var(--action-row-width, minmax(0, 1fr)));
+    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr) auto;
     grid-template-areas:
-      "phase actions clock"
-      "phase actions turn";
-    gap: 0.5rem;
+      "road settlement"
+      "city card"
+      "trade trade";
+    gap: var(--action-row-gap);
   }
 
-  .game-build-panel > .game-panel-heading {
+  .game-action-tile[data-action-kind="road"] {
+    grid-area: road;
+  }
+
+  .game-action-tile[data-action-kind="settlement"] {
+    grid-area: settlement;
+  }
+
+  .game-action-tile[data-action-kind="city"] {
+    grid-area: city;
+  }
+
+  .game-action-tile[data-action-kind="development-card"] {
+    grid-area: card;
+  }
+
+  .game-action-tile:is(
+    [data-action-kind="road"],
+    [data-action-kind="settlement"],
+    [data-action-kind="city"],
+    [data-action-kind="development-card"]
+  ) {
+    grid-template-columns: 2.5rem minmax(0, 1fr);
+    grid-template-rows: auto auto auto;
+    grid-template-areas:
+      "art head"
+      "art cost"
+      "status status";
+    align-content: center;
+    align-items: center;
+    justify-items: start;
+    width: auto;
+    height: 100%;
+    gap: 0.125rem var(--ui-space-2);
+    padding: var(--ui-space-1) var(--ui-space-2);
+  }
+
+  :is(
+      [data-action-kind="road"],
+      [data-action-kind="settlement"],
+      [data-action-kind="city"],
+      [data-action-kind="development-card"]
+    )
+    > :is(.game-action-head, .game-action-tile-cost, .game-action-status-slot) {
+    justify-content: flex-start;
+    width: 100%;
+    max-width: 100%;
+    margin-inline: 0;
+  }
+
+  /* The name, then its caption ("5 left") at the row's end, on one line. */
+  :is(
+      [data-action-kind="road"],
+      [data-action-kind="settlement"],
+      [data-action-kind="city"],
+      [data-action-kind="development-card"]
+    )
+    > .game-action-head {
+    flex-wrap: nowrap;
+    align-items: baseline;
+    justify-content: space-between;
+  }
+
+  :is(
+      [data-action-kind="road"],
+      [data-action-kind="settlement"],
+      [data-action-kind="city"],
+      [data-action-kind="development-card"]
+    )
+    > .game-action-status-slot {
+    margin-top: 0.125rem;
+  }
+
+  :is(
+      [data-action-kind="road"],
+      [data-action-kind="settlement"],
+      [data-action-kind="city"],
+      [data-action-kind="development-card"]
+    )
+    .game-action-status {
+    justify-content: flex-start;
+    overflow: hidden;
+    text-align: start;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  :is(
+      [data-action-kind="road"],
+      [data-action-kind="settlement"],
+      [data-action-kind="city"],
+      [data-action-kind="development-card"]
+    )
+    > .game-action-tile-art {
+    width: 2.5rem;
+    height: 2.5rem;
+    align-self: center;
+    overflow: hidden;
+    border-radius: var(--ui-radius-small);
+    box-shadow: 0 0 0 1.5px var(--game-outline);
+    filter: none;
+  }
+
+  /* A square crop of the card: its frame falls outside, so the piece fills the thumbnail. */
+  :is(
+      [data-action-kind="road"],
+      [data-action-kind="settlement"],
+      [data-action-kind="city"],
+      [data-action-kind="development-card"],
+      [data-action-kind="trade"]
+    )
+    > .game-action-tile-art
+    img {
+    object-fit: cover;
+    scale: 1.14;
+  }
+
+  :is(
+      [data-action-kind="road"],
+      [data-action-kind="settlement"],
+      [data-action-kind="city"],
+      [data-action-kind="development-card"]
+    )
+    .game-action-label {
+    font-size: 0.9375rem;
+  }
+
+  /* Trade: a slim bar across the grid, its icon and name centered, and the lock and reason
+     beside them while it is locked. */
+  .game-action-tile[data-action-kind="trade"] {
+    display: flex;
+    grid-area: trade;
+    align-items: center;
+    justify-content: center;
+    width: auto;
+    height: 2.375rem;
+    gap: var(--ui-space-2);
+    padding: 0 var(--ui-space-3);
+  }
+
+  .game-action-tile[data-action-kind="trade"] > .game-action-tile-art {
+    width: 1.5rem;
+    height: 1.5rem;
+    overflow: hidden;
+    border-radius: 0.375rem;
+    box-shadow: 0 0 0 1.5px var(--game-outline);
+    filter: none;
+  }
+
+  .game-action-tile[data-action-kind="trade"] .game-action-label {
+    font-size: 1rem;
+  }
+
+  .game-action-tile[data-action-kind="trade"] > :is(.game-action-head, .game-action-status-slot) {
+    width: auto;
+    min-height: 0;
+    margin: 0;
+  }
+
+  .game-action-tile[data-action-kind="trade"] > .game-action-status-slot:empty {
     display: none;
-  }
-
-  .game-turn-control .game-turn-button {
-    height: 3rem;
   }
 }
 
@@ -408,68 +736,164 @@
 
 @media (width >= 64rem) {
   .game-shell {
-    --hand-card-width: 3.5rem;
-    --action-tile-width: 3.4rem;
-    --action-tile-art-height: 4.25rem;
-    --dock-height: 13.5rem;
+    --hand-card-width: 3rem;
+    --action-row-width: 11.5rem;
+    --build-panel-width: calc(
+      2 * var(--action-row-width) + var(--action-row-gap) + 2 * var(--build-panel-pad) + 2 *
+        var(--ui-line)
+    );
+    --dock-height: 14rem;
 
     grid-template-rows: auto minmax(0, 1fr) minmax(var(--dock-height), auto);
   }
 
-  /* The hand takes the room it needs (scrolling past that), and the pair sits
-     centered under the board. */
+  /* The hand takes all the room beside the command dock, so it stays anchored at the same place
+     and width whatever cards it holds or which phase is up. */
   .game-footer {
-    grid-template-columns: minmax(0, max-content) auto;
+    grid-template-columns: minmax(0, 1fr) auto;
     grid-template-areas: "hand command";
     align-items: end;
-    justify-content: center;
+  }
+
+  /* Every held card in view: the five resource cards make the first row and development cards
+     (five kinds at most) a second row under them, both from the left, so none hides behind a
+     scroll arrow. Two rows fit the dock's height (--dock-height). */
+  .game-hand-cards {
+    display: grid;
+    grid-template-columns: repeat(5, var(--hand-card-width));
+    gap: 0.5rem var(--ui-space-2);
   }
 
   .game-command-dock {
     grid-area: command;
-    display: grid;
-    grid-template-columns: minmax(0, max-content) minmax(6.75rem, auto);
-    grid-template-areas:
-      "phase clock"
-      "actions turn";
-    gap: 0.5rem;
   }
 
-  /* The action tiles set the column width; the phase line wraps to fit it. */
-  .game-phase-panel {
-    width: 0;
-    min-width: 100%;
-  }
-
-  .game-command-dock[data-finished] .game-phase-panel {
-    width: auto;
+  .game-build-panel,
+  .game-steal-chooser {
+    width: var(--build-panel-width);
   }
 }
 
 /* Every lg screen and short desktop screens: a compact dock, so the board keeps its height. */
 @media (64rem <= width < 80rem), (width >= 80rem) and (height < 53rem) {
   .game-shell {
-    --hand-card-width: 3.25rem;
-    --action-tile-art-height: 3.75rem;
-    --dock-height: 11.25rem;
-  }
-
-  .game-build-panel > .game-panel-heading {
-    display: none;
+    --dock-height: 13.5rem;
   }
 }
 
-/* A missing clock leaves no hole: the turn control takes its cell too. Once
-   the game is over the dock is the phase line and "Show results". */
+/* Wide, tall desktop screens: the hand panel is wide, so its cards grow a step to use it (two
+   rows still fit the taller dock), and the action rows grow with them so the dock's two halves
+   keep one top edge. */
+@media (width >= 90rem) and (height >= 53rem) {
+  .game-shell {
+    --hand-card-width: 3.5rem;
+    --action-row-width: 12.5rem;
+    --turn-button-width: 8.5rem;
+    --dock-height: 15.5rem;
+  }
+}
+
+/* md up: Build & Trade on the left; on the right the turn plaque over the clock and the Roll or
+   End turn button, so the dock reads from the cards, to what can be done, to the turn. The plaque
+   takes the height the tiles leave. A missing clock leaves no hole: the turn control takes its
+   cell too. Once the game is over the dock is the plaque and "Show results". */
 @media (width >= 48rem) {
+  .game-command-dock {
+    display: grid;
+    grid-template-columns:
+      var(--build-panel-width, minmax(0, 1fr)) minmax(5.5rem, auto)
+      var(--turn-button-width);
+    grid-template-rows: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "actions phase phase"
+      "actions clock turn";
+    gap: 0.5rem;
+  }
+
   .game-command-dock:not(:has(.game-turn-clock)) .game-turn-control {
-    grid-row: 1 / -1;
+    grid-column: clock-start / turn-end;
   }
 
   .game-command-dock[data-finished] {
     grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: auto;
     grid-template-areas: "phase turn";
     align-items: center;
+  }
+
+  /* The plaque in its narrow column: the portrait beside whose turn it is, then the thing to do,
+     this turn's dice and the last move under them, the last move at the foot. */
+  .game-command-dock:not([data-finished]) .game-phase-panel {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-rows: auto auto auto minmax(0, 1fr);
+    grid-template-areas:
+      "portrait title"
+      "detail detail"
+      "dice dice"
+      "last last";
+    align-content: stretch;
+    gap: 0.375rem var(--ui-space-2);
+    /* The clock and the turn button set the column; the plaque wraps to fit it. */
+    contain: inline-size;
+    padding: var(--ui-space-2) var(--ui-space-3);
+  }
+
+  .game-command-dock:not([data-finished]) .game-phase-last {
+    align-self: end;
+    padding-top: 0.375rem;
+    border-top: 1px solid var(--ui-divider);
+  }
+
+  .game-command-dock:not([data-finished]) .game-phase-dice .die-face {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+
+  .game-turn-control .game-turn-button {
+    min-width: 0;
+    min-height: 3rem;
+  }
+
+  .game-turn-control[data-kind] {
+    min-width: 0;
+    min-height: 3rem;
+  }
+
+  /* Beside the clock the status is a pill like the clock: one line of words, no art. */
+  .game-command-dock:has(.game-turn-clock) .game-turn-control[data-kind] {
+    border-radius: 9999px;
+  }
+
+  .game-command-dock:has(.game-turn-clock) .game-turn-control[data-kind] .game-turn-art {
+    display: none;
+  }
+
+  .game-turn-clock {
+    min-width: 5.5rem;
+    gap: 0.375rem;
+    padding-inline: 0.375rem 0.625rem;
+  }
+
+  .game-turn-clock .game-clock-ring {
+    max-height: 1.75rem;
+  }
+}
+
+/* xl: the log is in view beside the dock, so the plaque drops its "Last move" line and sizes to
+   what is left, sitting on the clock row; the spare height stays above it. */
+@media (width >= 80rem) {
+  .game-phase-last {
+    display: none;
+  }
+
+  .game-command-dock:not([data-finished]) .game-phase-panel {
+    grid-template-rows: auto auto auto;
+    grid-template-areas:
+      "portrait title"
+      "detail detail"
+      "dice dice";
+    align-self: end;
+    align-content: start;
   }
 }
 
@@ -486,49 +910,112 @@
       "dock dock";
   }
 
+  .game-shell {
+    --game-strip-width: clamp(12rem, 19vw, 15rem);
+    /* The camera buttons sit in one row under the column, so the crew and its key keep the
+       height. */
+    --game-camera-height: 2.75rem;
+  }
+
+  /* The crew column stops above the map buttons, which sit in a row under it at the screen's
+     edge. */
   .game-player-strip {
     grid-auto-flow: row;
     grid-auto-rows: max-content;
     align-content: start;
-    width: clamp(10rem, 16vw, 13rem);
+    width: var(--game-strip-width);
     min-height: 0;
+    margin-bottom: calc(var(--game-camera-height) + 0.5rem);
     padding: 0.25rem;
     overflow-y: auto;
     scrollbar-width: thin;
   }
 
-  /* Compact plaques: the portrait, the name level with the points, and the card counts under
-     them across the full width. */
+  .board-camera {
+    right: calc(-1 * (var(--game-strip-width) + var(--game-gap)) + 0.25rem);
+    grid-auto-flow: column;
+  }
+
+  /* Compact plaques: the portrait, the name (and "Away") across the top, and the card counts
+     under it with any held award and the points pill at the end of that row. */
   .game-player-strip .game-strip-player {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr) auto;
     grid-template-areas:
-      "avatar name points"
-      "avatar stats stats";
+      "avatar name name"
+      "avatar stats points";
     align-content: center;
-    height: 4.5rem;
+    height: 4.25rem;
     gap: 0.25rem 0.5rem;
-    padding: 0.5rem;
-    border-radius: 1rem;
+    padding: 0.3125rem 0.5rem;
+    border-radius: var(--ui-radius-hud);
+  }
+
+  .game-player-strip .game-strip-stat img {
+    height: 1.375rem;
+  }
+
+  .game-player-strip .game-strip-portrait {
+    grid-area: avatar;
   }
 
   .game-player-strip .game-strip-avatar {
-    grid-area: avatar;
     width: 2.75rem;
     height: 2.75rem;
   }
 
-  .game-player-strip .game-strip-name {
+  .game-player-strip .game-strip-name-row {
     grid-area: name;
+  }
+
+  /* The name row is short here: long names take two lines rather than an ellipsis. */
+  .game-player-strip .game-strip-name[data-name-fit] {
+    font-size: 0.8125rem;
   }
 
   .game-player-strip .game-strip-stats {
     grid-area: stats;
     display: flex;
+    min-width: 0;
+  }
+
+  /* Points end the counts row; a held award ends the name row, clear of the counts. */
+  .game-player-strip .game-strip-end {
+    display: contents;
   }
 
   .game-player-strip .game-strip-points {
     grid-area: points;
+    justify-self: end;
+  }
+
+  .game-player-strip .game-strip-extras {
+    grid-row: 1;
+    grid-column: 3;
+    justify-self: end;
+  }
+
+  /* The name keeps the whole top row, less the award's room when there is one. */
+  .game-player-strip .game-strip-player:has(.game-strip-award) .game-strip-name-row {
+    padding-inline-end: 1.75rem;
+  }
+
+  .game-player-strip .game-strip-award {
+    width: 1.375rem;
+    height: 1.375rem;
+  }
+
+  .game-player-strip .game-strip-award img {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  .game-player-strip .game-strip-points {
+    min-width: 1.625rem;
+    height: 1.5rem;
+    padding-inline: 0.375rem;
+    font-size: 0.875rem;
+    line-height: 1.5rem;
   }
 }
 
@@ -545,14 +1032,15 @@
       "dock rail";
   }
 
-  /* The chip centers on the board column (the same axis as the banner, the
-     board and the dock); the table buttons sit over the rail. */
+  /* The middle track centers on the board column (the same axis as the placement pill, the
+     board and the dock). The goal and the table buttons end over the rail, and the goal may
+     reach left past it. */
   .game-header {
     grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) var(--game-rail);
   }
 
   .game-header-end {
-    grid-column: 4;
+    grid-column: 3 / -1;
   }
 
   .game-player-strip,
@@ -626,10 +1114,12 @@
     padding: 1rem;
     overflow-y: auto;
     overscroll-behavior: contain;
-    border: 2px solid var(--game-panel-rim);
-    border-radius: 1.5rem;
-    background: linear-gradient(var(--game-panel-top), var(--game-panel-bottom));
-    box-shadow: 0 4px 0 var(--game-panel-lip);
+    border: var(--ui-line) solid var(--game-outline);
+    border-radius: var(--ui-radius-panel);
+    background: linear-gradient(var(--ui-panel-top), var(--ui-panel-bottom));
+    box-shadow:
+      inset 0 1px 0 var(--ui-panel-highlight),
+      var(--ui-shadow-menu);
     visibility: hidden;
     translate: calc(100% + 2 * var(--game-gutter)) 0;
     transition:
@@ -651,7 +1141,7 @@
     position: fixed;
     inset: 0;
     z-index: 30;
-    background: var(--overlay);
+    background: var(--game-scrim);
   }
 }
 

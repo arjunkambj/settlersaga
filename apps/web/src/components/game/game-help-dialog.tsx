@@ -98,7 +98,7 @@ function getGuidePages(settings: GuideSettings): readonly GuidePage[] {
           title: "Win the awards",
         },
         {
-          copy: "A few development cards are hidden points. They count as soon as you draw them.",
+          copy: "Some development cards are secret victory points. They count as soon as you draw them.",
           title: "Secret points",
         },
       ],
@@ -142,7 +142,7 @@ function getGuidePages(settings: GuideSettings): readonly GuidePage[] {
         },
         ...getRuleArt(settings, "balancedDice"),
       ],
-      lead: "After setup, every turn is the same three beats. You can trade and build in any order.",
+      lead: "After setup, every turn goes the same way. Trade and build in any order you like.",
       title: "Roll, spend, then pass",
       tips: [
         {
@@ -184,7 +184,7 @@ function getGuidePages(settings: GuideSettings): readonly GuidePage[] {
           title: "Road",
         },
         {
-          copy: `${formatInventory(BUILD_COSTS.settlement)}. Needs an open crossing on your road, two road lengths from every other settlement.`,
+          copy: `${formatInventory(BUILD_COSTS.settlement)}. Needs an open corner on your road, two road lengths from every other settlement.`,
           title: "Settlement",
         },
         {
@@ -210,11 +210,11 @@ function getGuidePages(settings: GuideSettings): readonly GuidePage[] {
         },
         ...getRuleArt(settings, "hideBankCards"),
       ],
-      lead: "If you are short one resource, do not sit on a dead hand. Trade it away.",
+      lead: "Missing a resource? Trade for it with the crew, the bank or a harbor.",
       title: "Swap for the card you need",
       tips: [
         {
-          copy: "On your turn, offer a deal to the crew. Anyone can accept, then you pick who to trade with.",
+          copy: "On your turn, offer a deal to the crew. Anyone can accept, and you pick who to trade with.",
           title: "Trade with crew",
         },
         {
@@ -269,23 +269,23 @@ function getGuidePages(settings: GuideSettings): readonly GuidePage[] {
           width: 512,
         },
         {
-          alt: "Largest army",
+          alt: "Largest Army",
           height: 512,
           path: AWARD_ASSET_PATHS.largestArmy,
           width: 512,
         },
         {
-          alt: "Longest road",
+          alt: "Longest Road",
           height: 512,
           path: AWARD_ASSET_PATHS.longestRoad,
           width: 512,
         },
       ],
-      lead: "Development cards and awards are the usual path past a stalled board.",
-      title: "Buy cards. Contest awards.",
+      lead: "When the board fills up, development cards and the two awards help you pull ahead.",
+      title: "Cards and awards",
       tips: [
         {
-          copy: `Costs ${formatInventory(DEVELOPMENT_CARD_COST)}. Play it on a later turn — not the turn you buy it.`,
+          copy: `Costs ${formatInventory(DEVELOPMENT_CARD_COST)}. You can play it starting on your next turn.`,
           title: "Development card",
         },
         {
@@ -367,6 +367,9 @@ export function GameHelpDialog({
                 key={guidePage.topic}
               />
             ))}
+            <span aria-hidden="true" className="game-guide-count">
+              {pageIndex + 1}/{guidePages.length}
+            </span>
             <span className="sr-only">
               {page.topic}, {pageIndex + 1} of {guidePages.length}
             </span>
@@ -424,13 +427,13 @@ export function GameHelpDialog({
     >
       <article
         aria-labelledby={`game-guide-tab-${pageIndex}`}
-        className="grid content-start gap-5 sm:min-h-90"
+        className="grid content-start gap-4 sm:min-h-76 sm:gap-5"
         id="game-guide-page"
         key={page.topic}
         role="tabpanel"
       >
-        <div className="grid items-center gap-4 sm:grid-cols-[17rem_minmax(0,1fr)]">
-          <div className="game-art-stage flex h-32 items-center justify-center gap-3 rounded-2xl p-4 sm:h-36">
+        <div className="grid items-center gap-3 sm:grid-cols-[minmax(0,20rem)_minmax(0,1fr)] sm:gap-6">
+          <div className="game-guide-art game-art-stage flex h-28 items-center justify-center gap-3 rounded-2xl p-3 sm:h-40 sm:p-2">
             {page.art.map((asset) => (
               <Image
                 alt={asset.alt}
@@ -446,7 +449,7 @@ export function GameHelpDialog({
             ))}
           </div>
           <div className="grid gap-2 text-center sm:text-left">
-            <h3 className="game-title m-0 text-2xl text-balance">{page.title}</h3>
+            <h3 className="game-title m-0 text-xl text-balance sm:text-2xl">{page.title}</h3>
             <p className="m-0 text-base leading-relaxed font-medium text-muted-foreground text-pretty">
               {page.lead}
             </p>
