@@ -134,10 +134,10 @@
   font-variant-numeric: tabular-nums;
 }
 :is(.game-choice-tile, .game-choice-option):hover:not(
-  [data-disabled],
-  [data-checked],
-  [data-readonly]
-) {
+    [data-disabled],
+    [data-checked],
+    [data-readonly]
+  ) {
   border-color: var(--ui-hairline-light);
   background: color-mix(in srgb, var(--foreground) 6%, var(--ui-well));
 }
@@ -339,6 +339,30 @@
 /* Hover: the face and line brighten in place. No lift. */
 @media (hover: hover) {
   :is(
+      .game-button,
+      .game-button-secondary,
+      .game-button-gold,
+      .game-button-danger,
+      .game-button-ghost,
+      .game-button-icon,
+      .game-button-icon-danger
+    ):hover:not(:disabled, [data-disabled]) {
+    --btn-face: var(--btn-face-hover);
+    --btn-line: var(--btn-line-hover, transparent);
+  }
+  :is(
+      .game-button,
+      .game-button-gold,
+      .game-button-danger,
+      .game-button-icon,
+      .game-button-icon-danger
+    ):hover:not(:disabled, [data-disabled]) {
+    --btn-drop: var(--ui-shadow-hover);
+  }
+}
+
+/* Pressed: down 1px, the shadow tightens. */
+:is(
     .game-button,
     .game-button-secondary,
     .game-button-gold,
@@ -346,41 +370,17 @@
     .game-button-ghost,
     .game-button-icon,
     .game-button-icon-danger
-  ):hover:not(:disabled, [data-disabled]) {
-    --btn-face: var(--btn-face-hover);
-    --btn-line: var(--btn-line-hover, transparent);
-  }
-  :is(
+  ):active:not(:disabled, [data-disabled]) {
+  --btn-face: var(--btn-face-hover);
+  translate: 0 1px;
+}
+:is(
     .game-button,
     .game-button-gold,
     .game-button-danger,
     .game-button-icon,
     .game-button-icon-danger
-  ):hover:not(:disabled, [data-disabled]) {
-    --btn-drop: var(--ui-shadow-hover);
-  }
-}
-
-/* Pressed: down 1px, the shadow tightens. */
-:is(
-  .game-button,
-  .game-button-secondary,
-  .game-button-gold,
-  .game-button-danger,
-  .game-button-ghost,
-  .game-button-icon,
-  .game-button-icon-danger
-):active:not(:disabled, [data-disabled]) {
-  --btn-face: var(--btn-face-hover);
-  translate: 0 1px;
-}
-:is(
-  .game-button,
-  .game-button-gold,
-  .game-button-danger,
-  .game-button-icon,
-  .game-button-icon-danger
-):active:not(:disabled, [data-disabled]) {
+  ):active:not(:disabled, [data-disabled]) {
   --btn-drop: 0 2px 6px color-mix(in srgb, var(--ui-shadow-ink) 30%, transparent);
 }
 

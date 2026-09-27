@@ -21,11 +21,10 @@ const FULL_BANK: ResourceInventory = { brick: 19, sheep: 19, stone: 19, tree: 19
  */
 function forestBoard(buildings: BuildingState[]): GameState["board"] {
   const board = createPlayedGame("dice-production").board;
-  const tiles = board.tiles.map(
-    (tile, index): TileState =>
-      index < 2
-        ? { ...tile, numberToken: ROLL, terrain: "forest" }
-        : { ...tile, numberToken: null, terrain: "desert" },
+  const tiles = board.tiles.map((tile, index): TileState =>
+    index < 2
+      ? { ...tile, numberToken: ROLL, terrain: "forest" }
+      : { ...tile, numberToken: null, terrain: "desert" },
   );
   return { ...board, buildings, robberTileId: tiles.at(-1)!.id, tiles };
 }

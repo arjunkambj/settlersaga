@@ -43,9 +43,11 @@ import {
   withNextRoll,
 } from "./helpers";
 
-const HUMANS = makePlayers(4).map(
-  ({ displayName, id }): GamePlayerInput => ({ displayName, id, isBot: false }),
-);
+const HUMANS = makePlayers(4).map(({ displayName, id }): GamePlayerInput => ({
+  displayName,
+  id,
+  isBot: false,
+}));
 
 function handChange(before: GameState, after: GameState, playerId: string): ResourceInventory {
   return subtractResources(

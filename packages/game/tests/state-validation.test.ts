@@ -22,9 +22,8 @@ import {
   withHand,
 } from "./helpers";
 
-const PLAYERS = makePlayers(4).map(
-  (player, index): GamePlayerInput =>
-    index === 0 ? { displayName: player.displayName, id: player.id, isBot: false } : player,
+const PLAYERS = makePlayers(4).map((player, index): GamePlayerInput =>
+  index === 0 ? { displayName: player.displayName, id: player.id, isBot: false } : player,
 );
 
 function expectInvalidState(state: unknown) {

@@ -183,20 +183,16 @@ export function withBoardPieces(
       board: {
         ...state.board,
         buildings: state.players.flatMap((player): BuildingState[] => [
-          ...(owned(player.id).settlements ?? []).map(
-            (vertexKey): BuildingState => ({
-              kind: "settlement",
-              playerId: player.id,
-              vertexKey,
-            }),
-          ),
-          ...(owned(player.id).cities ?? []).map(
-            (vertexKey): BuildingState => ({
-              kind: "city",
-              playerId: player.id,
-              vertexKey,
-            }),
-          ),
+          ...(owned(player.id).settlements ?? []).map((vertexKey): BuildingState => ({
+            kind: "settlement",
+            playerId: player.id,
+            vertexKey,
+          })),
+          ...(owned(player.id).cities ?? []).map((vertexKey): BuildingState => ({
+            kind: "city",
+            playerId: player.id,
+            vertexKey,
+          })),
         ]),
         roads: state.players.flatMap((player) =>
           (owned(player.id).roads ?? []).map((edgeKey) => ({ edgeKey, playerId: player.id })),
