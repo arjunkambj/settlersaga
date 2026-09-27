@@ -17,14 +17,17 @@ const buttonVariants = cva(
           "hover:bg-muted/50 hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground",
         destructive:
           "bg-destructive text-destructive-foreground hover:bg-destructive/80 focus-visible:border-destructive/40 focus-visible:ring-destructive/30",
-        // Game buttons. Their faces, edges, press, focus and disabled states live in
-        // `.game-button*` (app/styles/menu.css); pair them with the `game-*` sizes.
+        // Game buttons: pills, or circles for the icon ones. Their faces, lines, press, focus
+        // and disabled states live in `.game-button*` (app/styles/menu.css); pair them with the
+        // `game-*` sizes. Gold is the primary, `game` the royal secondary, `game-secondary` the
+        // quiet one beside a primary (Go back, Cancel).
         game: "game-button",
         "game-secondary": "game-button-secondary",
         "game-gold": "game-button-gold",
         "game-danger": "game-button-danger",
         "game-ghost": "game-button-ghost",
         "game-icon": "game-button-icon [&_svg:not([class*='size-'])]:size-5",
+        "game-icon-danger": "game-button-icon-danger [&_svg:not([class*='size-'])]:size-5",
       },
       size: {
         default:
@@ -34,16 +37,17 @@ const buttonVariants = cva(
         icon: "size-8",
         "icon-xs": "size-6 [&_svg:not([class*='size-'])]:size-3",
         "icon-sm": "size-7",
+        // Pill heights 36, 44 and 52px.
         "game-sm": "h-9 gap-1.5 px-4 text-sm",
-        "game-md": "h-12 gap-2 px-5 text-lg",
-        "game-lg": "h-14 gap-2.5 px-8 text-xl",
+        "game-md": "h-11 gap-2 px-5 text-base",
+        "game-lg": "h-13 gap-2.5 px-7 text-lg",
       },
     },
     compoundVariants: [
-      { variant: "game-icon", size: "game-sm", class: "size-9 px-0" },
-      { variant: "game-icon", size: "game-md", class: "size-10 px-0" },
+      { variant: ["game-icon", "game-icon-danger"], size: "game-sm", class: "size-9 px-0" },
+      { variant: ["game-icon", "game-icon-danger"], size: "game-md", class: "size-10 px-0" },
       {
-        variant: "game-icon",
+        variant: ["game-icon", "game-icon-danger"],
         size: "game-lg",
         class: "size-12 px-0 [&_svg:not([class*='size-'])]:size-6",
       },

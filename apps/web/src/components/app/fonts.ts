@@ -1,17 +1,12 @@
-import { DM_Sans, Lilita_One } from "next/font/google";
+import { Plus_Jakarta_Sans } from "next/font/google";
 
-const dmSans = DM_Sans({
+/** Every piece of UI text: body 500, labels 600-700, titles and numbers 800. */
+const jakartaSans = Plus_Jakarta_Sans({
   display: "swap",
   subsets: ["latin"],
-  variable: "--font-dm-sans",
-});
-
-const lilitaOne = Lilita_One({
-  display: "swap",
-  subsets: ["latin"],
-  variable: "--font-lilita-one",
-  weight: "400",
+  variable: "--font-jakarta-sans",
+  weight: ["500", "600", "700", "800"],
 });
 
 /** Classes for `<html>` that define the font variables the theme's font stacks read. */
-export const fontVariables = `${dmSans.variable} ${lilitaOne.variable}`;
+export const fontVariables = jakartaSans.variable;
