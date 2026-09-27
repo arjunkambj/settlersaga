@@ -4,8 +4,8 @@ import { HomePageContent } from "@/components/home/home-page-content";
 import { normalizeRoomCode } from "@/lib/session";
 
 export const metadata: Metadata = {
-  description: "Hop aboard your crew's Island with its code.",
-  title: "Join Crew",
+  description: "Join a friend's game with its code.",
+  title: "Join a Game",
 };
 
 type JoinPageProps = {

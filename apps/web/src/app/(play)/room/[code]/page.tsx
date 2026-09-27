@@ -3,8 +3,8 @@ import type { Metadata } from "next";
 import { RoomScreenContainer } from "@/components/room/room-screen-container";
 
 export const metadata: Metadata = {
-  description: "Your crew's Island: gather in the harbor, then build and trade.",
-  title: "Island Room",
+  description: "Gather your crew, then build and trade.",
+  title: "Game Room",
 };
 
 type RoomPageProps = {

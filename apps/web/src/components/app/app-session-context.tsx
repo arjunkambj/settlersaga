@@ -244,7 +244,7 @@ export function AppSessionProvider({ children }: { children: ReactNode }) {
         actionLabel="Try again"
         message="We couldn't reach your account. Check your connection, then try again."
         onAction={() => window.location.reload()}
-        title="No signal"
+        title="Can't connect"
       />
     );
   }

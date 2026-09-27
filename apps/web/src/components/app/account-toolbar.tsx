@@ -68,13 +68,13 @@ export function AccountToolbar() {
           aria-label={`Account: ${displayName}`}
           className={cn(
             buttonVariants({ size: "game-md", variant: "game-icon" }),
-            "w-auto max-w-52 gap-2 p-1 sm:pr-4",
+            "w-auto max-w-52 gap-2 p-0.5 sm:pr-4",
           )}
           disabled={isPending || signingOut}
         >
           <Image
             alt=""
-            className="size-8 shrink-0 rounded-full object-cover"
+            className="size-8 shrink-0 rounded-full object-cover ring-2 ring-game-outline"
             height={32}
             src={profileImageUrl ?? getPlayerPortraitPath("red")}
             width={32}
@@ -112,7 +112,7 @@ export function AccountToolbar() {
           confirmLabel="Sign out"
           description={
             isGuest
-              ? "You can't sign back in to a guest profile. You'll lose this name and any seat you hold on an Island."
+              ? "Once you sign out, this guest profile is gone. You'll lose this name and any seat you hold in a game."
               : "Sign back in with the same account any time to pick up where you left off."
           }
           error={signOutError}

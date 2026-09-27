@@ -14,22 +14,22 @@ function describeError(error: Error): { message: string; recovery: Recovery } {
   switch (getErrorCode(error)) {
     case "UNAUTHENTICATED":
       return {
-        message: "Your sign-in ran out. Sign back in to keep playing.",
+        message: "You've been signed out. Sign back in to keep playing.",
         recovery: "sign-in",
       };
     case "NOT_ROOM_MEMBER":
       return {
-        message: "You don't have a seat on that Island any more. Sail home to find a new game.",
+        message: "You don't have a seat in that game any more. Go home to find a new one.",
         recovery: "home",
       };
     case "CORRUPT_GAME_STATE":
       return {
-        message: "We couldn't load that game's save. Sail home and start a new one.",
+        message: "We couldn't load that game. Go home and start a new one.",
         recovery: "home",
       };
     default:
       return {
-        message: "A rogue wave knocked something loose. Try again, or sail home.",
+        message: "Something broke on our end. Try again, or go home.",
         recovery: "retry",
       };
   }
@@ -59,12 +59,12 @@ export function ErrorScreen({ error, retry }: { error: Error; retry(): void }) {
               })}
               href="/"
             >
-              Sail home
+              Go home
             </Link>
           )}
         </>
       }
-      title="Stormy seas"
+      title="Something went wrong"
     >
       <MenuScreenText>{message}</MenuScreenText>
     </MenuScreen>

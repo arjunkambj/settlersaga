@@ -32,7 +32,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
         <HexclaveProvider app={hexclaveServerApp}>
           <HexclaveTheme />
           <a className="skip-link" href="#main-content">
-            Skip to game
+            Skip to content
           </a>
           <Providers>{children}</Providers>
         </HexclaveProvider>

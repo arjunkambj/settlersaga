@@ -113,7 +113,7 @@ export function PlayerSettingsDialog({
                 setError("");
                 setNameDraft(event.target.value);
               }}
-              placeholder="Pick a captain's name"
+              placeholder="Pick a name"
               readOnly={saving}
               value={name}
             />

@@ -5,8 +5,8 @@ import { SceneBackdrop } from "@/components/app/scene-backdrop";
 import { cn } from "@/lib/utils";
 
 /**
- * A full-screen game menu: the island backdrop and one panel with the wordmark riding its top
- * edge, an optional ribbon title, the screen's content, then its buttons stacked full width.
+ * A full-screen game menu: the island backdrop, the wordmark standing clear above one panel, an
+ * optional title, the screen's content, then its buttons stacked full width.
  */
 export function MenuScreen({
   actions,
@@ -19,16 +19,18 @@ export function MenuScreen({
 }) {
   return (
     <main
-      className="relative flex min-h-dvh items-center justify-center px-4 pt-24 pb-10 sm:px-6"
+      className="relative flex min-h-dvh items-center justify-center px-4 py-10 sm:px-6"
       id="main-content"
     >
       <SceneBackdrop />
-      <section className="game-menu-panel flex w-full max-w-sm flex-col items-center gap-5 px-6 pt-2 pb-6 text-center motion-safe:animate-game-pop sm:max-w-md">
-        <BrandWordmark className="-mt-16 w-56 sm:w-64" priority />
-        {title ? <h1 className="game-ribbon">{title}</h1> : null}
-        {children}
-        {actions ? <div className="flex w-full flex-col gap-3">{actions}</div> : null}
-      </section>
+      <div className="flex w-full max-w-sm flex-col items-center gap-4 motion-safe:animate-game-pop sm:max-w-md lg:max-w-xl lg:gap-5">
+        <BrandWordmark className="w-56 sm:w-72 lg:w-[26rem]" priority />
+        <section className="game-menu-panel flex w-full flex-col items-center gap-5 px-6 py-6 text-center lg:gap-6 lg:px-10 lg:py-8">
+          {title ? <h1 className="game-heading text-[1.75rem]">{title}</h1> : null}
+          {children}
+          {actions ? <div className="flex w-full flex-col gap-3">{actions}</div> : null}
+        </section>
+      </div>
     </main>
   );
 }
@@ -42,7 +44,12 @@ export function MenuScreenText({
   className?: string;
 }) {
   return (
-    <p className={cn("text-base font-medium text-balance text-muted-foreground", className)}>
+    <p
+      className={cn(
+        "text-base font-medium text-balance text-muted-foreground lg:text-lg",
+        className,
+      )}
+    >
       {children}
     </p>
   );

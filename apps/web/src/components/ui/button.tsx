@@ -4,7 +4,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "group/button inline-flex shrink-0 items-center justify-center rounded-2xl border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive/50 aria-invalid:ring-3 aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "group/button inline-flex shrink-0 items-center justify-center rounded-2xl border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-hidden select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive/50 aria-invalid:ring-3 aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
@@ -17,12 +17,13 @@ const buttonVariants = cva(
           "hover:bg-muted/50 hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground",
         destructive:
           "bg-destructive text-destructive-foreground hover:bg-destructive/80 focus-visible:border-destructive/40 focus-visible:ring-destructive/30",
-        // Chunky game buttons. Their faces, lips, press and disabled states live in
+        // Game buttons. Their faces, edges, press, focus and disabled states live in
         // `.game-button*` (app/styles/menu.css); pair them with the `game-*` sizes.
         game: "game-button",
         "game-secondary": "game-button-secondary",
         "game-gold": "game-button-gold",
         "game-danger": "game-button-danger",
+        "game-ghost": "game-button-ghost",
         "game-icon": "game-button-icon [&_svg:not([class*='size-'])]:size-5",
       },
       size: {
@@ -34,17 +35,17 @@ const buttonVariants = cva(
         "icon-xs": "size-6 [&_svg:not([class*='size-'])]:size-3",
         "icon-sm": "size-7",
         "game-sm": "h-9 gap-1.5 px-4 text-sm",
-        "game-md": "h-11 gap-2 px-5 text-base",
+        "game-md": "h-12 gap-2 px-5 text-lg",
         "game-lg": "h-14 gap-2.5 px-8 text-xl",
       },
     },
     compoundVariants: [
       { variant: "game-icon", size: "game-sm", class: "size-9 px-0" },
-      { variant: "game-icon", size: "game-md", class: "size-11 px-0" },
+      { variant: "game-icon", size: "game-md", class: "size-10 px-0" },
       {
         variant: "game-icon",
         size: "game-lg",
-        class: "size-14 px-0 [&_svg:not([class*='size-'])]:size-7",
+        class: "size-12 px-0 [&_svg:not([class*='size-'])]:size-6",
       },
     ],
     defaultVariants: {

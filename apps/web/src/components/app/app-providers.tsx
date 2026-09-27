@@ -29,7 +29,7 @@ export function AppProviders({ children }: { children: ReactNode }) {
   if (process.env.NODE_ENV !== "development") return app;
 
   return (
-    <Suspense fallback={<FullPageStatus label="Setting sail…" />}>
+    <Suspense fallback={<FullPageStatus label="Loading…" />}>
       <DevPreviewSwitch>{app}</DevPreviewSwitch>
     </Suspense>
   );
@@ -51,7 +51,7 @@ function SetupRequired() {
         <code className="font-mono text-foreground">apps/web/.env.local</code>, then restart the web
         server.
       </MenuScreenText>
-      <pre className="w-full overflow-auto rounded-2xl border-2 border-well-edge bg-well p-4 text-left font-mono text-xs inset-shadow-well">{`NEXT_PUBLIC_CONVEX_URL=https://your-deployment.convex.cloud
+      <pre className="w-full overflow-auto rounded-2xl border-2 border-well-line bg-well-fill p-4 text-left font-mono text-xs inset-shadow-well-deep">{`NEXT_PUBLIC_CONVEX_URL=https://your-deployment.convex.cloud
 NEXT_PUBLIC_HEXCLAVE_PROJECT_ID=your-project-id`}</pre>
     </MenuScreen>
   );

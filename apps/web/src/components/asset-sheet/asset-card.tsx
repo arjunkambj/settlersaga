@@ -65,7 +65,7 @@ export function AssetCard({ asset }: { asset: AssetCardItem }) {
           .join(" · ");
 
   return (
-    <div className="group/card relative flex flex-col overflow-hidden rounded-2xl bg-card text-card-foreground shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md focus-within:shadow-md focus-within:ring-1 focus-within:ring-foreground/5">
+    <div className="group/card relative flex flex-col overflow-hidden rounded-2xl bg-card text-card-foreground shadow-xs transition-shadow duration-200 hover:shadow-md focus-within:shadow-md focus-within:ring-1 focus-within:ring-foreground/5">
       <div
         className={cn(
           "relative isolate flex h-[176px] w-full items-center justify-center overflow-hidden border-b",
@@ -127,7 +127,7 @@ function ImagePreview({
         <Image
           alt={`${asset.name} asset preview`}
           className={cn(
-            "relative h-full w-full transition-transform duration-300 will-change-transform group-hover/card:scale-[1.02] group-focus-within/card:scale-[1.02]",
+            "relative h-full w-full",
             asset.fit === "cover" ? "object-cover" : "object-contain",
           )}
           draggable={false}

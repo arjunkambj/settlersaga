@@ -11,7 +11,7 @@ describe("action errors", () => {
     const notHost = new ConvexError({ code: "NOT_HOST", message: "Caller is not the room host." });
 
     expect(getErrorCode(roomFull)).toBe("ROOM_FULL");
-    expect(toActionableError(roomFull)).toBe("That Island is full.");
+    expect(toActionableError(roomFull)).toBe("That game is full.");
     expect(getErrorCode(notHost)).toBe("NOT_HOST");
     expect(toActionableError(notHost)).toBe("Only the host can do that.");
   });
