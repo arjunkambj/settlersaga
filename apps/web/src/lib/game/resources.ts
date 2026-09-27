@@ -26,10 +26,18 @@ export function formatInventory(inventory: Readonly<ResourceInventory>): string 
   return parts.length > 0 ? parts.join(", ") : "no cards";
 }
 
+/** "You need 1 Sheep and 1 Wheat", or null when the price is covered. */
 export function getMissingResourcesReason(
   cost: Readonly<ResourceInventory>,
   resources: Readonly<ResourceInventory>,
 ): string | null {
   const missing = getMissingInventory(cost, resources);
-  return totalResources(missing) > 0 ? `Need ${formatInventory(missing)}` : null;
+  if (totalResources(missing) === 0) {
+    return null;
+  }
+  const parts = RESOURCE_ORDER.flatMap((resource) =>
+    missing[resource] > 0 ? [`${missing[resource]} ${RESOURCE_LABELS[resource]}`] : [],
+  );
+  const last = parts.pop();
+  return `You need ${parts.length > 0 ? `${parts.join(", ")} and ${last}` : last}`;
 }

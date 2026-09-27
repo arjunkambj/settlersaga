@@ -3,6 +3,7 @@ import {
   DEVELOPMENT_CARD_COST,
   type PlayerGameView,
   type PrivatePlayerState,
+  type ResourceInventory,
 } from "@settersaga/game";
 import checkIcon from "@iconify-icons/solar/check-circle-bold";
 import { Icon } from "@iconify/react/offline";
@@ -19,43 +20,28 @@ import {
   BUILD_PIECE_RULES,
   getBuildTileStatus,
   getDevelopmentCardTileStatus,
-  getLockNote,
-  getPiecesLeftCaption,
   type ActionTileStatus,
   type BuildPieceRule,
 } from "@/lib/game/dock-actions";
 import { formatInventory } from "@/lib/game/resources";
 
-import { ActionTile, type ActionTileState } from "./action-tile";
-import { CostPips } from "./dock-resource";
+import { ActionTile, TileArt, type ActionTileState } from "./action-tile";
+import { CostCards, ResourceIcons } from "./dock-resource";
 import { TradeCenter } from "./trade-center";
+import { useMediaQuery } from "./use-media-query";
 
 const BUILD_PIECES_ID = "game-build-pieces";
+/** From md up the tiles are one row in the dock (styles/game-layout.css). */
+const DOCK_ROW_QUERY = "(min-width: 48rem)";
 const CALLOUT_DURATION_MS = 2_400;
-/** The longest piece name that fits the phone Build tile's chip. */
-const PHONE_CHIP_NAME_LENGTH = 4;
 /** What a building tile says while its build mode is on. */
 const PLACING_LABEL = "Pick a spot";
-
-function TileArt({ src }: { src: string }) {
-  return (
-    <Image
-      alt=""
-      className="size-full object-contain"
-      draggable={false}
-      height={768}
-      loading="eager"
-      sizes="4.5rem"
-      src={src}
-      width={512}
-    />
-  );
-}
+/** How a tile's label says the game is paused. */
+const PAUSED_WORDS = "Game paused";
 
 /**
- * The three building pieces as small thumbnails on the phone Build tile. A piece the player can
- * build now is lit and the others fade back, so what is within reach reads without opening the
- * tray.
+ * The three building cards, small, as the phone Build tile's art. A piece the player can build
+ * now is lit and the others fade back, so what is within reach reads without opening the tray.
  */
 function PieceMarks({ marks }: { marks: readonly { ready: boolean; rule: BuildPieceRule }[] }) {
   return (
@@ -78,29 +64,51 @@ function PieceMarks({ marks }: { marks: readonly { ready: boolean; rule: BuildPi
   );
 }
 
+/** "There's no open path…" after a colon: "Road: there's no open path…". */
+function lowerFirst(text: string): string {
+  return `${text.charAt(0).toLowerCase()}${text.slice(1)}`;
+}
+
 /**
- * A tile's lock and status line from the panel-wide lock (roll first, not your turn) and its own
- * status. The order matters: an empty supply stands whatever the phase, then the panel's lock,
- * then the price, then the board. `lockReason` is the full sentence for the tooltip and the
- * callout; the state is the few words on the tile.
+ * A building or dev card tile's look and words. A panel-wide lock (roll first, not your turn) or
+ * a pause puts nothing on the tile: the whole row dims, and the turn card says what to do.
+ * Otherwise the tile's own status decides: ready, short of cards (it says which) or locked with
+ * its one short line. `lockReason` is what a press explains; `words` is the state in words for
+ * the label and the tooltip, after the tile's name and a colon.
  */
 function getTileView(
   panelLock: string | undefined,
+  paused: boolean,
   status: ActionTileStatus,
-): { lockReason: string | null; state: ActionTileState } {
-  if (status.kind === "blocked" && status.by === "supply") {
-    return { lockReason: status.reason, state: { kind: "locked", label: status.note } };
-  }
+  readyWords: string,
+): { lockReason: string | null; state: ActionTileState; words: string } {
+  const own = status.kind === "ready" ? readyWords : status.reason;
+  const say = (...sentences: string[]) => lowerFirst(sentences.join(". "));
   if (panelLock) {
-    return { lockReason: panelLock, state: { kind: "locked", label: getLockNote(panelLock) } };
+    return {
+      lockReason: panelLock,
+      state: { kind: "quiet" },
+      words: status.kind === "ready" ? say(panelLock) : say(panelLock, own),
+    };
+  }
+  if (paused) {
+    return { lockReason: null, state: { kind: "quiet" }, words: say(PAUSED_WORDS, own) };
   }
   switch (status.kind) {
     case "ready":
-      return { lockReason: null, state: { kind: "ready" } };
+      return { lockReason: null, state: { kind: "ready" }, words: say(own) };
     case "short":
-      return { lockReason: status.reason, state: { kind: "need", label: status.note } };
+      return {
+        lockReason: status.reason,
+        state: { kind: "short", missing: status.missing },
+        words: say(own),
+      };
     case "blocked":
-      return { lockReason: status.reason, state: { kind: "locked", label: status.note } };
+      return {
+        lockReason: status.reason,
+        state: { kind: "locked", note: status.note },
+        words: say(own),
+      };
   }
 }
 
@@ -113,8 +121,8 @@ const SETUP_STEPS = [
 ] as const;
 
 /**
- * The viewer's opening round as four numbered steps: the ones placed carry a check, the one to
- * place now a gold line (only on the viewer's turn), the rest wait quietly.
+ * The viewer's opening round as four numbered steps in one row: the ones placed carry a check,
+ * the one to place now a sky rim (only on the viewer's turn), the rest wait quietly.
  */
 function SetupSteps({ game }: { game: PlayerGameView }) {
   const viewerId = game.viewerPlayerId;
@@ -167,16 +175,22 @@ function isSetupPhase(game: PlayerGameView): boolean {
 }
 
 /**
- * Trade, development card and building tiles. Each building and card tile shows its art, its name
- * with how many are left, its price as a row of resource coins, and a status line in words: a
- * green "Ready" chip when it can be used now, "Need 1 Brick" when the player is short, or a lock
- * and a few words ("No open corner", "Roll first") when something else stops it. Only a ready tile is
- * lit; the others are drawn quiet. Locked tiles stay pressable: pressing one says why in a
- * callout above the panel (a tooltip says the same on hover and focus). From md up the tiles are
- * wide rows in a 2×2 grid over a slim Trade button (styles/game-layout.css); phones show Trade,
- * Dev card and a Build tile that opens the three building tiles as a tray, which closes on any
- * tap outside it or when the action moves on. During the opening placements the panel shows the
- * viewer's four opening steps instead.
+ * Trade, development card and building tiles, all built the same way. From md up each tile reads
+ * as three short lines: the card's art and its name, its price as resource icons with their counts
+ * ("×2"), then its state: "✓ Ready" when it can be used now (the tile is lit), "Need" with only
+ * the missing cards when the player can't pay yet, or a lock and one short line when the board or
+ * the supply stops it ("No spot", "None left", "Deck empty"). When something stops the whole
+ * panel (not your turn, roll first, discard first, paused) the tiles carry nothing of their own:
+ * the row dims evenly, and the turn card says what to do. Phones keep the older tile: the price as
+ * mini cards, lit where the player holds them and ghosted where missing, with a check or a lock on
+ * the art. Every tile's label and tooltip say its state in words. Locked tiles stay pressable:
+ * pressing one says why in a callout above the panel.
+ * From md up the five tiles share one row in the order Road, Settlement, City, Dev card, Trade
+ * (styles/game-dock.css); phones show Trade, Dev card and a Build tile that opens the three
+ * building tiles as a tray, which closes on any tap outside it or when the action moves on. The
+ * tiles are rendered in the order they are seen at each size, so the tab order follows the row.
+ * During the opening placements the panel shows the viewer's four opening steps in one row
+ * instead.
  */
 export function BuildActions({
   buildMode,
@@ -201,6 +215,7 @@ export function BuildActions({
   pending: boolean;
 }) {
   const panelRef = useRef<HTMLElement>(null);
+  const dockRow = useMediaQuery(DOCK_ROW_QUERY);
   const [trayActionNumber, setTrayActionNumber] = useState<number | null>(null);
   const [callout, setCallout] = useState<{ id: number; reason: string } | null>(null);
   const piecesOpen = trayActionNumber === game.actionNumber;
@@ -230,38 +245,141 @@ export function BuildActions({
   }, [piecesOpen]);
 
   const setup = isSetupPhase(game);
-  const developmentCard = getTileView(lockReason, getDevelopmentCardTileStatus(game, me));
+  // Something stops every tile at once: the whole row dims.
+  const rowLocked = !setup && (lockReason !== undefined || isPaused);
+  // The price: resource icons in the dock row, mini cards (ghosted where missing) on phones.
+  const price = (cost: Readonly<ResourceInventory>) =>
+    dockRow ? <ResourceIcons cards={cost} /> : <CostCards cost={cost} have={me.resources} />;
+  const developmentCard = getTileView(
+    lockReason,
+    isPaused,
+    getDevelopmentCardTileStatus(game, me),
+    "Ready to buy",
+  );
   const pieceViews = BUILD_PIECE_RULES.map((rule) => ({
     rule,
-    view: getTileView(lockReason, getBuildTileStatus(rule, game, me)),
+    view: getTileView(lockReason, isPaused, getBuildTileStatus(rule, game, me), "Ready to build"),
   }));
   const readyRules = pieceViews
     .filter(({ view }) => view.state.kind === "ready")
     .map(({ rule }) => rule);
-  // The phone Build tile names the one piece that is ready when the name fits its chip ("Road",
-  // "City"); otherwise it counts them.
-  const [onlyReady] = readyRules;
-  // Nothing ready and nothing locking the panel: say when it is the cards that are missing.
-  const buildMenuState: ActionTileState | undefined =
-    readyRules.length > 0
-      ? {
-          kind: "ready",
-          label:
-            readyRules.length === 1 && onlyReady && onlyReady.label.length <= PHONE_CHIP_NAME_LENGTH
-              ? onlyReady.label
-              : `${readyRules.length} ready`,
-        }
-      : lockReason
-        ? { kind: "locked", label: getLockNote(lockReason) }
-        : pieceViews.some(({ view }) => view.state.kind === "need")
-          ? { kind: "need", label: "Need cards" }
-          : undefined;
   const trayNote = piecesOpen && callout ? callout.reason : lockReason;
+
+  const tradeTile = (
+    <TradeCenter
+      game={game}
+      isPaused={isPaused}
+      key="trade"
+      lockReason={lockReason}
+      me={me}
+      onCommand={onCommand}
+      onLockedPress={explain}
+      onPausedAction={onPausedAction}
+      pending={pending}
+    />
+  );
+  const developmentCardTile = (
+    <ActionTile
+      ariaLabel={`Dev card: ${developmentCard.words}. Costs ${formatInventory(
+        DEVELOPMENT_CARD_COST,
+      )}. ${game.developmentCardSupply} left in the deck`}
+      art={<TileArt src={DEVELOPMENT_CARD_BACK_ASSET_PATH} />}
+      cost={price(DEVELOPMENT_CARD_COST)}
+      key="development-card"
+      kind="development-card"
+      lockReason={developmentCard.lockReason}
+      onClick={() => {
+        if (developmentCard.lockReason) {
+          explain(developmentCard.lockReason);
+        } else if (!pending) {
+          void onCommand({ kind: "buy_development_card" }, "Development card bought.");
+        }
+      }}
+      state={developmentCard.state}
+      title="Dev card"
+      tooltip={`Dev card: ${developmentCard.words}. ${game.developmentCardSupply} left in the deck`}
+    />
+  );
+  // Phones only: the Build tile that opens the building tray.
+  const buildMenuTile = (
+    <div className="game-build-menu-toggle" key="build-menu">
+      <ActionTile
+        activeLabel={PLACING_LABEL}
+        ariaControls={BUILD_PIECES_ID}
+        ariaExpanded={piecesOpen}
+        ariaLabel={`Build a road, settlement or city${
+          readyRules.length > 0
+            ? `. Ready to build: ${readyRules.map((rule) => rule.label.toLowerCase()).join(", ")}`
+            : lockReason
+              ? `. ${lockReason}`
+              : ""
+        }`}
+        art={
+          <PieceMarks
+            marks={pieceViews.map(({ rule, view }) => ({
+              ready: view.state.kind === "ready",
+              rule,
+            }))}
+          />
+        }
+        kind="build-menu"
+        onClick={() => setTrayActionNumber(piecesOpen ? null : game.actionNumber)}
+        pressed={buildMode !== null}
+        state={{ kind: readyRules.length > 0 ? "ready" : "quiet" }}
+        title="Build"
+      />
+    </div>
+  );
+  // Road, Settlement and City: a tray over the phone action bar, tiles in the row from md up.
+  const buildingTiles = (
+    <div
+      className="game-build-pieces"
+      data-open={piecesOpen || undefined}
+      id={BUILD_PIECES_ID}
+      key="pieces"
+    >
+      {trayNote ? (
+        <p aria-hidden="true" className="game-build-tray-note">
+          {trayNote}
+        </p>
+      ) : null}
+      {pieceViews.map(({ rule, view }) => {
+        const active = buildMode === rule.piece;
+        const cost = BUILD_COSTS[rule.piece];
+        const left = me.piecesRemaining[rule.remaining];
+        const words = active ? "pick a spot on the board, or press again to cancel" : view.words;
+        return (
+          <ActionTile
+            activeLabel={PLACING_LABEL}
+            ariaLabel={`${rule.label}: ${words}. Costs ${formatInventory(cost)}. ${left} left`}
+            art={<TileArt src={ACTION_CARD_ASSET_PATHS[rule.piece]} />}
+            cost={price(cost)}
+            key={rule.piece}
+            kind={rule.piece}
+            lockReason={view.lockReason}
+            onClick={() => {
+              if (view.lockReason) {
+                explain(view.lockReason);
+                return;
+              }
+              closeTray();
+              onBuildMode(active ? null : rule.piece);
+            }}
+            pressed={active}
+            state={view.state}
+            title={rule.label}
+            tooltip={`${rule.label}: ${words}. ${left} left`}
+          />
+        );
+      })}
+    </div>
+  );
 
   return (
     <section
       aria-labelledby="building-actions-title"
       className="game-build-panel"
+      data-locked={rowLocked || undefined}
       data-setup={setup || undefined}
       onKeyDown={(event) => {
         if (piecesOpen && event.key === "Escape") {
@@ -276,107 +394,13 @@ export function BuildActions({
       {/* The opening placements: the four steps in place of tiles that don't apply yet. The tiles
           stay laid out (hidden) under them, so the dock keeps its size. */}
       {setup ? <SetupSteps game={game} /> : null}
+      {/* In the order the tiles are seen: from md up Road, Settlement, City, Dev card, Trade (the
+          Build tile is hidden there); on phones Trade, Dev card, then the Build tile and the tray
+          it opens. The keys keep each tile (and the trade composer's state) across the switch. */}
       <div aria-hidden={setup || undefined} className="game-build-actions" inert={setup}>
-        <TradeCenter
-          game={game}
-          isPaused={isPaused}
-          lockReason={lockReason}
-          me={me}
-          onCommand={onCommand}
-          onLockedPress={explain}
-          onPausedAction={onPausedAction}
-          pending={pending}
-        />
-        <ActionTile
-          ariaLabel={`Buy dev card, ${formatInventory(DEVELOPMENT_CARD_COST)}. ${
-            game.developmentCardSupply
-          } left${developmentCard.lockReason ? `. ${developmentCard.lockReason}` : ""}`}
-          art={<TileArt src={DEVELOPMENT_CARD_BACK_ASSET_PATH} />}
-          caption={`${game.developmentCardSupply} left`}
-          captionWideOnly
-          cost={<CostPips cost={DEVELOPMENT_CARD_COST} />}
-          kind="development-card"
-          lockReason={developmentCard.lockReason}
-          onClick={() => {
-            if (developmentCard.lockReason) {
-              explain(developmentCard.lockReason);
-            } else if (!pending) {
-              void onCommand({ kind: "buy_development_card" }, "Development card bought.");
-            }
-          }}
-          state={developmentCard.state}
-          title="Dev card"
-          tooltip={`Development card: ${formatInventory(DEVELOPMENT_CARD_COST)}`}
-        />
-        <div className="game-build-menu-toggle">
-          <ActionTile
-            activeLabel={PLACING_LABEL}
-            ariaControls={BUILD_PIECES_ID}
-            ariaExpanded={piecesOpen}
-            ariaLabel={`Build a road, settlement or city${
-              readyRules.length > 0
-                ? `. Ready to build: ${readyRules.map((rule) => rule.label.toLowerCase()).join(", ")}`
-                : lockReason
-                  ? `. ${lockReason}`
-                  : ""
-            }`}
-            art={
-              <PieceMarks
-                marks={pieceViews.map(({ rule, view }) => ({
-                  ready: view.state.kind === "ready",
-                  rule,
-                }))}
-              />
-            }
-            cost={readyRules.length > 0 ? <span className="game-build-hint">Can build</span> : null}
-            dimmed={readyRules.length === 0}
-            kind="build-menu"
-            onClick={() => setTrayActionNumber(piecesOpen ? null : game.actionNumber)}
-            pressed={buildMode !== null}
-            state={buildMenuState}
-            title="Build"
-          />
-        </div>
-        <div className="game-build-pieces" data-open={piecesOpen || undefined} id={BUILD_PIECES_ID}>
-          {trayNote ? (
-            <p aria-hidden="true" className="game-build-tray-note">
-              {trayNote}
-            </p>
-          ) : null}
-          {pieceViews.map(({ rule, view }) => {
-            const active = buildMode === rule.piece;
-            const cost = BUILD_COSTS[rule.piece];
-            const left = me.piecesRemaining[rule.remaining];
-            const piecesLeft = getPiecesLeftCaption(left);
-            return (
-              <ActionTile
-                activeLabel={PLACING_LABEL}
-                ariaLabel={`${active ? "Cancel" : "Build"} ${rule.label.toLowerCase()}, ${formatInventory(
-                  cost,
-                )}. ${left} left${view.lockReason ? `. ${view.lockReason}` : ""}`}
-                art={<TileArt src={ACTION_CARD_ASSET_PATHS[rule.piece]} />}
-                caption={piecesLeft.text}
-                captionWideOnly={!piecesLeft.low}
-                cost={<CostPips cost={cost} />}
-                key={rule.piece}
-                kind={rule.piece}
-                lockReason={view.lockReason}
-                onClick={() => {
-                  if (view.lockReason) {
-                    explain(view.lockReason);
-                    return;
-                  }
-                  closeTray();
-                  onBuildMode(active ? null : rule.piece);
-                }}
-                pressed={active}
-                state={view.state}
-                title={rule.label}
-                tooltip={`${rule.label}: ${formatInventory(cost)}. ${left} left`}
-              />
-            );
-          })}
-        </div>
+        {dockRow
+          ? [buildingTiles, developmentCardTile, tradeTile, buildMenuTile]
+          : [tradeTile, developmentCardTile, buildMenuTile, buildingTiles]}
       </div>
       {callout && !piecesOpen ? (
         <p

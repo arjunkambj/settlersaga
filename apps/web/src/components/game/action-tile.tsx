@@ -1,45 +1,50 @@
 "use client";
 
+import type { ResourceInventory } from "@settersaga/game";
 import checkIcon from "@iconify-icons/solar/check-circle-bold";
 import lockIcon from "@iconify-icons/solar/lock-keyhole-minimalistic-bold";
 import { Icon } from "@iconify/react/offline";
+import Image from "next/image";
 import type { ReactNode } from "react";
 
 import { Tooltip } from "@/components/ui/tooltip";
-import { getLockNote } from "@/lib/game/dock-actions";
+
+import { ResourceIcons } from "./dock-resource";
 
 /**
- * What a dock tile says about itself, in words, on its status line:
- * - ready: it can be used now. A green "Ready" chip (or `label`, such as "Road" on the phone
- *   Build tile);
- * - need: the player can't pay for it yet, and `label` says what is missing ("Need 1 Brick");
- * - locked: something else stops it, and `label` says what in a few words ("No open corner", "Roll
- *   first"), beside a lock.
+ * How a dock tile looks. The tile's words are in its label and tooltip; on the tile itself:
+ * - ready: it can be used now. The tile is lit, and its status line says "✓ Ready";
+ * - short: the player can't pay for it yet. A quiet tile whose status line says "Need" with only
+ *   the missing cards, as icons with their counts;
+ * - quiet: it can't be used for another reason, or something stops the whole panel (not your
+ *   turn, roll first…): a quiet tile with no status line (the panel dims its whole row then);
+ * - locked: something the price can't fix stops it (no open spot, none left, deck empty): a lock
+ *   and `note`, one short muted line.
+ * On phones the tile keeps its older look: the price as mini cards (ghosted where missing) and a
+ * small check or lock on the art.
  */
 export type ActionTileState =
-  | { kind: "locked"; label: string }
-  | { kind: "need"; label: string }
-  | { kind: "ready"; label?: string };
+  | { kind: "locked"; note: string }
+  | { kind: "quiet" }
+  | { kind: "ready" }
+  | { kind: "short"; missing: Readonly<ResourceInventory> };
 
 export interface ActionTileProps {
-  /** Dock: the status line while the tile is pressed (its build mode is on), "Pick a spot". */
+  /** Dock: the tile's one line while it is pressed (its build mode is on), "Pick a spot". */
   activeLabel?: string;
   ariaControls?: string;
   ariaExpanded?: boolean;
   ariaLabel: string;
   art: ReactNode;
   /**
-   * Poster: a line under the title. Dock: a quiet caption beside the name, such as "5 left".
+   * Poster: a line under the title. Dock: a short quiet line in the price's place on a tile
+   * without one (Trade), shown only where it fits.
    */
   caption?: ReactNode;
-  /** Dock: the caption shows only where the tiles are wide rows (md up), not in the phone tray. */
-  captionWideOnly?: boolean;
-  /** The price as resource icons, on its own line under the name. */
+  /** The price as mini cards (CostCards), on its own line under the name. */
   cost?: ReactNode;
   /** Poster only: a count chip on the corner. */
   count?: ReactNode;
-  /** Dock: a working tile that has nothing ready behind it (the phone Build tile), drawn quiet. */
-  dimmed?: boolean;
   /** Read by the game screen to return focus to a build tile after placement. */
   kind: string;
   /** Why the tile can't be used now. The tile stays focusable and pressable so it can say so. */
@@ -49,55 +54,34 @@ export interface ActionTileProps {
   pressed?: boolean;
   /** "poster" is the large preset used by the UI preview; the dock look lives in game-dock.css. */
   size?: "dock" | "poster";
-  /**
-   * Dock: the status line. Without it a locked tile shows its lock and the few words for
-   * `lockReason`, and an open tile shows no status (Trade is simply a button).
-   */
+  /** Dock: how the tile looks (above). Without it the tile is ready unless `lockReason` is set. */
   state?: ActionTileState;
   title: string;
-  /** Hover and focus hint for an unlocked dock tile, such as its price. */
+  /** Hover and focus hint: the tile's name and its state in words. */
   tooltip?: string;
 }
 
-/** The status line's look: the state, or "active" while the tile's build mode is on. */
-type TileLook = "active" | "idle" | ActionTileState["kind"];
-
-function StatusLine({
-  activeLabel,
-  look,
-  state,
-}: {
-  activeLabel: string | undefined;
-  look: TileLook;
-  state: ActionTileState | undefined;
-}) {
-  if (look === "active") {
-    return activeLabel ? <span className="game-action-status">{activeLabel}</span> : null;
-  }
-  if (!state) {
-    return null;
-  }
-  switch (state.kind) {
-    case "ready":
-      return (
-        <span className="game-action-status">
-          <span className="game-ready-chip">
-            <Icon icon={checkIcon} />
-            {state.label ?? "Ready"}
-          </span>
-        </span>
-      );
-    case "need":
-      return <span className="game-action-status">{state.label}</span>;
-    case "locked":
-      return (
-        <span className="game-action-status">
-          <Icon className="game-action-status-icon" icon={lockIcon} />
-          {state.label}
-        </span>
-      );
-  }
+/**
+ * A tile's art: its card, whole (frame and all), like the cards in the hand. Every tile shows
+ * one the same way, so no tile sits on a colored square of its own.
+ */
+export function TileArt({ src }: { src: string }) {
+  return (
+    <Image
+      alt=""
+      className="game-action-art-image"
+      draggable={false}
+      height={768}
+      loading="eager"
+      sizes="2.5rem"
+      src={src}
+      width={512}
+    />
+  );
 }
+
+/** The tile's look: its state, or "active" while its build mode is on. */
+type TileLook = "active" | ActionTileState["kind"];
 
 export function ActionTile({
   activeLabel,
@@ -106,10 +90,8 @@ export function ActionTile({
   ariaLabel,
   art,
   caption,
-  captionWideOnly = false,
   cost,
   count,
-  dimmed = false,
   kind,
   lockReason,
   meta,
@@ -150,11 +132,8 @@ export function ActionTile({
     );
   }
 
-  const shown: ActionTileState | undefined =
-    state ?? (lockReason ? { kind: "locked", label: getLockNote(lockReason) } : undefined);
-  const look: TileLook = pressed
-    ? "active"
-    : (shown?.kind ?? (lockReason || dimmed ? "idle" : "ready"));
+  const look: TileLook = pressed ? "active" : (state?.kind ?? (lockReason ? "quiet" : "ready"));
+  const note = look === "active" ? activeLabel : state?.kind === "locked" ? state.note : undefined;
   const tile = (
     <button
       aria-controls={ariaControls}
@@ -164,33 +143,37 @@ export function ActionTile({
       aria-pressed={pressed}
       className="game-action-tile"
       data-action-kind={kind}
+      data-priced={cost ? true : undefined}
       data-state={look}
       onClick={onClick}
       type="button"
     >
       <span aria-hidden="true" className="game-action-tile-art">
         {art}
-      </span>
-      <span aria-hidden="true" className="game-action-head">
-        <span className="game-action-label">{title}</span>
-        {caption ? (
-          <span className="game-action-caption" data-wide-only={captionWideOnly || undefined}>
-            {caption}
+        {look === "locked" ? (
+          <span className="game-action-badge" data-tone="locked">
+            <Icon icon={lockIcon} />
+          </span>
+        ) : look === "ready" ? (
+          <span className="game-action-badge" data-tone="ready">
+            <Icon icon={checkIcon} />
           </span>
         ) : null}
       </span>
-      {cost ? (
-        <span aria-hidden="true" className="game-action-tile-cost">
-          {cost}
-        </span>
-      ) : null}
-      <span aria-hidden="true" className="game-action-status-slot">
-        <StatusLine activeLabel={activeLabel} look={look} state={shown} />
+      <span aria-hidden="true" className="game-action-label">
+        {title}
       </span>
+      <span aria-hidden="true" className="game-action-tile-cost">
+        {cost ?? (caption ? <span className="game-action-caption">{caption}</span> : null)}
+      </span>
+      <span aria-hidden="true" className="game-action-note">
+        {note}
+      </span>
+      <TileStatus activeLabel={activeLabel} look={look} state={state} />
     </button>
   );
 
-  const hint = lockReason ?? tooltip;
+  const hint = tooltip ?? lockReason;
   return hint ? (
     <Tooltip label={hint} side="top">
       {tile}
@@ -198,4 +181,52 @@ export function ActionTile({
   ) : (
     tile
   );
+}
+
+/**
+ * The dock row's status line (styles/game-dock.css; phones use the note and the art's badge):
+ * "✓ Ready" in green, "Need" with only the missing cards in amber, a lock and the short reason in
+ * the muted color, or the build mode's "Pick a spot". A quiet tile has none.
+ */
+function TileStatus({
+  activeLabel,
+  look,
+  state,
+}: {
+  activeLabel?: string;
+  look: TileLook;
+  state?: ActionTileState;
+}) {
+  if (look === "active") {
+    return activeLabel ? (
+      <span aria-hidden="true" className="game-action-status" data-tone="active">
+        <span className="game-action-status-text">{activeLabel}</span>
+      </span>
+    ) : null;
+  }
+  switch (state?.kind) {
+    case "ready":
+      return (
+        <span aria-hidden="true" className="game-action-status" data-tone="ready">
+          <Icon className="game-action-status-icon" icon={checkIcon} />
+          <span className="game-action-status-text">Ready</span>
+        </span>
+      );
+    case "short":
+      return (
+        <span aria-hidden="true" className="game-action-status" data-tone="need">
+          <span className="game-action-status-text">Need</span>
+          <ResourceIcons cards={state.missing} />
+        </span>
+      );
+    case "locked":
+      return (
+        <span aria-hidden="true" className="game-action-status" data-tone="locked">
+          <Icon className="game-action-status-icon" icon={lockIcon} />
+          <span className="game-action-status-text">{state.note}</span>
+        </span>
+      );
+    default:
+      return null;
+  }
 }

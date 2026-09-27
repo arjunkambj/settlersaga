@@ -21,11 +21,10 @@ import { getPointsLead } from "./player-panel";
 
 /**
  * The crew at a glance below the rail breakpoint, in the same order as the drawer's rows:
- * portrait, name and points. The player on turn gets a stronger seat tint and a gold line, as
- * their row in the rail gets its rim. Nothing sits on a portrait: an away player's portrait
- * greys and "Away" follows the name, and where the pills are too narrow for names the viewer's
- * pill says "You" under its points. A held Longest Road or Largest Army shows as a small gold
- * award chip. The leader's points are solid gold and the rest a quiet gold chip, as on the rows.
+ * portrait, name and points. The player on turn gets a sky rim, as their row in the rail does.
+ * Nothing sits on a portrait: an away player's portrait greys and "Away" follows the name, and
+ * where the pills are too narrow for names the viewer's pill says "You" under its points. A held Longest Road or Largest Army shows as a small gold
+ * award chip. The leader's points are solid gold and the rest a quiet white chip, as on the rows.
  * The crew column beside the board (lg) also shows card counts, each with a tooltip; the full
  * rows live in the drawer.
  */

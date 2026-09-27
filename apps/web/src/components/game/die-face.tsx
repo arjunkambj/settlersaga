@@ -54,15 +54,13 @@ export function DieFace({ tone, value }: { tone: "ember" | "ivory"; value: numbe
   );
 }
 
-/** The last roll as a pair of dice, optionally followed by its total. */
+/** The last roll as a pair of dice. */
 export function DiceRoll({
   className,
   roll,
-  showTotal = false,
 }: {
   className: string;
   roll: NonNullable<PlayerGameView["lastDiceRoll"]>;
-  showTotal?: boolean;
 }) {
   return (
     <div
@@ -74,11 +72,6 @@ export function DiceRoll({
         <DieFace tone="ivory" value={roll.first} />
         <DieFace tone="ember" value={roll.second} />
       </span>
-      {showTotal ? (
-        <strong aria-hidden="true" className="game-dice-total">
-          {roll.sum}
-        </strong>
-      ) : null}
     </div>
   );
 }

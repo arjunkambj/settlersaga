@@ -13,7 +13,7 @@ import leaveIcon from "@iconify-icons/solar/logout-2-bold";
 import restartIcon from "@iconify-icons/solar/restart-bold";
 import { Icon } from "@iconify/react/offline";
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
@@ -31,6 +31,7 @@ import { getPlayerPortraitSrc, type PortraitSources } from "@/lib/game/hud-portr
 import {
   getDisplayedVictoryPoints,
   getPlayerColor,
+  getShortPlayerName,
   getVictoryPointCardCount,
 } from "@/lib/game/view";
 
@@ -91,6 +92,16 @@ export function WinOverlay({
     hostSeatIndex !== null &&
     (viewer?.seatIndex === hostSeatIndex || offlineSeatIndexes.has(hostSeatIndex));
   const isLastHuman = game.players.every((player) => player.isViewer || player.isBot);
+  const primaryActionRef = useRef<HTMLButtonElement>(null);
+
+  // The main action takes focus when the results open, so Enter plays again (or views the
+  // board). Its ring shows only when the player was already moving by keyboard, not on a screen
+  // that simply appeared.
+  useEffect(() => {
+    const active = document.activeElement;
+    const byKeyboard = active instanceof HTMLElement && active.matches(":focus-visible");
+    primaryActionRef.current?.focus({ focusVisible: byKeyboard });
+  }, [canRematch]);
 
   const run = async (action: PendingAction, work: () => Promise<void>) => {
     if (pendingAction) {
@@ -126,7 +137,7 @@ export function WinOverlay({
         />
       </div>
 
-      <div className="game-menu-panel game-results-panel motion-safe:animate-game-pop">
+      <div className="game-menu-panel game-dialog-panel game-results-panel motion-safe:animate-game-pop">
         <div className="game-results-body game-scroll-fade p-5 sm:p-6">
           <header className="grid justify-items-center text-center">
             <Image
@@ -186,10 +197,10 @@ export function WinOverlay({
                   <span
                     className="game-podium-name"
                     data-name-fit={
-                      player.isViewer ? undefined : nameFit(podiumName(player.displayName))
+                      player.isViewer ? undefined : nameFit(getShortPlayerName(player.displayName))
                     }
                   >
-                    {player.isViewer ? "You" : podiumName(player.displayName)}
+                    {player.isViewer ? "You" : getShortPlayerName(player.displayName)}
                   </span>
                 </div>
               ))}
@@ -282,9 +293,9 @@ export function WinOverlay({
               Leave
             </Button>
             <Button
-              autoFocus={!canRematch}
               disabled={pendingAction !== null}
               onClick={onViewBoard}
+              ref={canRematch ? undefined : primaryActionRef}
               size="game-lg"
               variant="game-secondary"
             >
@@ -293,10 +304,10 @@ export function WinOverlay({
             </Button>
             {canRematch ? (
               <Button
-                autoFocus
                 className="col-span-2 sm:col-span-1"
                 disabled={pendingAction !== null}
                 onClick={() => void run("rematch", onRematch)}
+                ref={primaryActionRef}
                 size="game-lg"
                 variant="game-gold"
               >
@@ -472,14 +483,4 @@ function getPointSources(
       shape: "card",
     },
   ];
-}
-
-/**
- * The name on a podium plate: short names whole, long ones by their first word, so the plate reads
- * "Bartholomew" rather than "Bartholomew …". The standings beside it carry the full name.
- */
-function podiumName(displayName: string): string {
-  return nameFit(displayName) === undefined
-    ? displayName
-    : (displayName.split(/\s+/)[0] ?? displayName);
 }

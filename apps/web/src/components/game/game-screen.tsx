@@ -48,6 +48,7 @@ import { HandDockProvider } from "./hand-dock";
 import { PlayerStrip } from "./player-strip";
 import { ResourceHand } from "./resource-hand";
 import { ActiveTradeOffer } from "./trade-center";
+import { TurnCard } from "./turn-card";
 import { useAttentionTitle, type AttentionRequest } from "./use-attention-title";
 import { useMediaQuery } from "./use-media-query";
 import { useRollOutcome } from "./use-roll-outcome";
@@ -305,8 +306,8 @@ export function GameScreen({
   useAttentionTitle(getAttentionRequest(game, isViewerTurn));
   const phaseCopy = getDockPhaseCopy(game, getPhaseCopy(game), rollOutcome);
   const latestEvent = events.at(-1)?.text;
-  // The phase line also says what just happened (unless it is already reporting the roll), at
-  // every width: the log beside the board is small, and a glance at the dock should answer it.
+  // The phone turn card also says what just happened (unless it is already reporting the roll):
+  // the log is in the drawer there, and a glance at the card should answer it.
   const latestMove = rollOutcome ? null : summarizeLatestMove(events.at(-1), game.players);
   const phaseLiveMessage = [
     phaseTitleText(phaseCopy.title),
@@ -316,8 +317,8 @@ export function GameScreen({
     .filter((part) => part !== null)
     .map((part) => (/[.!?…]$/.test(part) ? part : `${part}.`))
     .join(" ");
-  // Placements the phase asks for (setup, the robber, free roads) are already prompted by the
-  // turn plaque, so the pill over the board only names a build the player picked, beside Cancel.
+  // Placements the phase asks for (setup, the robber, free roads) are already the turn card's
+  // detail line; a build the player picked takes that line instead, beside a Cancel.
   const boardTargetMode = resolveBoardTargetMode(game, buildMode);
   const placementLabel =
     buildMode !== null && boardTargetMode === buildMode && !PHASE_PLACEMENTS.has(game.phase.kind)
@@ -412,46 +413,50 @@ export function GameScreen({
               pending={pending}
             />
 
-            <div className="game-board-notices">
-              {placementLabel ? (
-                <div className="game-placement-row motion-safe:animate-game-pop">
-                  <p className="game-placement-pill m-0">{placementLabel}</p>
-                  <Button
-                    onClick={() => setBuildSelection(null)}
-                    size="game-md"
-                    variant="game-secondary"
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              ) : null}
-              {pausedNoticeVisible && isPaused ? (
-                <p className="game-toast" role="status">
-                  <Icon aria-hidden="true" className="size-5 shrink-0" icon={pauseIcon} />
-                  {isHost
-                    ? "The game is paused. Resume it from the game menu."
-                    : "The game is paused. The host can resume it."}
-                </p>
-              ) : null}
-              {error ? (
-                <div className="game-toast game-toast--error" role="alert">
-                  <span>{error}</span>
-                  <Button
-                    aria-label="Dismiss"
-                    className="shrink-0"
-                    onClick={() => setError("")}
-                    size="game-md"
-                    variant="game-icon"
-                  >
-                    <Icon aria-hidden="true" icon={closeIcon} />
-                  </Button>
-                </div>
-              ) : null}
+            {/* Toasts and the trade and discard sheets share the bottom of the board area, just
+                above the dock: the toasts stack over any open sheet, and the top center of the
+                board stays clear. */}
+            <div className="game-board-overlay">
+              <div className="game-board-notices">
+                {pausedNoticeVisible && isPaused ? (
+                  <p className="game-toast" role="status">
+                    <Icon aria-hidden="true" className="size-5 shrink-0" icon={pauseIcon} />
+                    {isHost
+                      ? "The game is paused. Resume it from the game menu."
+                      : "The game is paused. The host can resume it."}
+                  </p>
+                ) : null}
+                {error ? (
+                  <div className="game-toast game-toast--error" role="alert">
+                    <span>{error}</span>
+                    <Button
+                      aria-label="Dismiss"
+                      className="shrink-0"
+                      onClick={() => setError("")}
+                      size="game-md"
+                      variant="game-icon"
+                    >
+                      <Icon aria-hidden="true" icon={closeIcon} />
+                    </Button>
+                  </div>
+                ) : null}
+              </div>
+              <div className="game-sheet-root" ref={setSheetRoot} />
             </div>
 
-            <div className="game-sheet-root" ref={setSheetRoot} />
-
             <footer className="game-footer" data-game-footer>
+              <TurnCard
+                botThinking={botThinking}
+                game={game}
+                isHost={isHost}
+                isPaused={isPaused}
+                latestMove={latestMove}
+                me={me}
+                onCancelPlacement={() => setBuildSelection(null)}
+                phaseCopy={phaseCopy}
+                phaseHeadingRef={phaseHeadingRef}
+                placementLabel={placementLabel}
+              />
               <ResourceHand
                 actionNumber={game.actionNumber}
                 isViewerTurn={isViewerTurn}
@@ -466,7 +471,6 @@ export function GameScreen({
                 buildMode={buildMode}
                 game={game}
                 isPaused={isPaused}
-                latestMove={latestMove}
                 me={me}
                 nextActionAt={nextActionAt}
                 onBuildMode={changeBuildMode}
@@ -475,8 +479,6 @@ export function GameScreen({
                 onShowResults={resultsHidden ? () => setResultsHidden(false) : undefined}
                 pausedRemainingMs={pausedRemainingMs}
                 pending={pending}
-                phaseCopy={phaseCopy}
-                phaseHeadingRef={phaseHeadingRef}
               />
             </footer>
             {game.tradeOffer ? (
@@ -611,7 +613,7 @@ function acquireSingleFlight(lock: { current: boolean }): boolean {
   return true;
 }
 
-/** Phases whose board placement the turn plaque prompts for. */
+/** Phases whose board placement the turn card already prompts for. */
 const PHASE_PLACEMENTS: ReadonlySet<PlayerGameView["phase"]["kind"]> = new Set([
   "move_robber",
   "road_building",
@@ -619,15 +621,15 @@ const PHASE_PLACEMENTS: ReadonlySet<PlayerGameView["phase"]["kind"]> = new Set([
   "setup_settlement",
 ]);
 
-/** The pill over the board while the viewer is choosing a spot for a piece they picked. */
+/** The turn card's line while the viewer is choosing a spot for a piece they picked. */
 function getPlacementLabel(piece: NonNullable<BoardBuildMode>): string {
   switch (piece) {
     case "city":
-      return "Upgrade a settlement";
+      return "Pick a settlement to upgrade";
     case "settlement":
-      return "Place a settlement";
+      return "Pick a spot for your settlement";
     case "road":
-      return "Place a road";
+      return "Pick a spot for your road";
   }
 }
 

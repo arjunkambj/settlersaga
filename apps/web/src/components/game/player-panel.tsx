@@ -49,8 +49,8 @@ export function getPointsLead(points: readonly number[]): { leadBy: number; top:
 /**
  * One row per player, in turn order after the viewer: portrait, name with its tags, a quiet line
  * of card and award counts, and points. Every row has the same structure and height whatever it
- * shows (styles/game-hud.css). The player on turn gets a stronger seat tint and a seat-color rim;
- * once the game is won, the winner's row carries a "Winner" pill.
+ * shows (styles/game-hud.css). The player on turn gets a sky rim and a "Playing" pill under their
+ * points; once the game is won, the winner's row carries a "Winner" pill instead.
  */
 export function PlayerPanel({
   activePlayerId,
@@ -265,7 +265,13 @@ export function PlayerPanel({
               </p>
             </Tooltip>
 
-            {isWinner ? <span className="game-player-status">Winner</span> : null}
+            {isWinner ? (
+              <span className="game-player-status" data-tone="winner">
+                Winner
+              </span>
+            ) : isActive ? (
+              <span className="game-player-status">Playing</span>
+            ) : null}
           </li>
         );
       })}

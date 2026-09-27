@@ -1,31 +1,137 @@
 /* ============================================================================
-   Game dock: the hand, the command dock (phase, clock, build & trade, turn
-   control), resource card flights and the dock sheets (trade, trade offer,
-   discard). Where each part sits and the per-breakpoint sizes
-   (--hand-card-width, --action-tile-*) are in game-layout.css; these rules are
-   component internals only.
+   Game dock: the hand, Build & Trade, the clock and the turn control,
+   resource card flights and the dock sheets (trade, trade offer, discard).
+   Where each part sits is in game-layout.css; these rules are the parts' own
+   look and size.
+
+   E1 glass: every panel is game glass with a 1px light hairline and one soft
+   shadow; rows and tiles are wells. From md up the dock is ONE row: the hand
+   (resource cards, a thin divider, then the room kept for development cards),
+   Build & Trade (five tiles: Road, Settlement, City, Dev card, Trade), then
+   open sea up to the turn column (md, lg) or the rail (xl). Neither panel
+   stretches: the hand keeps one width whatever it holds, and the tiles keep
+   theirs, so nothing in the dock moves as cards come and go. The sizes are
+   set per breakpoint on the shell:
+
+     --turn-card-height      the turn card
+     --turn-row-height       the clock and the Roll or End turn button
+     --dock-row-height       the hand's and the build panel's outer height
+     --dock-hand-card-width  one hand card (set on .game-hand from md up)
+     --dock-hand-gap         between hand cards
+     --dock-hand-pad         the card row's side padding
+     --dock-fan-step         how far each development card sits from the last
+                             when all five kinds are held (fewer spread out)
+     --dock-dev-width        the room kept for development cards
+     --dock-tile-width       one Build & Trade tile
+     --dock-tile-gap         between tiles
+     --dock-tile-pad         a tile's side padding
+     --dock-panel-pad        the build panel's padding
+     --dock-art-size         a tile's art
+     --dock-icon-size        a price's resource icons
+     --dock-need-icon-size   the missing cards' icons on the state line
+     --dock-build-width      the whole build panel (the steal chooser matches it)
+
+   The widest screens get everything; where the row runs short (1280), the
+   development fan overlaps more, then the gaps shrink, then the tiles lose
+   their art. Below xl the turn card shares the dock row, so the tiles keep
+   their state line first: lg drops the art beside the name for a small one
+   above it, md keeps the art and the state and drops the name and the price
+   (both are in the tooltip and the label).
    ========================================================================= */
+
+@media (width >= 48rem) {
+  .game-shell {
+    --turn-card-height: 5.75rem;
+    --turn-row-height: 3rem;
+    --dock-row-height: calc(var(--turn-card-height) + var(--ui-space-2) + var(--turn-row-height));
+    --dock-hand-card-width: 2.25rem;
+    --dock-hand-gap: 0.40625rem;
+    --dock-hand-pad: 0.375rem;
+    --dock-fan-step: 0px;
+    --dock-dev-width: var(--dock-hand-card-width);
+    --dock-tile-width: 2.875rem;
+    --dock-tile-gap: 0.125rem;
+    --dock-tile-pad: 0.125rem;
+    --dock-panel-pad: 0.1875rem;
+    --dock-art-size: 2.75rem;
+    --dock-icon-size: 0.875rem;
+    --dock-need-icon-size: 0.875rem;
+    --dock-build-width: calc(
+      5 * var(--dock-tile-width) + 4 * var(--dock-tile-gap) + 2 * var(--dock-panel-pad) + 2 *
+        var(--ui-line)
+    );
+  }
+}
+
+/* lg: the development cards fan out, and the tiles are wide enough for their names. */
+@media (width >= 64rem) {
+  .game-shell {
+    --dock-hand-card-width: 2.625rem;
+    --dock-hand-gap: var(--ui-space-1);
+    --dock-fan-step: calc(var(--dock-hand-card-width) * 0.3);
+    --dock-dev-width: calc(var(--dock-hand-card-width) + 4 * var(--dock-fan-step));
+    --dock-tile-width: 5rem;
+    --dock-tile-gap: 0.1875rem;
+    --dock-tile-pad: 0.1875rem;
+    --dock-art-size: 2.5rem;
+  }
+}
+
+/* xl up to 1440: the turn card leaves the dock, and the row is its own height. The fan overlaps
+   more and the gaps are small, and the tiles give up their art so the names stay whole. */
+@media (width >= 80rem) {
+  .game-shell {
+    --turn-card-height: 5.5rem;
+    --turn-row-height: 3.25rem;
+    --dock-row-height: 7rem;
+    --dock-hand-card-width: 2.875rem;
+    --dock-tile-width: 6rem;
+    --dock-tile-pad: var(--ui-space-1);
+    --dock-art-size: 1.5rem;
+    --dock-icon-size: 1.25rem;
+    --dock-need-icon-size: 1rem;
+  }
+}
+
+/* 1440 and wider: the fan at 40% of a card, full gaps, and each tile's art (28px) beside its
+   name. */
+@media (width >= 90rem) {
+  .game-shell {
+    --dock-hand-gap: var(--ui-space-2);
+    --dock-hand-pad: var(--ui-space-2);
+    --dock-fan-step: calc(var(--dock-hand-card-width) * 0.4);
+    --dock-tile-width: 6.875rem;
+    --dock-tile-gap: 0.3125rem;
+    --dock-tile-pad: 0.1875rem;
+    --dock-panel-pad: var(--ui-space-1);
+    --dock-art-size: 1.75rem;
+  }
+}
 
 /* --------------------------------------------------------------------------
    Shared pieces
    ----------------------------------------------------------------------- */
 
-/* The HUD panel every dock part sits on: one navy line, a 1px top highlight
-   and a soft shadow. */
+/* Game glass: the panel every dock part sits on. */
 .game-hand,
 .game-build-panel,
 .game-steal-chooser,
 .game-turn-control[data-kind],
-.game-dock-sheet {
-  border: var(--ui-line) solid var(--game-outline);
-  background: linear-gradient(var(--ui-panel-top), var(--ui-panel-bottom));
+.game-turn-clock,
+.game-build-callout,
+.game-hand-dev-popover {
+  border: var(--ui-line) solid var(--ui-hairline-game);
+  background: var(--ui-glass-game);
   box-shadow:
     inset 0 1px 0 var(--ui-panel-highlight),
-    var(--ui-shadow-float);
+    var(--ui-shadow-panel);
   color: var(--foreground);
+  -webkit-backdrop-filter: var(--ui-glass-blur-game);
+  backdrop-filter: var(--ui-glass-blur-game);
 }
 
-/* A count badge that hangs on the top-right corner of its card. */
+/* A count badge that hangs on the top-right corner of its card: a royal pill with a thin navy
+   ring, since it overlaps the card's edge. */
 .game-count-chip {
   position: absolute;
   top: -0.375rem;
@@ -36,12 +142,13 @@
   height: 1.25rem;
   place-items: center;
   padding-inline: 0.3125rem;
-  border: 1.5px solid var(--game-outline);
-  border-radius: 9999px;
-  background: var(--ui-primary-bottom);
+  border: 0;
+  border-radius: var(--ui-radius-pill);
+  background: var(--ui-royal);
+  box-shadow: 0 0 0 1.5px var(--game-outline);
   color: var(--ui-ink-on-primary);
   font-family: var(--font-sans);
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   line-height: 1;
@@ -59,9 +166,8 @@
   height: var(--portrait-size);
   overflow: hidden;
   border: 2px solid var(--player-color);
-  border-radius: 9999px;
-  background: color-mix(in srgb, var(--player-color) 45%, var(--ui-panel-bottom));
-  box-shadow: 0 0 0 1.5px var(--game-outline);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--player-color) 45%, var(--ui-glass-game-bottom-solid));
 }
 
 .game-dock-portrait-art {
@@ -70,54 +176,42 @@
   object-fit: cover;
 }
 
-/* A price on one line: a 22px coin per resource, in hand order, with "×n" beside it when more
-   than one card is needed. Every price is drawn the same way; what is missing is said in words
-   on the tile's status line. Never wraps, so a four-resource price is one row of four. */
-.game-cost-pips {
+/* A price as one mini card per card it takes. Cards the player holds are in full color; the
+   ones still missing are ghosted: faint, inside a dashed outline. */
+.game-cost-cards {
   display: flex;
   flex-wrap: nowrap;
   align-items: center;
   justify-content: center;
-  gap: 0.25rem;
-}
-
-.game-cost-item {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
   gap: 0.125rem;
 }
 
-.game-resource-coin {
+.game-cost-card {
+  position: relative;
   display: block;
   flex: none;
-  width: var(--cost-coin-size, 1.375rem);
-  height: var(--cost-coin-size, 1.375rem);
+  width: var(--cost-card-width, 1rem);
+  aspect-ratio: 2 / 3;
   overflow: hidden;
-  border: 1.5px solid var(--game-outline);
-  border-radius: 9999px;
-  background: var(--ui-well);
+  border-radius: 0.1875rem;
 }
 
-.game-resource-coin-art {
+.game-cost-card-art {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  scale: 1.9;
 }
 
-.game-cost-count {
-  color: inherit;
-  font-family: var(--font-sans);
-  font-size: 0.8125rem;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  line-height: 1;
-  white-space: nowrap;
+.game-cost-card[data-missing] .game-cost-card-art {
+  opacity: 0.3;
 }
 
-.game-cost-times {
-  font-weight: 700;
+.game-cost-card[data-missing]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 1px dashed var(--ui-text-muted);
+  border-radius: inherit;
 }
 
 /* A row of small resource cards with counts (one side of a trade). */
@@ -142,9 +236,7 @@
   width: 100%;
   height: 100%;
   border-radius: 0.375rem;
-  box-shadow:
-    0 0 0 1.5px var(--game-outline),
-    var(--ui-shadow-raise);
+  box-shadow: var(--ui-shadow-control);
   object-fit: cover;
 }
 
@@ -183,12 +275,9 @@
   border: 0;
   border-radius: var(--ui-radius-small);
   background: transparent;
-  box-shadow:
-    0 0 0 1.5px var(--game-outline),
-    var(--ui-shadow-raise);
+  box-shadow: var(--ui-shadow-control);
   cursor: pointer;
   transition:
-    translate 120ms ease-out,
     box-shadow 150ms ease-out,
     opacity 150ms ease-out;
 }
@@ -200,18 +289,19 @@
   object-fit: cover;
 }
 
+/* The picks on a card: a sky chip with navy ink (gold stays for the main actions). */
 .game-picker-card .game-count-chip {
-  background: var(--ui-gold-top);
-  color: var(--ui-ink-on-gold);
+  background: var(--ui-pick);
+  color: var(--ui-ink-on-pick);
 }
 
-/* The hand count, when the picker shows it: the same navy chip as the hand. */
+/* The hand count, when the picker shows it: the same royal chip as the hand. */
 .game-picker-card .game-count-chip[data-tone="held"] {
-  background: var(--ui-primary-bottom);
+  background: var(--ui-royal);
   color: var(--ui-ink-on-primary);
 }
 
-/* Picks, when the corner shows the hand count: a gold chip just inside the lower edge. */
+/* Picks, when the corner shows the hand count: a sky chip just inside the lower edge. */
 .game-picker-picked {
   position: absolute;
   bottom: 0.25rem;
@@ -222,12 +312,12 @@
   height: 1.375rem;
   place-items: center;
   padding-inline: 0.3125rem;
-  border-radius: 9999px;
-  background: var(--ui-gold-top);
+  border-radius: var(--ui-radius-pill);
+  background: var(--ui-pick);
   box-shadow: 0 0 0 1.5px var(--game-outline);
-  color: var(--ui-ink-on-gold);
+  color: var(--ui-ink-on-pick);
   font-family: var(--font-sans);
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   line-height: 1;
@@ -235,9 +325,8 @@
 }
 
 .game-picker-card[data-picked] {
-  outline: 3px solid var(--ui-selected-ring);
-  outline-offset: 1px;
-  translate: 0 -2px;
+  outline: 2px solid var(--ui-selected-ring);
+  outline-offset: 2px;
 }
 
 .game-picker-card:disabled {
@@ -250,15 +339,14 @@
 }
 
 .game-picker-card:focus-visible {
-  outline: 3px solid var(--ui-focus-ring);
+  outline: 2px solid var(--ui-focus-ring);
   outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--ui-focus-offset);
 }
 
 @media (hover: hover) {
   .game-picker-card:hover:not(:disabled) {
-    box-shadow:
-      0 0 0 1.5px var(--game-outline),
-      var(--ui-shadow-hover);
+    box-shadow: var(--ui-shadow-hover);
   }
 }
 
@@ -280,7 +368,7 @@
 }
 
 /* --------------------------------------------------------------------------
-   Hand
+   Hand: one row of resource cards, a thin divider, then development cards
    ----------------------------------------------------------------------- */
 
 .game-hand {
@@ -290,7 +378,7 @@
   width: 100%;
   min-width: 0;
   height: fit-content;
-  padding: var(--ui-space-2);
+  padding: 0.25rem;
   border-radius: var(--ui-radius-hud);
 }
 
@@ -299,18 +387,19 @@
   min-width: 0;
 }
 
-/* Cards start at the left edge of the shelf, whatever the hand holds. */
-.game-hand-cards {
+/* Cards start at the left edge of the shelf, whatever the hand holds. From md up the row is
+   always one line (the specificity beats any per-breakpoint grid in game-layout.css). */
+.game-hand .game-hand-cards {
   display: flex;
+  flex-wrap: nowrap;
   align-items: start;
   justify-content: flex-start;
   /* While the row scrolls, the hand widens the gap (--hand-gap) so the cards in view fill it
      edge to edge and the last one is never cut in half. */
   gap: var(--hand-gap, var(--ui-space-2));
   margin: 0;
-  margin-inline: 0;
-  /* Room for the count chips above the cards and the picked chips below them. */
-  padding: 0.625rem var(--ui-space-2) 0.125rem;
+  /* Room for the count chips above the cards. */
+  padding: 0.625rem var(--ui-space-2) 0.25rem;
   overflow-x: auto;
   list-style: none;
   scroll-behavior: smooth;
@@ -325,8 +414,8 @@
 
 .game-hand-cards:focus-visible {
   border-radius: var(--ui-radius-control);
-  outline: 3px solid var(--ui-focus-ring);
-  outline-offset: -3px;
+  outline: 2px solid var(--ui-focus-ring);
+  outline-offset: -2px;
 }
 
 /* Fade whichever end still has cards scrolled out of view. */
@@ -361,13 +450,24 @@
 .game-hand-card {
   position: relative;
   display: grid;
+  /* One column as wide as the card, so a long name (it may overhang into the gaps) never
+     widens the card. */
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto 1rem;
   flex: none;
   justify-items: center;
   width: var(--hand-card-width);
-  gap: var(--ui-space-1);
+  gap: 0.1875rem;
   scroll-snap-align: start;
-  transition: translate 150ms ease-out;
+}
+
+/* The thin rule between resource and development cards. */
+.game-hand-divider {
+  flex: none;
+  align-self: stretch;
+  width: 1px;
+  margin-block: 0 1.25rem;
+  background: var(--ui-divider);
 }
 
 .game-hand-card-face {
@@ -376,9 +476,7 @@
   aspect-ratio: 2 / 3;
   overflow: hidden;
   border-radius: var(--ui-radius-small);
-  box-shadow:
-    0 0 0 1.5px var(--game-outline),
-    var(--ui-shadow-raise);
+  box-shadow: var(--ui-shadow-control);
   transition:
     box-shadow 150ms ease-out,
     opacity 150ms ease-out;
@@ -390,23 +488,25 @@
   object-fit: cover;
 }
 
+/* The name under the card: 13px bold. It may reach into the gaps beside a narrow card. */
 .game-hand-card-label {
-  max-width: calc(100% + 0.5rem);
-  overflow: hidden;
+  max-width: calc(100% + var(--ui-space-2));
+  overflow: visible;
   color: var(--foreground);
-  font-family: var(--font-display);
-  font-size: 0.75rem;
-  letter-spacing: 0.02em;
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0;
   line-height: 1rem;
-  text-overflow: clip;
   text-shadow: none;
   white-space: nowrap;
 }
 
-/* Development card names run longer ("Monopoly"), so they drop the tracking to fit the
-   narrow phone card whole. */
+/* Development card names run longer ("Monopoly"), a step smaller so they stay whole. */
 .game-hand-card[data-development] .game-hand-card-label {
-  letter-spacing: 0;
+  max-width: none;
+  font-size: 0.75rem;
+  letter-spacing: -0.02em;
 }
 
 /* None of this card: it dims and keeps its color. */
@@ -415,33 +515,36 @@
 }
 
 .game-hand-card[data-empty] .game-count-chip {
-  border-color: var(--ui-well-border);
-  background: var(--ui-well);
-  color: var(--muted-foreground);
+  background: var(--ui-locked);
+  color: var(--ui-ink-on-locked);
 }
 
 .game-hand-card[data-empty] .game-hand-card-label {
-  color: var(--muted-foreground);
-}
-
-.game-hand-card[data-selected] {
-  translate: 0 -0.375rem;
+  color: var(--ui-text-muted);
 }
 
 .game-hand-card[data-selected] .game-hand-card-face {
-  outline: 3px solid var(--ui-selected-ring);
-  outline-offset: 1px;
+  outline: 2px solid var(--ui-selected-ring);
+  outline-offset: 2px;
 }
 
 .game-hand-card[data-gained] .game-hand-card-face {
   animation: hand-card-gain 520ms cubic-bezier(0.34, 1.56, 0.64, 1) 360ms both;
 }
 
+/* The development cards gathered into one stack: the card back with a second card peeking
+   behind it. */
+.game-hand-card[data-stack] .game-hand-card-face {
+  box-shadow:
+    3px -3px 0 -1px var(--ui-locked),
+    var(--ui-shadow-control);
+}
+
 /* How many of this card are picked for a trade, just inside the card's bottom edge, clear of
    the label. */
 .game-hand-picked {
   position: absolute;
-  bottom: 1rem;
+  bottom: 1.25rem;
   left: 50%;
   z-index: 2;
   display: grid;
@@ -450,10 +553,10 @@
   place-items: center;
   padding-inline: 0.3125rem;
   border: 0;
-  border-radius: 9999px;
-  background: var(--ui-gold-top);
+  border-radius: var(--ui-radius-pill);
+  background: var(--ui-pick);
   box-shadow: 0 0 0 1.5px var(--game-outline);
-  color: var(--ui-ink-on-gold);
+  color: var(--ui-ink-on-pick);
   font-family: var(--font-sans);
   font-size: 0.8125rem;
   font-weight: 800;
@@ -479,31 +582,31 @@
 }
 
 .game-hand-card-button:focus-visible {
-  outline: 3px solid var(--ui-focus-ring);
+  outline: 2px solid var(--ui-focus-ring);
   outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--ui-focus-offset);
 }
 
 @media (hover: hover) {
   .game-hand-card:has(.game-hand-card-button:hover:not(:disabled)) .game-hand-card-face {
-    box-shadow:
-      0 0 0 1.5px var(--game-outline),
-      var(--ui-shadow-hover);
+    box-shadow: var(--ui-shadow-hover);
   }
 }
 
-/* "Play" on a playable development card: a gold pill on the lower edge of the card face, so
-   the card's name keeps the label slot under it. */
+/* "Play" on a playable development card: a small gold pill on the lower edge of the card face,
+   so the card's name keeps the label slot under it. */
 .game-hand-play {
   position: absolute;
-  bottom: calc(1rem + var(--ui-space-1) + 0.1875rem);
+  bottom: calc(1rem + 0.1875rem + 0.25rem);
   left: 50%;
-  display: grid;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   height: 1.125rem;
-  place-items: center;
-  padding-inline: var(--ui-space-2);
+  padding-inline: 0.4375rem;
   border: 0;
-  border-radius: 9999px;
-  background: var(--ui-gold-top);
+  border-radius: var(--ui-radius-pill);
+  background: linear-gradient(var(--ui-gold-top), var(--ui-gold-bottom));
   box-shadow: 0 0 0 1.5px var(--game-outline);
   color: var(--ui-ink-on-gold);
   font-family: var(--font-sans);
@@ -511,6 +614,31 @@
   font-weight: 800;
   line-height: 1;
   translate: -50% 0;
+}
+
+/* The stack's popover: the development cards in a small glass row above the hand's right end. */
+.game-hand-dev-popover {
+  position: absolute;
+  inset-inline-end: 0;
+  bottom: calc(100% + 0.75rem);
+  z-index: 30;
+  max-width: calc(100vw - 2rem);
+  padding: 0.25rem 0.5rem 0.375rem;
+  border-radius: var(--ui-radius-hud);
+}
+
+.game-hand-dev-popover[hidden] {
+  display: none;
+}
+
+.game-hand-dev-list {
+  display: flex;
+  gap: var(--ui-space-3);
+  margin: 0;
+  padding: 0.625rem 0.25rem 0;
+  overflow-x: auto;
+  list-style: none;
+  scrollbar-width: none;
 }
 
 /* Sizes the kit's round icon button for the ends of the card row. */
@@ -538,10 +666,10 @@
   height: 1.25rem;
   place-items: center;
   padding-inline: 0.3125rem;
-  border-radius: 9999px;
-  background: var(--ui-well);
+  border-radius: var(--ui-radius-pill);
+  background: var(--ui-locked);
   box-shadow: 0 0 0 1.5px var(--game-outline);
-  color: var(--foreground);
+  color: var(--ui-ink-on-locked);
   font-family: var(--font-sans);
   font-size: 0.75rem;
   font-weight: 800;
@@ -553,6 +681,162 @@
 .game-hand-scroll-count[data-playable] {
   background: var(--ui-gold-top);
   color: var(--ui-ink-on-gold);
+}
+
+/* A development card too far under the next one for the word shows the pill's play mark alone
+   (the fan, below). */
+.game-hand-play-icon {
+  display: none;
+  flex: none;
+  width: 0.625rem;
+  height: 0.625rem;
+}
+
+/* md up: one row as tall as the dock row, of one width whatever the hand holds: the cards are a
+   size and the gaps a width set per breakpoint (never fitted by script), and after the resources
+   comes the room kept for development cards (--dock-dev-width). */
+@media (width >= 48rem) {
+  .game-hand {
+    --hand-card-width: var(--dock-hand-card-width);
+
+    height: var(--dock-row-height);
+    align-content: center;
+  }
+
+  .game-hand .game-hand-cards {
+    gap: var(--dock-hand-gap);
+    padding-inline: var(--dock-hand-pad);
+    scroll-padding-inline: var(--dock-hand-pad);
+  }
+
+  .game-hand-dev {
+    position: relative;
+    flex: none;
+    width: var(--dock-dev-width);
+  }
+
+  /* The development cards fan out from the left of their room, each over the one after it and
+     --fan-step from it, so each shows its right edge with its count and its Play pill. The step is
+     --dock-fan-step for all five kinds; fewer kinds spread out (two sit side by side). A card
+     with keyboard focus comes to the front. */
+  .game-hand-fan {
+    --fan-step: min(
+      calc(var(--hand-card-width) + var(--dock-hand-gap)),
+      calc(4 * var(--dock-fan-step) / max(1, var(--fan-count) - 1))
+    );
+
+    position: relative;
+    height: calc(var(--hand-card-width) * 1.5 + 0.1875rem + 1rem);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .game-hand-fan > .game-hand-card {
+    position: absolute;
+    top: 0;
+    left: calc(var(--fan-index) * var(--fan-step));
+    z-index: calc(var(--fan-count) - var(--fan-index));
+  }
+
+  .game-hand-fan > .game-hand-card:focus-within {
+    z-index: 6;
+  }
+
+  /* Three kinds or more overlap: the names give way to one "Dev ×N" under the fan, and every card
+     after the first, showing only its right edge, carries a round Play pill there. */
+  .game-hand-fan:not([data-count="1"], [data-count="2"]) .game-hand-card-label {
+    visibility: hidden;
+  }
+
+  .game-hand-fan:not([data-count="1"], [data-count="2"])
+    > .game-hand-card:not(:first-child)
+    .game-hand-play {
+    right: 0.125rem;
+    left: auto;
+    width: 1.125rem;
+    padding: 0;
+    translate: none;
+  }
+
+  .game-hand-fan:not([data-count="1"], [data-count="2"])
+    > .game-hand-card:not(:first-child)
+    .game-hand-play-text {
+    display: none;
+  }
+
+  .game-hand-fan:not([data-count="1"], [data-count="2"])
+    > .game-hand-card:not(:first-child)
+    .game-hand-play-icon {
+    display: block;
+  }
+
+  .game-hand-fan-label {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    max-width: none;
+  }
+
+  /* No development cards: a dashed card, the card back faint inside it. */
+  .game-hand-dev[data-empty] {
+    display: grid;
+    grid-template-rows: auto 1rem;
+    justify-items: start;
+    gap: 0.1875rem;
+  }
+
+  .game-hand-dev-empty {
+    display: block;
+    width: var(--hand-card-width);
+    aspect-ratio: 2 / 3;
+    overflow: hidden;
+    border-radius: var(--ui-radius-small);
+    outline: 1.5px dashed var(--ui-text-muted);
+    outline-offset: -1.5px;
+  }
+
+  .game-hand-dev-empty .game-hand-card-art {
+    opacity: 0.25;
+  }
+
+  .game-hand-dev-empty-label {
+    max-width: none;
+    color: var(--ui-text-muted);
+  }
+
+  .game-hand-dev-empty-label[data-length="short"] {
+    display: none;
+  }
+}
+
+/* md: the room is one card wide, so its empty card says it in one word under itself, and the row
+   ends with a little more room for a long name under the card ("Monopoly"). */
+@media (48rem <= width < 64rem) {
+  .game-hand .game-hand-cards {
+    padding-inline-end: 0.75rem;
+  }
+
+  .game-hand-dev[data-empty] {
+    justify-items: center;
+  }
+
+  .game-hand-dev-empty-label[data-length="long"] {
+    display: none;
+  }
+
+  .game-hand-dev-empty-label[data-length="short"] {
+    display: block;
+  }
+}
+
+/* md: the cards are narrow, so their names run a step smaller (12px) to stay clear of each
+   other. */
+@media (48rem <= width < 64rem) {
+  .game-hand .game-hand-card-label {
+    font-size: 0.75rem;
+    letter-spacing: -0.01em;
+  }
 }
 
 @keyframes hand-card-gain {
@@ -627,7 +911,7 @@
   object-fit: cover;
 }
 
-/* "+2" or "−1" on a flying card: a count badge, gold for a gain and red for a spend. */
+/* "+2" or "−1" on a flying card: a count badge, green for a gain and red for a spend. */
 .resource-flight-badge {
   position: absolute;
   top: -0.375rem;
@@ -637,10 +921,11 @@
   height: 1.25rem;
   place-items: center;
   padding-inline: 0.3125rem;
-  border: 1.5px solid var(--game-outline);
-  border-radius: 9999px;
-  background: var(--ui-gold-top);
-  color: var(--ui-ink-on-gold);
+  border: 0;
+  border-radius: var(--ui-radius-pill);
+  background: var(--ui-ready);
+  box-shadow: 0 0 0 1.5px var(--game-outline);
+  color: var(--ui-ink-on-ready);
   font-family: var(--font-sans);
   font-size: 0.8125rem;
   font-weight: 800;
@@ -696,200 +981,7 @@
 }
 
 /* --------------------------------------------------------------------------
-   Phase panel: whose turn it is and what happens next
-   ----------------------------------------------------------------------- */
-
-/* A plain HUD panel; the seat shows in the portrait ring. Whose turn it is on the first line,
-   the one thing to do now under it, and what just happened as a quiet last line. The phone
-   layout runs the lines beside the portrait with the dice at the end; from md up the plaque
-   stands in a narrow column and stacks them (game-layout.css). */
-.game-phase-panel {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  grid-template-areas:
-    "portrait title dice"
-    "portrait detail dice"
-    "portrait last dice";
-  align-content: center;
-  align-items: center;
-  min-width: 0;
-  gap: 0.125rem var(--ui-space-3);
-  padding: var(--ui-space-2) var(--ui-space-3);
-  border: var(--ui-line) solid var(--game-outline);
-  border-radius: var(--ui-radius-hud);
-  background: linear-gradient(var(--ui-panel-top), var(--ui-panel-bottom));
-  box-shadow:
-    inset 0 1px 0 var(--ui-panel-highlight),
-    var(--ui-shadow-float);
-  color: var(--foreground);
-}
-
-.game-phase-panel > .game-dock-portrait {
-  grid-area: portrait;
-}
-
-/* One line. Only the name shortens, so "’s turn" always stays whole beside it. */
-.game-phase-title {
-  display: flex;
-  grid-area: title;
-  min-width: 0;
-  margin: 0;
-  color: var(--foreground);
-  font-family: var(--font-display);
-  font-size: 1.0625rem;
-  font-weight: 400;
-  letter-spacing: 0.02em;
-  /* One line box at every size, so a long name never changes the dock's height. */
-  line-height: 1.375rem;
-  text-shadow: none;
-  white-space: nowrap;
-}
-
-/* A long name shrinks the title a step before the name shortens. */
-.game-phase-title[data-name-fit="long"] {
-  font-size: 0.9375rem;
-}
-
-.game-phase-title[data-name-fit="xlong"] {
-  font-size: 0.875rem;
-  letter-spacing: 0;
-}
-
-.game-phase-title:focus-visible {
-  border-radius: 0.25rem;
-  outline: 3px solid var(--ui-focus-ring);
-  outline-offset: 2px;
-}
-
-.game-phase-name {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.game-phase-rest {
-  flex: none;
-  white-space: pre;
-}
-
-/* The one thing to do now: at most two lines (one on phones: game-layout.css). */
-.game-phase-detail {
-  display: -webkit-box;
-  grid-area: detail;
-  margin: 0;
-  overflow: hidden;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  color: var(--foreground);
-  font-size: 0.875rem;
-  font-weight: 700;
-  line-height: 1.3;
-  text-shadow: none;
-  /* Two even lines rather than a lone last word. */
-  text-wrap: balance;
-}
-
-/* What just happened: one quiet line, clearly secondary. */
-.game-phase-last {
-  display: flex;
-  grid-area: last;
-  min-width: 0;
-  margin: 0;
-  gap: 0.375rem;
-  color: var(--muted-foreground);
-  font-size: 0.75rem;
-  font-weight: 600;
-  line-height: 1.25;
-  text-shadow: none;
-}
-
-.game-phase-last-label {
-  flex: none;
-  font-weight: 800;
-}
-
-.game-phase-last-text {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* This turn's roll: the dice tumble in, then the total pops. */
-.game-phase-dice {
-  display: flex;
-  grid-area: dice;
-  flex: none;
-  align-items: center;
-  gap: 0.375rem;
-}
-
-.game-phase-dice .die-face {
-  width: 1.5rem;
-  height: 1.5rem;
-  animation: dice-land 560ms cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
-}
-
-.game-phase-dice .die-face + .die-face {
-  animation-delay: 90ms;
-}
-
-.game-dice-total {
-  display: grid;
-  min-width: 1.75rem;
-  height: 1.625rem;
-  place-items: center;
-  padding-inline: 0.375rem;
-  border: 0;
-  border-radius: 9999px;
-  background: var(--ui-gold-top);
-  box-shadow: 0 0 0 1.5px var(--game-outline);
-  color: var(--ui-ink-on-gold);
-  font-family: var(--font-sans);
-  font-size: 0.9375rem;
-  font-variant-numeric: tabular-nums;
-  font-weight: 800;
-  line-height: 1;
-  animation: dice-total-pop 360ms cubic-bezier(0.34, 1.56, 0.64, 1) 420ms backwards;
-}
-
-@keyframes dice-land {
-  0% {
-    opacity: 0;
-    rotate: -200deg;
-    scale: 0.3;
-    translate: 0 -1.25rem;
-  }
-
-  70% {
-    opacity: 1;
-    rotate: 12deg;
-    scale: 1.12;
-    translate: 0 0.125rem;
-  }
-
-  100% {
-    rotate: 0deg;
-    scale: 1;
-    translate: 0 0;
-  }
-}
-
-@keyframes dice-total-pop {
-  0% {
-    opacity: 0;
-    scale: 0.4;
-  }
-
-  100% {
-    opacity: 1;
-    scale: 1;
-  }
-}
-
-/* --------------------------------------------------------------------------
-   Turn clock: a ring that empties, and the time left
+   Turn clock: a glass pill with a ring that empties, and the time left
    ----------------------------------------------------------------------- */
 
 .game-turn-clock {
@@ -898,14 +990,8 @@
   justify-content: center;
   min-width: 0;
   gap: var(--ui-space-2);
-  padding: 0.25rem 0.75rem 0.25rem 0.375rem;
-  border: var(--ui-line) solid var(--game-outline);
-  border-radius: 9999px;
-  background: linear-gradient(var(--ui-panel-top), var(--ui-panel-bottom));
-  box-shadow:
-    inset 0 1px 0 var(--ui-panel-highlight),
-    var(--ui-shadow-float);
-  color: var(--foreground);
+  padding: 0.25rem 0.875rem 0.25rem 0.5rem;
+  border-radius: var(--ui-radius-pill);
 }
 
 .game-clock-ring {
@@ -937,15 +1023,15 @@
 .game-clock-ring-track,
 .game-clock-ring-fill {
   fill: none;
-  stroke-width: 4.5;
+  stroke-width: 4;
 }
 
 .game-clock-ring-track {
-  stroke: var(--ui-well);
+  stroke: var(--ui-divider);
 }
 
 .game-clock-ring-fill {
-  stroke: var(--brand-gold-top);
+  stroke: var(--ui-active-rim);
   stroke-linecap: round;
   transition: stroke-dasharray 250ms linear;
 }
@@ -954,10 +1040,9 @@
   animation: clock-spin 1.1s linear infinite;
 }
 
+/* The time: 18px heavy tabular digits in a box as wide as the widest m:ss, so the clock and
+   everything beside it never shift as the seconds tick. */
 .game-turn-clock-time {
-  /* DM Sans ignores tabular-nums (0:11 is ~30% narrower than 0:00), so the time gets a fixed
-     box as wide as the widest m:ss. Otherwise the clock, the turn column and the dock beside it
-     would shift every second. */
   min-inline-size: 2.5em;
   font-family: var(--font-sans);
   font-size: 1.125rem;
@@ -969,13 +1054,14 @@
 }
 
 .game-turn-clock[data-state="urgent"] {
-  background: var(--ui-danger-bottom);
+  border-color: transparent;
+  background: var(--ui-danger-top);
   color: var(--ui-ink-on-primary);
   animation: clock-pulse 1s ease-in-out infinite;
 }
 
 .game-turn-clock[data-state="urgent"] .game-clock-ring-track {
-  stroke: color-mix(in srgb, var(--game-outline) 45%, transparent);
+  stroke: color-mix(in srgb, var(--ui-ink-on-primary) 30%, transparent);
 }
 
 .game-turn-clock[data-state="urgent"] .game-clock-ring-fill {
@@ -984,7 +1070,7 @@
 
 .game-turn-clock[data-state="paused"] .game-clock-ring-fill,
 .game-turn-clock[data-state="bot"] .game-clock-ring-fill {
-  stroke: var(--accent);
+  stroke: var(--ui-text-muted);
 }
 
 @keyframes clock-spin {
@@ -995,7 +1081,7 @@
 
 @keyframes clock-pulse {
   50% {
-    scale: 1.03;
+    background: var(--ui-danger-bottom);
   }
 }
 
@@ -1021,7 +1107,7 @@
   padding: 0;
 }
 
-/* The opening placements: the tiles keep their room (hidden), and one line says what to do. */
+/* The opening placements: the tiles keep their room (hidden), and the steps sit over them. */
 .game-build-panel[data-setup] > .game-build-actions {
   visibility: hidden;
 }
@@ -1036,35 +1122,40 @@
 }
 
 .game-build-setup-lead {
-  display: grid;
-  gap: 0.125rem;
+  display: flex;
+  align-items: baseline;
+  min-width: 0;
+  gap: var(--ui-space-2);
   margin: 0;
   padding-inline: var(--ui-space-1);
-  text-wrap: balance;
+  overflow: hidden;
+  white-space: nowrap;
 }
 
 .game-build-setup-lead > strong {
+  flex: none;
   color: var(--foreground);
-  font-family: var(--font-display);
-  font-size: 1rem;
-  font-weight: 400;
-  letter-spacing: 0.02em;
+  font-family: var(--font-sans);
+  font-size: 0.9375rem;
+  font-weight: 800;
   line-height: 1.2;
 }
 
 .game-build-setup-lead > span {
-  color: var(--muted-foreground);
-  font-size: 0.875rem;
-  font-weight: 700;
-  line-height: 1.3;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--ui-text-muted);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.2;
+  text-overflow: ellipsis;
 }
 
-/* The four opening steps in the 2x2 grid the build rows use: placed ones checked, the one to
-   place now on a gold line, the rest quiet. */
+/* The four opening steps (one row from md up): placed ones checked, the one to place now on a
+   sky rim, the rest quiet. */
 .game-setup-steps {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  grid-auto-rows: minmax(0, 1fr);
   gap: var(--ui-space-2);
   min-height: 0;
   margin: 0;
@@ -1081,11 +1172,12 @@
   border: var(--ui-line) solid var(--ui-well-border);
   border-radius: var(--ui-radius-control);
   background: var(--ui-well);
-  color: var(--muted-foreground);
+  color: var(--ui-text-muted);
 }
 
 .game-setup-step[data-step="now"] {
-  border-color: var(--brand-gold-top);
+  border-color: var(--ui-active-rim);
+  box-shadow: inset 0 0 0 1px var(--ui-active-rim);
   color: var(--foreground);
 }
 
@@ -1096,11 +1188,11 @@
 .game-setup-step-number {
   display: grid;
   flex: none;
-  width: 1.25rem;
-  height: 1.25rem;
+  width: 1.375rem;
+  height: 1.375rem;
   place-items: center;
-  border-radius: 9999px;
-  background: color-mix(in srgb, var(--foreground) 12%, var(--ui-well));
+  border-radius: 50%;
+  background: var(--ui-tag-quiet);
   color: var(--foreground);
   font-size: 0.75rem;
   font-weight: 800;
@@ -1109,8 +1201,8 @@
 }
 
 .game-setup-step[data-step="now"] .game-setup-step-number {
-  background: var(--ui-gold-top);
-  color: var(--ui-ink-on-gold);
+  background: var(--ui-royal);
+  color: var(--ui-ink-on-primary);
 }
 
 .game-setup-step[data-step="done"] .game-setup-step-number {
@@ -1119,8 +1211,8 @@
 }
 
 .game-setup-step-number svg {
-  width: 1.25rem;
-  height: 1.25rem;
+  width: 1.375rem;
+  height: 1.375rem;
 }
 
 .game-setup-step-art {
@@ -1138,7 +1230,7 @@
   min-width: 0;
   overflow: hidden;
   font-size: 0.875rem;
-  font-weight: 800;
+  font-weight: 700;
   line-height: 1.2;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1162,13 +1254,7 @@
   max-width: 16rem;
   margin: 0;
   padding: var(--ui-space-2) 0.875rem;
-  border: var(--ui-line) solid var(--game-outline);
   border-radius: var(--ui-radius-control);
-  background: linear-gradient(var(--ui-panel-top), var(--ui-panel-bottom));
-  box-shadow:
-    inset 0 0 0 1px var(--brand-gold-top),
-    var(--ui-shadow-float);
-  color: var(--foreground);
   font-size: 0.875rem;
   font-weight: 700;
   line-height: 1.3;
@@ -1176,135 +1262,191 @@
   translate: -50% 0;
 }
 
-/* Build and trade tiles: the whole tile is the button. Art, then the name (with a quiet
-   caption such as "5 left"), the price on one line, and a status line in words. From md up the
-   building and card tiles turn into wide rows and Trade into a slim bar (game-layout.css).
+/* Build and trade tiles: the whole tile is the button, and all five are built the same way.
+   On phones a tile is a centered stack: a fixed art slot (the piece or the card itself, on
+   nothing), the name (14px, 700), the price as mini cards (ghosted where missing) and one short
+   optional line. From md up it reads as short lines instead (below): the art and the name, the
+   price as resource icons, then its state.
 
-   What each look means, so what can be done reads at a glance:
-   - ready (usable now): a lit face and a green "Ready" chip;
-   - need (can't pay yet): a quiet well, and "Need 1 Brick" in amber;
-   - locked (no spot, none left, roll first, not your turn): the quiet well, a lock and the
-     reason;
-   - idle: the phone Build tile with nothing ready behind it, quiet like the others;
-   - active (the build mode that is on): a gold line and "Pick a spot".
-   Nothing moves on hover: the lit face's shadow grows, and a press settles it 1px. */
+   How a tile reads, so what can be done shows at a glance:
+   - ready (usable now): the tile is lit, brighter glass on a 1.5px green hairline, and says
+     "✓ Ready" (on phones, a small green check on the art's corner);
+   - short (can't pay yet): the plain well; it says "Need" with only the missing cards;
+   - locked (no spot, none left, deck empty): a lock and one short muted line;
+   - quiet: the plain well and nothing else;
+   - active (the build mode that is on): a 2px sky rim and "Pick a spot".
+   Nothing moves on hover: the face brightens, and a press settles it 1px. The white ring is for
+   keyboard focus only. */
 .game-action-tile {
-  --cost-coin-size: 1.375rem;
+  --tile-art-height: var(--action-tile-art-height, 2.5rem);
+  --tile-cost-height: calc(var(--cost-card-width, 1rem) * 1.5);
+  --tile-note-height: 0.8125rem;
 
   position: relative;
   display: grid;
   flex: none;
-  /* The price row keeps its height on a tile without one (Trade), so the status lines stay level. */
-  grid-template-rows: var(--action-tile-art-height) auto var(--cost-coin-size) auto;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: var(--tile-art-height) auto var(--tile-cost-height) var(--tile-note-height);
   grid-template-areas:
     "art"
-    "head"
+    "label"
     "cost"
-    "status";
-  align-content: start;
+    "note";
+  align-content: center;
   justify-items: center;
-  align-items: start;
+  align-items: center;
   width: var(--action-tile-width);
   min-width: 0;
-  gap: var(--ui-space-1);
-  padding: 0.375rem var(--ui-space-1);
-  border: var(--ui-line) solid var(--game-outline);
+  gap: 0.125rem;
+  padding: 0.25rem;
+  border: var(--ui-line) solid var(--ui-well-border);
   border-radius: var(--ui-radius-control);
-  background: linear-gradient(var(--ui-primary-top), var(--ui-primary-bottom));
-  box-shadow:
-    inset 0 1px 0 color-mix(in srgb, var(--foreground) 22%, transparent),
-    inset 0 -2px 0 var(--ui-primary-edge),
-    var(--ui-shadow-raise);
-  color: var(--ui-ink-on-primary);
+  background: var(--ui-well);
+  box-shadow: none;
+  color: var(--foreground);
   font: inherit;
   cursor: pointer;
   user-select: none;
   transition:
     translate 90ms ease-out,
-    box-shadow 120ms ease-out,
     border-color 120ms ease-out,
-    background-color 150ms;
+    background-color 150ms,
+    box-shadow 150ms;
 }
 
+/* The art slot: the tile's card, whole, at a fixed height. Badges hang on its top corner. */
 .game-action-tile-art {
   position: relative;
   display: block;
   grid-area: art;
-  width: 100%;
-  height: 100%;
+  width: calc(var(--tile-art-height) * 2 / 3);
+  height: var(--tile-art-height);
   min-height: 0;
-  filter: drop-shadow(0 1px 2px color-mix(in srgb, var(--game-outline) 45%, transparent));
-  transition: opacity 150ms;
 }
 
-/* The name, and beside it (or under it on a narrow tile) a quiet caption. */
-.game-action-head {
-  display: flex;
-  flex-wrap: wrap;
-  grid-area: head;
-  align-items: baseline;
-  justify-content: center;
-  max-width: calc(100% + 2 * var(--ui-space-1));
-  margin-inline: calc(-1 * var(--ui-space-1));
-  gap: 0 0.375rem;
-  line-height: 1;
+.game-action-art-image {
+  width: 100%;
+  height: 100%;
+  border-radius: 0.25rem;
+  object-fit: cover;
+}
+
+/* The phone Build tile's art is three pieces side by side. */
+.game-action-tile[data-action-kind="build-menu"] .game-action-tile-art {
+  width: 100%;
+}
+
+.game-action-badge {
+  position: absolute;
+  top: -0.25rem;
+  right: -0.4375rem;
+  display: grid;
+  width: 1rem;
+  height: 1rem;
+  place-items: center;
+  border-radius: 50%;
+}
+
+.game-action-badge svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* A green check: the icon's check is cut out, so the navy under it shows through. */
+.game-action-badge[data-tone="ready"] {
+  background: radial-gradient(circle, var(--ui-ink-on-ready) 60%, transparent 62%);
+  color: var(--ui-ready);
+}
+
+.game-action-badge[data-tone="locked"] {
+  background: var(--ui-locked);
+  box-shadow: 0 0 0 1.5px var(--game-outline);
+  color: var(--ui-ink-on-locked);
+}
+
+.game-action-badge[data-tone="locked"] svg {
+  width: 0.625rem;
+  height: 0.625rem;
 }
 
 .game-action-label {
-  flex: none;
-  font-family: var(--font-display);
+  grid-area: label;
+  max-width: 100%;
+  overflow: hidden;
+  font-family: var(--font-sans);
   font-size: 0.875rem;
-  letter-spacing: 0.02em;
-  line-height: 1.15;
+  font-weight: 700;
+  letter-spacing: 0;
+  line-height: 1rem;
+  text-overflow: ellipsis;
   text-shadow: none;
   white-space: nowrap;
 }
 
-.game-action-caption {
-  flex: none;
-  color: var(--ui-tile-caption);
-  font-family: var(--font-sans);
-  font-size: 0.75rem;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  line-height: 1.15;
-  white-space: nowrap;
-}
-
-/* The price, under the name, on one line. It reaches into the tile's side padding. */
 .game-action-tile-cost {
   display: flex;
   grid-area: cost;
-  justify-content: center;
-  width: calc(100% + 2 * var(--ui-space-1));
-  min-width: 0;
-  margin-inline: calc(-1 * var(--ui-space-1));
-}
-
-/* The status line keeps its height when it is empty, so sibling tiles stay level. */
-.game-action-status-slot {
-  display: flex;
-  grid-area: status;
   align-items: center;
   justify-content: center;
-  width: calc(100% + 2 * var(--ui-space-1));
+  width: 100%;
   min-width: 0;
-  min-height: 1.25rem;
-  margin-inline: calc(-1 * var(--ui-space-1));
+  height: 100%;
 }
 
+/* A short quiet line in the price's place on a tile without one (Trade's "Bank or crew"). */
+.game-action-caption {
+  color: var(--ui-text-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1rem;
+  white-space: nowrap;
+}
+
+/* The phones' one short line: a tile's own lock ("No spot") or, while placing, "Pick a spot". */
+.game-action-note {
+  grid-area: note;
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--ui-text-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: var(--tile-note-height);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The dock row's state line (md up): "✓ Ready" in green, "Need" and the missing cards in amber,
+   a lock and the short reason muted, or "Pick a spot" in sky. It wraps rather than cut a word. */
 .game-action-status {
-  display: inline-flex;
+  display: none;
+  grid-area: status;
+  flex-wrap: wrap;
   align-items: center;
-  justify-content: center;
   min-width: 0;
-  gap: 0.25rem;
+  max-width: 100%;
+  gap: 0.125rem 0.25rem;
   font-family: var(--font-sans);
   font-size: 0.75rem;
-  font-weight: 800;
-  line-height: 1.15;
-  text-align: center;
-  text-wrap: balance;
+  font-weight: 700;
+  letter-spacing: 0;
+  line-height: 1rem;
+  text-shadow: none;
+}
+
+.game-action-status[data-tone="ready"] {
+  color: var(--ui-ready-text);
+}
+
+.game-action-status[data-tone="need"] {
+  color: var(--ui-need);
+}
+
+.game-action-status[data-tone="locked"] {
+  color: var(--ui-text-muted);
+}
+
+.game-action-status[data-tone="active"] {
+  color: var(--ui-active-rim);
 }
 
 .game-action-status-icon {
@@ -1313,50 +1455,101 @@
   height: 0.875rem;
 }
 
-/* "Ready": a small green chip with a check. */
-.game-ready-chip {
+/* The missing cards, a size under the price's icons. */
+.game-action-status .game-resource-icons {
+  --resource-icon-size: var(--dock-need-icon-size, 0.875rem);
+}
+
+.game-action-tile:is([data-state="quiet"], [data-state="short"], [data-state="locked"])
+  .game-action-label {
+  color: var(--ui-text-soft);
+}
+
+.game-action-tile[data-state="locked"] .game-action-art-image {
+  opacity: 0.6;
+}
+
+/* Ready: lit. Brighter glass on a 1.5px green hairline. */
+.game-action-tile[data-state="ready"] {
+  border-color: var(--ui-ready);
+  background: linear-gradient(var(--ui-glass-hover), var(--ui-glass-hover)), var(--ui-well);
+  box-shadow: inset 0 0 0 0.5px var(--ui-ready);
+}
+
+/* Chosen (the build mode that is on): a 1.5px sky hairline, and the line says what to do. */
+.game-action-tile[data-state="active"] {
+  border-color: var(--ui-active-rim);
+  background: linear-gradient(var(--ui-glass-hover), var(--ui-glass-hover)), var(--ui-well);
+  box-shadow: inset 0 0 0 0.5px var(--ui-active-rim);
+}
+
+.game-action-tile[data-state="active"] .game-action-note {
+  color: var(--ui-active-rim);
+}
+
+/* Hover brightens the face; the edge keeps its color. */
+@media (hover: hover) {
+  .game-action-tile:hover {
+    background: linear-gradient(var(--ui-glass-hover), var(--ui-glass-hover)), var(--ui-well);
+  }
+
+  .game-action-tile:is([data-state="ready"], [data-state="active"]):hover {
+    background:
+      linear-gradient(var(--ui-glass-hover), var(--ui-glass-hover)),
+      linear-gradient(var(--ui-glass-hover), var(--ui-glass-hover)), var(--ui-well);
+  }
+}
+
+.game-action-tile:is([data-state="ready"], [data-state="active"]):active {
+  translate: 0 1px;
+}
+
+.game-action-tile:focus-visible {
+  outline: 2px solid var(--ui-focus-ring);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--ui-focus-offset);
+}
+
+.game-action-tile[aria-disabled="true"] {
+  cursor: not-allowed;
+}
+
+/* Cards as small resource icons: a price, or the cards still missing. A count follows an icon
+   that stands for more than one ("×2"). */
+.game-resource-icons {
+  --resource-icon-size: 1.25rem;
+
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.125rem;
+}
+
+.game-resource-icon {
   display: inline-flex;
   flex: none;
   align-items: center;
-  gap: 0.1875rem;
-  height: 1.25rem;
-  padding-inline: 0.25rem 0.4375rem;
-  border-radius: 9999px;
-  background: var(--ui-ready);
-  color: var(--ui-ink-on-ready);
+  gap: 1px;
+}
+
+/* A little more room after a count, so "×2" reads with its own icon. */
+.game-resource-icon:has(.game-resource-icon-count) + .game-resource-icon {
+  margin-inline-start: 0.125rem;
+}
+
+.game-resource-icon-art {
+  display: block;
+  width: var(--resource-icon-size);
+  height: var(--resource-icon-size);
+  object-fit: contain;
+}
+
+.game-resource-icon-count {
+  font-family: var(--font-sans);
   font-size: 0.75rem;
   font-weight: 800;
+  font-variant-numeric: tabular-nums;
   line-height: 1;
-  white-space: nowrap;
-}
-
-.game-ready-chip svg {
-  flex: none;
-  width: 0.875rem;
-  height: 0.875rem;
-}
-
-.game-action-tile[data-state="need"] .game-action-status {
-  color: var(--ui-need);
-}
-
-.game-action-tile[data-state="locked"] .game-action-status {
-  color: var(--muted-foreground);
-  font-weight: 700;
-}
-
-.game-action-tile[data-state="active"] .game-action-status {
-  color: var(--brand-gold-top);
-}
-
-/* The phone Build tile's price row: "Can build" over the chip naming what is ready. */
-.game-build-hint {
-  align-self: center;
-  color: var(--ui-tile-caption);
-  font-size: 0.75rem;
-  font-weight: 700;
-  line-height: 1.15;
-  white-space: nowrap;
 }
 
 /* The phone Build tile's art: road, settlement and city side by side. One the player can build
@@ -1365,20 +1558,18 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: calc(100% + 2 * var(--ui-space-1));
+  width: 100%;
   height: 100%;
-  margin-inline: calc(-1 * var(--ui-space-1));
-  gap: 0.1875rem;
+  gap: 0.125rem;
 }
 
 .game-build-mark {
   display: block;
   flex: none;
-  width: 1.375rem;
-  height: 1.375rem;
+  width: 1.1875rem;
+  aspect-ratio: 2 / 3;
   overflow: hidden;
-  border-radius: 0.375rem;
-  box-shadow: 0 0 0 1.5px var(--game-outline);
+  border-radius: 0.1875rem;
   opacity: 0.45;
 }
 
@@ -1390,81 +1581,337 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  scale: 1.35;
 }
 
-/* Every pieces-left count shows on the wide rows; the phone tray shows only the low ones. */
+/* Phones: the Trade caption has no room in the narrow action bar. A tile without a price (Trade,
+   Build) keeps the art and the name, centered in the tile like the others' art, name and
+   price. Something that stops the whole panel (not your turn, roll first, paused) puts nothing
+   on the tiles: the art and the prices dim evenly, the names keep their contrast, and each tile
+   keeps its rows, so the action bar (and the hand and turn card above it) never shifts. */
 @media (width < 48rem) {
-  .game-action-caption[data-wide-only] {
+  .game-action-caption {
+    display: none;
+  }
+
+  .game-action-tile:not([data-priced]) {
+    grid-template-rows: var(--tile-art-height) auto var(--tile-note-height);
+    grid-template-areas:
+      "art"
+      "label"
+      "note";
+  }
+
+  .game-action-tile:not([data-priced]) > .game-action-tile-cost {
+    display: none;
+  }
+
+  .game-build-pieces {
+    --cost-card-width: 0.9375rem;
+  }
+
+  .game-build-panel[data-locked] .game-action-tile {
+    border-color: var(--ui-well-border);
+    background: var(--ui-well);
+    box-shadow: none;
+  }
+
+  .game-build-panel[data-locked]
+    .game-action-tile
+    :is(.game-action-tile-art, .game-action-tile-cost) {
+    opacity: 0.6;
+  }
+
+  .game-build-panel[data-locked] .game-action-tile .game-action-label {
+    color: var(--ui-text-muted);
+  }
+
+  .game-build-panel[data-locked] .game-action-tile :is(.game-action-note, .game-action-badge) {
+    visibility: hidden;
+  }
+}
+
+/* md up: the build panel keeps its own width (--dock-build-width) right after the hand, as tall
+   as the dock row; the sea takes whatever is left. Its five tiles sit in the order Road,
+   Settlement, City, Dev card, Trade. The steal chooser stands in at the same size. A tile reads
+   as short lines from its top-left corner: the art and the name, the price as resource icons,
+   then the state. Each line keeps its height on every tile, so the lines match across the row.
+   The selectors carry the panel so they beat the phone action bar's tile rules. */
+@media (width >= 48rem) {
+  .game-build-panel,
+  .game-steal-chooser {
+    justify-self: start;
+    width: var(--dock-build-width);
+    height: var(--dock-row-height);
+  }
+
+  .game-build-panel {
+    gap: 0;
+    padding: var(--dock-panel-pad);
+  }
+
+  .game-build-panel .game-build-actions {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    gap: var(--dock-tile-gap);
+  }
+
+  /* The state line keeps room for two lines (three on the narrowest tiles), so a state that wraps
+     never moves the other lines; the block is centered in the tile. */
+  .game-build-panel .game-build-actions .game-action-tile {
+    --tile-art-height: var(--dock-art-size);
+    --tile-status-height: 2rem;
+
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-rows: var(--tile-art-height) var(--dock-icon-size) var(--tile-status-height);
+    grid-template-areas:
+      "art label"
+      "cost cost"
+      "status status";
+    align-content: center;
+    justify-items: start;
+    width: var(--dock-tile-width);
+    height: 100%;
+    min-height: 0;
+    gap: var(--ui-space-1);
+    padding: 0.3125rem var(--dock-tile-pad);
+    text-align: start;
+  }
+
+  .game-build-panel .game-action-status {
+    align-self: start;
+  }
+
+  .game-build-panel .game-action-tile-cost {
+    justify-content: flex-start;
+    height: auto;
+  }
+
+  .game-build-panel .game-action-tile-cost .game-resource-icons {
+    --resource-icon-size: var(--dock-icon-size);
+
+    flex-wrap: nowrap;
+  }
+
+  .game-build-panel .game-action-tile-cost .game-resource-icon-count {
+    color: var(--ui-text-soft);
+  }
+
+  .game-build-panel :is(.game-action-note, .game-action-badge) {
+    display: none;
+  }
+
+  .game-build-panel .game-action-status {
+    display: flex;
+  }
+
+  /* Something stops the whole panel (not your turn, roll first, paused): the tiles carry nothing
+     of their own, and the whole row dims evenly. The turn card says what to do. */
+  .game-build-panel[data-locked] .game-build-actions {
+    opacity: 0.55;
+  }
+}
+
+/* md: the narrowest tiles, beside the turn card at 768. Each keeps its art and its state, centered;
+   the check or the lock sits on the art, and a state too long for the tile takes two lines. The
+   name and the price are in its tooltip and label. */
+@media (48rem <= width < 64rem) {
+  .game-build-panel .game-build-actions .game-action-tile {
+    --tile-status-height: 3rem;
+
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: var(--tile-art-height) var(--tile-status-height);
+    grid-template-areas:
+      "art"
+      "status";
+    justify-items: center;
+    padding-block: var(--ui-space-2);
+    text-align: center;
+  }
+
+  .game-build-panel :is(.game-action-label, .game-action-tile-cost, .game-action-status-icon) {
+    display: none;
+  }
+
+  .game-build-panel .game-action-badge {
+    display: grid;
+  }
+
+  .game-build-panel .game-action-status {
+    justify-content: center;
+  }
+}
+
+/* lg: a small art above the name (13px, a touch tighter), then the price and the state. */
+@media (64rem <= width < 80rem) {
+  .game-build-panel .game-build-actions .game-action-tile {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: var(--tile-art-height) 1rem var(--dock-icon-size) var(--tile-status-height);
+    grid-template-areas:
+      "art"
+      "label"
+      "cost"
+      "status";
+  }
+
+  .game-build-panel .game-action-label {
+    font-size: 0.8125rem;
+    letter-spacing: -0.01em;
+  }
+
+  .game-build-panel .game-action-caption {
     display: none;
   }
 }
 
-@media (hover: hover) {
-  .game-action-tile:is([data-state="ready"], [data-state="active"]):hover {
-    box-shadow:
-      inset 0 1px 0 color-mix(in srgb, var(--foreground) 22%, transparent),
-      inset 0 -2px 0 var(--ui-primary-edge),
-      var(--ui-shadow-hover);
+/* xl up to 1440: the name heads the tile on its own (the art gives way), then the price and the
+   state. */
+@media (80rem <= width < 90rem) {
+  .game-build-panel .game-build-actions .game-action-tile {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: 1.125rem var(--dock-icon-size) var(--tile-status-height);
+    grid-template-areas:
+      "label"
+      "cost"
+      "status";
   }
 
-  .game-action-tile:not([data-state="ready"], [data-state="active"]):hover {
-    border-color: color-mix(in srgb, var(--foreground) 22%, var(--ui-well-border));
+  .game-build-panel .game-action-tile-art {
+    display: none;
   }
 }
 
-.game-action-tile[data-state="ready"]:active {
-  translate: 0 1px;
+/* xl: the state line a step larger (13px), its missing cards at 16px. */
+@media (width >= 80rem) {
+  .game-build-panel .game-action-status {
+    font-size: 0.8125rem;
+    line-height: 1rem;
+  }
 }
 
-.game-action-tile:focus-visible {
-  outline: 3px solid var(--ui-focus-ring);
-  outline-offset: 2px;
+/* 1440 and wider: a little more air between the art and the name. */
+@media (width >= 90rem) {
+  .game-build-panel .game-build-actions .game-action-tile {
+    column-gap: 0.3125rem;
+  }
 }
 
-/* Not usable now: a quiet well; the name and the art step back, the status line says why. */
-.game-action-tile:is([data-state="need"], [data-state="locked"], [data-state="idle"]) {
-  border-color: var(--ui-well-border);
-  background: var(--ui-well);
-  box-shadow: var(--ui-shadow-inset);
-  color: var(--foreground);
+/* The opening round from md up: the lead on one line over the four steps, each a small tile (art,
+   then its number and name). */
+@media (width >= 48rem) {
+  .game-build-setup {
+    inset: var(--dock-panel-pad);
+    gap: 0.3125rem;
+  }
+
+  .game-setup-steps {
+    grid-template-columns: none;
+    grid-auto-columns: minmax(0, 1fr);
+    grid-auto-flow: column;
+  }
+
+  .game-setup-step {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+      "art art"
+      "number label";
+    align-content: center;
+    justify-content: center;
+    justify-items: center;
+    gap: 0.25rem 0.3125rem;
+    padding: 0.25rem;
+  }
+
+  /* A square crop of the card art, like the tiles' art slot. */
+  .game-setup-step-art {
+    grid-area: art;
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: var(--ui-radius-small);
+    object-fit: cover;
+  }
+
+  .game-setup-step-number {
+    grid-area: number;
+  }
+
+  .game-setup-step-label {
+    grid-area: label;
+    justify-self: start;
+  }
 }
 
-.game-action-tile[aria-disabled="true"] {
-  cursor: not-allowed;
+/* md and lg: the panel holds compact tiles, so the steps are narrow. The number sits in the
+   step's top corner and the name, at 12px, gets the whole width under the art. */
+@media (48rem <= width < 80rem) {
+  .game-build-setup-lead > span {
+    display: none;
+  }
+
+  .game-setup-steps {
+    gap: var(--dock-tile-gap);
+  }
+
+  .game-setup-step {
+    position: relative;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "art"
+      "label";
+  }
+
+  .game-setup-step-number {
+    position: absolute;
+    top: 0.25rem;
+    left: 0.25rem;
+  }
+
+  .game-setup-step-label {
+    justify-self: center;
+    max-width: 100%;
+    font-size: 0.75rem;
+  }
 }
 
-.game-action-tile:is([data-state="need"], [data-state="locked"], [data-state="idle"])
-  :is(.game-action-label, .game-action-caption) {
-  color: var(--muted-foreground);
-}
+/* md: the panel is too narrow for four steps side by side, and the dock row is tall, so the steps
+   stand two over two, each a short row of its number and its name (13px, whole), as on phones. */
+@media (48rem <= width < 64rem) {
+  .game-setup-steps {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-flow: row;
+  }
 
-.game-action-tile:is([data-state="need"], [data-state="locked"]) > .game-action-tile-art {
-  opacity: 0.55;
-  filter: none;
-}
+  .game-setup-step {
+    display: flex;
+    justify-content: flex-start;
+    gap: 0.375rem;
+    padding: 0 0.375rem;
+  }
 
-/* Chosen (the build mode that is on): a gold line on the lit face. */
-.game-action-tile[data-state="active"] {
-  border-color: var(--ui-selected-ring);
-  box-shadow:
-    inset 0 0 0 1px var(--ui-selected-ring),
-    inset 0 1px 0 var(--ui-panel-highlight),
-    var(--ui-shadow-raise);
+  .game-setup-step-number {
+    position: static;
+  }
+
+  .game-setup-step-art {
+    display: none;
+  }
+
+  .game-setup-step-label {
+    font-size: 0.8125rem;
+  }
 }
 
 /* --------------------------------------------------------------------------
    Steal chooser: the players the robber can rob
    ----------------------------------------------------------------------- */
 
-/* As wide as the build panel it stands in for (--build-panel-width, set from lg up where the
-   dock column hugs its content; below lg the panel fills its cell), so the dock and the board
-   keep their size. */
+/* As wide as the build panel it stands in for (from md up, above), so the dock and the board keep
+   their size. */
 .game-steal-chooser {
   display: flex;
   align-items: stretch;
   justify-content: safe center;
-  width: var(--build-panel-width, 100%);
   min-width: 0;
   max-width: 100%;
   gap: var(--ui-space-2);
@@ -1474,8 +1921,6 @@
 }
 
 .game-steal-plaque {
-  --plaque-rim-color: var(--player-color);
-
   display: grid;
   flex: 1 1 0;
   align-content: center;
@@ -1483,28 +1928,20 @@
   min-width: 4.25rem;
   max-width: 8rem;
   gap: 0.375rem;
-  padding: var(--ui-space-2) 0.375rem;
-  border: var(--ui-line) solid var(--game-outline);
+  padding: 0.375rem;
+  border: var(--ui-line) solid var(--ui-hairline-game);
   border-radius: var(--ui-radius-control);
-  background: linear-gradient(
-    color-mix(in srgb, var(--player-color) var(--ui-seat-tint-top), var(--ui-panel-top)),
-    color-mix(in srgb, var(--player-color) var(--ui-seat-tint-bottom), var(--ui-panel-bottom))
-  );
-  box-shadow:
-    inset 0 0 0 2px var(--plaque-rim-color),
-    var(--ui-shadow-raise);
+  background: linear-gradient(var(--ui-glass-hover), var(--ui-glass-hover)), var(--ui-well);
   color: var(--foreground);
   cursor: pointer;
   transition:
     translate 90ms ease-out,
-    box-shadow 120ms ease-out;
+    border-color 120ms ease-out;
 }
 
 @media (hover: hover) {
   .game-steal-plaque:hover:not(:disabled) {
-    box-shadow:
-      inset 0 0 0 2px var(--plaque-rim-color),
-      var(--ui-shadow-hover);
+    border-color: var(--ui-hairline-light);
   }
 }
 
@@ -1513,8 +1950,9 @@
 }
 
 .game-steal-plaque:focus-visible {
-  outline: 3px solid var(--ui-focus-ring);
+  outline: 2px solid var(--ui-focus-ring);
   outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--ui-focus-offset);
 }
 
 .game-steal-plaque:disabled {
@@ -1541,8 +1979,8 @@
   height: 1.375rem;
   padding-inline: 0.25rem 0.375rem;
   border: 0;
-  border-radius: var(--ui-radius-small);
-  background: var(--ui-well);
+  border-radius: var(--ui-radius-pill);
+  background: var(--ui-locked);
   box-shadow: 0 0 0 1.5px var(--game-outline);
   color: var(--foreground);
   font-family: var(--font-sans);
@@ -1564,7 +2002,7 @@
   overflow: hidden;
   font-family: var(--font-sans);
   font-size: 0.875rem;
-  font-weight: 800;
+  font-weight: 700;
   line-height: 1.2;
   text-overflow: ellipsis;
   text-shadow: none;
@@ -1582,29 +2020,56 @@
   user-select: none;
 }
 
-/* Sizes the kit's game button to fill the turn slot. The button is a size
-   container, so its content never resizes the slot; the minimums keep the
-   icon and label on one row in short slots. */
+/* Sizes the kit's game button to fill the turn slot: a 52px pill at least, 18px heavy label.
+   The button is a size container, so its content never resizes the slot. */
 .game-turn-button {
   width: 100%;
   height: 100%;
   min-width: 7.5rem;
-  min-height: 3rem;
-  padding: 0.375rem var(--ui-space-2);
+  min-height: 3.25rem;
+  padding: 0.375rem var(--ui-space-3);
   container-type: size;
   font-size: 1.125rem;
+  font-weight: 800;
   line-height: 1.1;
 }
 
-/* Icon (or dice) and label: side by side in short slots (phones and md with
-   a clock), stacked in tall ones (lg, xl, or no clock). */
+/* Paused: the button keeps its place and its words but steps back to a quiet slate pill, like
+   the status pill during the opening round. Pressing it says the game is paused. */
+.game-turn-control .game-turn-button.game-button-gold[data-paused] {
+  --btn-face: var(--ui-locked);
+  --btn-ink: var(--ui-ink-on-locked);
+  --btn-highlight: transparent;
+  --btn-drop: 0 0 #0000;
+
+  cursor: not-allowed;
+}
+
+.game-turn-button[data-paused] :is(.game-turn-button-icon, .game-roll-dice) {
+  opacity: 0.6;
+}
+
+/* Below xl the slot is narrow, so the label and its icon run a step smaller. */
+@media (width < 80rem) {
+  .game-turn-button {
+    padding-inline: var(--ui-space-2);
+    font-size: 1rem;
+  }
+
+  .game-turn-button-icon {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+}
+
+/* Icon (or dice) and label side by side. */
 .game-turn-face {
   display: flex;
   align-items: center;
   justify-content: center;
   width: 100%;
   height: 100%;
-  gap: var(--ui-space-1) 0.375rem;
+  gap: var(--ui-space-1) var(--ui-space-2);
   text-align: center;
 }
 
@@ -1634,14 +2099,14 @@
   object-fit: contain;
 }
 
-/* What the viewer owes somewhere else (the board, a sheet) or what the table waits on: a plain
-   HUD status panel, a size container like the button. Beside the clock it is a pill like the
-   clock (game-layout.css), so it never reads as a button. The turn card says what the move is;
-   this says where to make it. */
+/* What the viewer owes somewhere else (the board, a sheet) or what the table waits on: a glass
+   status pill, never a button. The turn pill says what the move is; this says where to make it. */
 .game-turn-control[data-kind] {
   min-width: 7.5rem;
   min-height: 3.25rem;
-  padding: var(--ui-space-2);
+  padding: var(--ui-space-2) var(--ui-space-3);
+  /* A panel when it fills a tall slot (discarding on a phone); a pill beside the clock
+     (game-layout.css). */
   border-radius: var(--ui-radius-hud);
   container-type: size;
 }
@@ -1651,17 +2116,16 @@
   height: 1.75rem;
   flex: none;
   object-fit: contain;
-  filter: drop-shadow(0 2px 4px color-mix(in srgb, var(--game-outline) 45%, transparent));
 }
 
-/* One short line ("Pick a corner"): a status, in the HUD's sans, never a button label. */
+/* One short line ("Pick a corner"): a status in the HUD's sans. */
 .game-turn-task {
   min-width: 0;
   overflow: hidden;
   color: var(--foreground);
   font-family: var(--font-sans);
   font-size: 0.9375rem;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0;
   line-height: 1.2;
   text-overflow: ellipsis;
@@ -1670,40 +2134,31 @@
 }
 
 .game-turn-control[data-kind="waiting"] .game-turn-task {
-  color: var(--muted-foreground);
+  color: var(--ui-text-muted);
 }
 
-/* The narrow phone column: a step smaller, so the line stays whole. */
-@container (width < 8.5rem) {
+/* The narrow phone and md columns: a step smaller, so the line stays whole. */
+@container (width < 9rem) {
   .game-turn-task {
     font-size: 0.875rem;
   }
 }
 
-@container (min-height: 4.5rem) {
+/* A tall slot (no clock beside it): the icon over the label. */
+@container (min-height: 5.5rem) {
   .game-turn-face {
     flex-direction: column;
   }
 
   .game-turn-art,
   .game-turn-button-icon {
-    width: 2.5rem;
-    height: 2.5rem;
+    width: 2.25rem;
+    height: 2.25rem;
   }
 
   .game-roll-dice .die-face {
     width: 1.75rem;
     height: 1.75rem;
-  }
-}
-
-@container (min-height: 6.5rem) {
-  .game-turn-button .game-turn-face {
-    font-size: 1.25rem;
-  }
-
-  .game-turn-task {
-    font-size: 1rem;
   }
 }
 
@@ -1723,14 +2178,23 @@
    Dock sheets (DockSheet): trade composer, trade offer, discard
    ----------------------------------------------------------------------- */
 
-/* Focused by script when it opens; the transparent outline still shows in forced colors. */
+/* Dialog glass, since a sheet sits over the board. Focused by script when it opens; the
+   transparent outline still shows in forced colors. */
 .game-dock-sheet {
   display: grid;
   gap: var(--ui-space-2);
   min-width: 0;
   padding: var(--ui-space-4);
+  border: var(--ui-line) solid var(--ui-hairline-game);
   border-radius: var(--ui-radius-panel);
-  outline: 3px solid transparent;
+  background: var(--ui-glass-dialog);
+  box-shadow:
+    inset 0 1px 0 var(--ui-panel-highlight),
+    var(--ui-shadow-panel);
+  color: var(--foreground);
+  outline: 2px solid transparent;
+  -webkit-backdrop-filter: var(--ui-glass-blur-game);
+  backdrop-filter: var(--ui-glass-blur-game);
 }
 
 /* Equal side slots keep the title centered whether or not there is a close button. */
@@ -1773,8 +2237,9 @@
 .game-dock-status {
   min-height: 1.25rem;
   margin: 0;
-  font-size: 0.875rem;
-  font-weight: 700;
+  color: var(--ui-text-soft);
+  font-size: 0.9375rem;
+  font-weight: 600;
   line-height: 1.3;
   text-align: center;
   text-shadow: none;
@@ -1782,21 +2247,22 @@
 }
 
 .game-dock-status[data-tone="ready"] {
-  color: var(--brand-gold-top);
+  color: var(--ui-ready-text);
+  font-weight: 700;
 }
 
 .game-dock-status[data-tone="error"] {
   color: var(--ui-missing);
+  font-weight: 700;
 }
 
-/* A sunken well that holds cards. */
+/* A well that holds cards. */
 .game-trade-well,
 .game-trade-grid {
   min-width: 0;
   border: var(--ui-line) solid var(--ui-well-border);
   border-radius: var(--ui-radius-control);
   background: var(--ui-well);
-  box-shadow: var(--ui-shadow-inset);
 }
 
 .game-trade-well {
@@ -1820,11 +2286,11 @@
 .game-trade-row-label,
 .game-trade-well-label {
   margin: 0;
-  color: var(--brand-gold-top);
+  color: var(--ui-text-soft);
   font-family: var(--font-sans);
   font-size: 0.75rem;
   font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   line-height: 1.2;
   text-shadow: none;
   text-transform: uppercase;
@@ -1857,14 +2323,12 @@
 .game-trade-recipient > .game-dock-portrait {
   --portrait-size: 2.25rem;
 
-  transition:
-    opacity 150ms ease-out,
-    translate 120ms ease-out;
+  transition: opacity 150ms ease-out;
 }
 
 .game-trade-recipient[aria-pressed="true"] > .game-dock-portrait {
-  outline: 3px solid var(--ui-selected-ring);
-  outline-offset: 1px;
+  outline: 2px solid var(--ui-selected-ring);
+  outline-offset: 2px;
 }
 
 .game-trade-recipient[aria-pressed="false"] > .game-dock-portrait {
@@ -1872,12 +2336,12 @@
 }
 
 .game-trade-recipient[aria-pressed="false"] .game-trade-recipient-name {
-  color: var(--muted-foreground);
+  color: var(--ui-text-muted);
 }
 
 .game-trade-recipient:focus-visible {
   border-radius: var(--ui-radius-small);
-  outline: 3px solid var(--ui-focus-ring);
+  outline: 2px solid var(--ui-focus-ring);
   outline-offset: 2px;
 }
 
@@ -1886,7 +2350,7 @@
   overflow: hidden;
   font-family: var(--font-sans);
   font-size: 0.75rem;
-  font-weight: 800;
+  font-weight: 700;
   line-height: 1.2;
   text-overflow: ellipsis;
   text-shadow: none;
@@ -1900,8 +2364,9 @@
   justify-content: center;
   gap: var(--ui-space-2);
   margin: 0;
+  color: var(--ui-text-soft);
   font-size: 0.9375rem;
-  font-weight: 700;
+  font-weight: 600;
   line-height: 1.3;
   text-align: center;
   text-wrap: balance;
@@ -1946,17 +2411,17 @@
   }
 }
 
-/* A gold arrow coin between the wells. */
+/* A royal arrow coin between the wells. */
 .game-trade-arrow {
   box-sizing: border-box;
   width: 2rem;
   height: 2rem;
   padding: 0.375rem;
-  border: 1.5px solid var(--game-outline);
-  border-radius: 9999px;
-  background: var(--ui-gold-top);
-  box-shadow: none;
-  color: var(--ui-ink-on-gold);
+  border: 0;
+  border-radius: 50%;
+  background: var(--ui-royal);
+  box-shadow: var(--ui-shadow-control);
+  color: var(--ui-ink-on-primary);
 }
 
 .game-trade-replies {
@@ -1969,8 +2434,8 @@
   list-style: none;
 }
 
-/* One recipient's answer: a well whose inner line and pill take the answer's color.
-   Every plaque is the same size whatever it says. */
+/* One recipient's answer: a well whose edge and pill take the answer's color. Every plaque is
+   the same size whatever it says. */
 .game-trade-reply {
   --reply-color: var(--ui-well-border);
 
@@ -1979,10 +2444,9 @@
   width: 6.25rem;
   gap: 0.3125rem;
   padding: 0.375rem;
-  border: var(--ui-line) solid var(--game-outline);
+  border: var(--ui-line) solid var(--reply-color);
   border-radius: var(--ui-radius-control);
   background: var(--ui-well);
-  box-shadow: inset 0 0 0 1.5px var(--reply-color);
 }
 
 .game-trade-reply[data-state="accepted"] {
@@ -1993,30 +2457,28 @@
   --reply-color: color-mix(in srgb, var(--ui-danger-top) 60%, transparent);
 }
 
-/* An accepted recipient the proposer can trade with: the whole plaque is the
-   button, with the kit's primary face and a gold "Trade" pill. */
+/* An accepted recipient the proposer can trade with: the whole plaque is the button, a royal face
+   with a gold "Trade" pill. */
 .game-trade-reply[data-state="partner"] {
-  --reply-color: var(--brand-gold-top);
+  --reply-color: color-mix(in srgb, var(--foreground) 16%, transparent);
 
-  background: linear-gradient(var(--ui-primary-top), var(--ui-primary-bottom));
-  box-shadow:
-    inset 0 1px 0 color-mix(in srgb, var(--foreground) 22%, transparent),
-    inset 0 -3px 0 var(--ui-primary-edge),
-    0 2px 4px color-mix(in srgb, var(--game-outline) 30%, transparent);
+  background: var(--ui-royal);
+  box-shadow: var(--ui-shadow-control);
   color: var(--ui-ink-on-primary);
   font: inherit;
   cursor: pointer;
   transition:
     translate 90ms ease-out,
-    box-shadow 90ms ease-out;
+    box-shadow 90ms ease-out,
+    border-color 90ms ease-out;
 }
 
 @media (hover: hover) {
   .game-trade-reply[data-state="partner"]:hover:not(:disabled) {
-    box-shadow:
-      inset 0 1px 0 color-mix(in srgb, var(--foreground) 22%, transparent),
-      inset 0 -3px 0 var(--ui-primary-edge),
-      var(--ui-shadow-hover);
+    --reply-color: color-mix(in srgb, var(--foreground) 34%, transparent);
+
+    background: var(--ui-royal-hover);
+    box-shadow: var(--ui-shadow-hover);
   }
 }
 
@@ -2025,13 +2487,15 @@
 }
 
 .game-trade-reply[data-state="partner"]:focus-visible {
-  outline: 3px solid var(--ui-focus-ring);
+  outline: 2px solid var(--ui-focus-ring);
   outline-offset: 2px;
 }
 
 .game-trade-reply[data-state="partner"]:disabled {
+  --reply-color: transparent;
+
   background: var(--ui-disabled-face);
-  box-shadow: inset 0 -3px 0 var(--ui-disabled-edge);
+  box-shadow: none;
   color: var(--ui-disabled-ink);
   cursor: not-allowed;
 }
@@ -2049,31 +2513,30 @@
   overflow: hidden;
   font-family: var(--font-sans);
   font-size: 0.75rem;
-  font-weight: 800;
+  font-weight: 700;
   line-height: 1.2;
   text-overflow: ellipsis;
   text-shadow: none;
   white-space: nowrap;
 }
 
-/* The answer as a pill: waiting and declined are neutral, accepted is green. */
+/* The answer as a pill: waiting and declined are quiet, accepted is green. */
 .game-trade-reply-state {
   display: flex;
   align-items: center;
   justify-content: center;
   width: 100%;
-  height: 1.625rem;
+  height: 1.5rem;
   gap: var(--ui-space-1);
   padding-inline: var(--ui-space-1);
   border: 0;
-  border-radius: 9999px;
-  background: var(--ui-panel-bottom);
+  border-radius: var(--ui-radius-pill);
+  background: var(--ui-tag-quiet);
   box-shadow: none;
   color: var(--foreground);
   font-family: var(--font-sans);
   font-size: 0.75rem;
-  font-weight: 800;
-  letter-spacing: 0.02em;
+  font-weight: 700;
   line-height: 1;
   text-shadow: none;
 }
@@ -2085,19 +2548,19 @@
 }
 
 .game-trade-reply[data-state="accepted"] .game-trade-reply-state {
-  background: var(--dock-accept-deep);
-  color: var(--ui-ink-on-primary);
+  background: var(--ui-ready);
+  color: var(--ui-ink-on-ready);
 }
 
 .game-trade-reply[data-state="declined"] .game-trade-reply-state {
-  color: var(--muted-foreground);
+  color: var(--ui-text-muted);
 }
 
 .game-trade-reply[data-state="partner"] .game-trade-reply-state {
-  background: var(--ui-gold-top);
-  box-shadow: 0 0 0 1.5px var(--game-outline);
+  background: linear-gradient(var(--ui-gold-top), var(--ui-gold-bottom));
   color: var(--ui-ink-on-gold);
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
+  font-weight: 800;
 }
 
 .game-trade-reply[data-state="partner"]:disabled .game-trade-reply-state {
@@ -2131,10 +2594,10 @@
   width: 1.25rem;
   height: 1.25rem;
   place-items: center;
-  border: 1.5px solid var(--game-outline);
-  border-radius: 9999px;
-  background: var(--ui-well);
-  box-shadow: none;
+  border: 0;
+  border-radius: 50%;
+  background: var(--ui-locked);
+  box-shadow: 0 0 0 1.5px var(--game-outline);
   color: var(--foreground);
 }
 
@@ -2144,8 +2607,8 @@
 }
 
 .game-trade-reply-chip[data-state="accepted"] .game-trade-reply-badge {
-  background: var(--dock-accept-deep);
-  color: var(--ui-ink-on-primary);
+  background: var(--ui-ready);
+  color: var(--ui-ink-on-ready);
 }
 
 .game-trade-reply-chip[data-state="declined"] .game-trade-reply-badge {
@@ -2176,19 +2639,18 @@
 
 .game-discard-meter {
   flex: 1;
-  height: 0.75rem;
+  height: 0.625rem;
   overflow: hidden;
-  border: 1.5px solid var(--ui-well-border);
-  border-radius: 9999px;
+  border: var(--ui-line) solid var(--ui-well-border);
+  border-radius: var(--ui-radius-pill);
   background: var(--ui-well);
-  box-shadow: var(--ui-shadow-inset);
 }
 
 .game-discard-meter-fill {
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: var(--ui-gold-top);
+  background: var(--ui-pick);
   transition: inline-size 200ms ease-out;
 }
 
@@ -2208,8 +2670,8 @@
   height: 1.625rem;
   padding-inline: var(--ui-space-2);
   border: 0;
-  border-radius: 9999px;
-  background: var(--ui-well);
+  border-radius: var(--ui-radius-pill);
+  background: var(--ui-tag-quiet);
   box-shadow: none;
   color: var(--foreground);
   font-family: var(--font-sans);
@@ -2244,7 +2706,7 @@
 .game-dev-card-art {
   width: 4.5rem;
   height: auto;
-  filter: drop-shadow(0 2px 4px color-mix(in srgb, var(--game-outline) 45%, transparent));
+  filter: drop-shadow(0 4px 8px color-mix(in srgb, var(--ui-shadow-ink) 35%, transparent));
 }
 
 .game-dev-card-footer {
@@ -2259,7 +2721,6 @@
     animation: none;
   }
 
-  .game-hand-card,
   .game-hand-card-face,
   .game-picker-card,
   .game-action-tile,
@@ -2272,9 +2733,13 @@
     transition: none;
   }
 
+  .game-action-tile[data-state="ready"]:active,
+  .game-steal-plaque:active:not(:disabled),
+  .game-trade-reply[data-state="partner"]:active:not(:disabled) {
+    translate: none;
+  }
+
   .game-hand-card[data-gained] .game-hand-card-face,
-  .game-phase-dice .die-face,
-  .game-dice-total,
   .game-turn-button[data-rolling] .die-face,
   .game-clock-ring[data-spinning] > svg:first-child,
   .game-turn-clock[data-state="urgent"] {

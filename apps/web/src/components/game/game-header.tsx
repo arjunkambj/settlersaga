@@ -26,8 +26,10 @@ import { GAME_HELP_DIALOG_ID } from "./game-help-dialog";
 export const GAME_SIDEBAR_ID = "game-table-drawer";
 
 /**
- * Brand on the left; the goal (turn and points to win) beside the table buttons on the right, so
- * the board's top edge stays clear. Phones fold pause, settings, help and leave into one menu.
+ * Brand on the left, and the goal (turn and points to win) beside the table buttons on the right.
+ * Nothing sits in the middle, so the board has the top center to itself; whose turn it is lives
+ * in the turn card by the Roll and End turn button (turn-card.tsx). Phones fold pause, settings,
+ * help and leave into one menu.
  */
 export function GameHeader({
   drawerOpen,
@@ -124,12 +126,11 @@ export function GameHeader({
             <Button
               aria-haspopup="dialog"
               aria-label="Leave game"
-              className="game-header-leave"
               onClick={onLeave}
               size="game-md"
-              variant="game-danger"
+              variant="game-icon-danger"
             >
-              <Icon aria-hidden="true" className="size-5" icon={logoutIcon} />
+              <Icon aria-hidden="true" icon={logoutIcon} />
             </Button>
           </Tooltip>
         </div>

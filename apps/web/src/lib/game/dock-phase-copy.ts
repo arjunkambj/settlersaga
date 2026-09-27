@@ -1,10 +1,12 @@
 import type { PlayerGameView } from "@settersaga/game";
 
+import { getShortPlayerName } from "./view";
+
 export interface PhaseCopy {
   detail: string;
   /**
-   * "Your turn", or another player's name and the rest ("’s turn"). On screen the name shortens
-   * before the rest does, so the title keeps to one line whatever the name.
+   * "Your turn", or another player's name and the rest ("’s turn"). A long name is given by its
+   * first word ("Bartholomew’s turn"), so the title keeps to one line and the name reads whole.
    */
   title: { name: string | null; rest: string };
 }
@@ -21,7 +23,7 @@ export function getPhaseCopy(game: PlayerGameView): PhaseCopy {
   const nameOf = (playerId: string | null) =>
     game.players.find((player) => player.id === playerId)?.displayName ?? "A player";
   const isViewerTurn = game.activePlayerId === game.viewerPlayerId;
-  const name = nameOf(game.activePlayerId);
+  const name = getShortPlayerName(nameOf(game.activePlayerId));
   const title = isViewerTurn ? { name: null, rest: "Your turn" } : { name, rest: "’s turn" };
   const phase = game.phase;
 
@@ -75,6 +77,9 @@ export function getPhaseCopy(game: PlayerGameView): PhaseCopy {
         title,
       };
     case "build_and_trade":
+      if (!isViewerTurn && game.legalActions.canRespondToTrade) {
+        return { detail: "Wants to trade with you", title };
+      }
       return {
         detail: isViewerTurn ? "Build, trade or end your turn" : "Building and trading…",
         title,
@@ -85,7 +90,7 @@ export function getPhaseCopy(game: PlayerGameView): PhaseCopy {
         : {
             detail: "Better luck next game",
             // A no-break space: a plain one would be trimmed from the start of the title's end.
-            title: { name: nameOf(game.winnerPlayerId), rest: "\u00a0wins!" },
+            title: { name: getShortPlayerName(nameOf(game.winnerPlayerId)), rest: "\u00a0wins!" },
           };
   }
 }

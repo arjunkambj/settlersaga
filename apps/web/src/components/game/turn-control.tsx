@@ -20,14 +20,22 @@ import {
   type CountdownStatus,
 } from "./use-action-countdown";
 
-/** Roll or End turn when those are the viewer's to press; otherwise what the table waits on. */
+/**
+ * Roll or End turn when those are the viewer's to press; otherwise what the table waits on. While
+ * the game is paused the button stays in place, quiet, and pressing it says the game is paused.
+ */
 export function TurnControl({
   game,
+  isPaused = false,
   onCommand,
+  onPausedAction,
   pending,
 }: {
   game: PlayerGameView;
+  isPaused?: boolean;
   onCommand(command: GameCommand, message: string): void;
+  /** Says the game is paused, when a press can't go through for that. */
+  onPausedAction?: () => void;
   pending: boolean;
 }) {
   // The press belongs to the action it was made in, so "Rolling…" never outlives that roll.
@@ -35,6 +43,10 @@ export function TurnControl({
   const busy = pending && pressedAt === game.actionNumber;
   const state = getTurnControlState(game);
   const press = (command: GameCommand, message: string) => {
+    if (isPaused) {
+      onPausedAction?.();
+      return;
+    }
     setPressedAt(game.actionNumber);
     onCommand(command, message);
   };
@@ -45,7 +57,9 @@ export function TurnControl({
         <section aria-label="Turn control" className="game-turn-control">
           <Button
             aria-busy={busy || undefined}
+            aria-disabled={isPaused || undefined}
             className="game-turn-button"
+            data-paused={isPaused || undefined}
             data-rolling={busy || undefined}
             disabled={pending}
             onClick={() => press({ kind: "roll" }, "Dice rolled.")}
@@ -67,11 +81,13 @@ export function TurnControl({
         <section aria-label="Turn control" className="game-turn-control">
           <Button
             aria-busy={busy || undefined}
+            aria-disabled={isPaused || undefined}
             className="game-turn-button"
+            data-paused={isPaused || undefined}
             disabled={pending || !game.legalActions.canEndTurn}
             onClick={() => press({ kind: "end_turn" }, "Turn ended.")}
             size="game-lg"
-            variant="game"
+            variant="game-gold"
           >
             <span className="game-turn-face">
               {busy ? (

@@ -7,6 +7,8 @@ import {
   type PrivatePlayerState,
 } from "@settersaga/game";
 
+import { nameFit } from "@/lib/app/name-fit";
+
 /** Parsed views are validated to hold exactly one viewer and a known active player. */
 export function getViewerAndActivePlayer(game: PlayerGameView): {
   activePlayer: PlayerViewState;
@@ -59,4 +61,15 @@ export function getPlayerHudOrder<T extends { id: string; isViewer: boolean }>(
   };
 
   return [...players].sort((left, right) => turnsAfterViewer(left) - turnsAfterViewer(right));
+}
+
+/**
+ * A player's name where the room is short (the turn card's title, a podium plate): short names
+ * whole, long ones by their first word, so it reads "Bartholomew" rather than "Bartholomew Lo…".
+ * The player rows and the standings carry the full name.
+ */
+export function getShortPlayerName(displayName: string): string {
+  return nameFit(displayName) === undefined
+    ? displayName
+    : (displayName.trim().split(/\s+/)[0] ?? displayName);
 }

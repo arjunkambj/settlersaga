@@ -1,35 +1,29 @@
 import type { PlayerGameView, PrivatePlayerState } from "@settersaga/game";
 import cupIcon from "@iconify-icons/solar/cup-star-bold";
 import { Icon } from "@iconify/react/offline";
-import type { Ref } from "react";
 
 import { Button } from "@/components/ui/button";
 import type { BoardBuildMode } from "@/lib/game/board-canvas-model";
 import type { SendCommand } from "@/lib/game/command-errors";
-import { nameFit } from "@/lib/app/name-fit";
 import { getActionDockLockReason } from "@/lib/game/dock-actions";
-import { phaseTitleText, type PhaseCopy } from "@/lib/game/dock-phase-copy";
-import { getPlayerColor } from "@/lib/game/view";
 
 import { BuildActions } from "./build-actions";
-import { DiceRoll } from "./die-face";
-import { DockPortrait } from "./dock-portrait";
 import { StealChooser } from "./steal-chooser";
 import { TurnClock, TurnControl } from "./turn-control";
 
 /**
- * The turn controls beside the hand: the turn plaque (whose turn it is and the one thing to do
- * now, with what just happened as a quiet last line), the clock, Build & Trade, and the Roll or
- * End turn button. Each part sits in a named grid area (styles/game-layout.css) so a missing
- * clock never shifts the others. Once the game is over only the plaque stays, with "Show
- * results" in the turn slot while the results are hidden.
+ * The dock's command half, beside the hand: Build & Trade (or the steal chooser while the viewer
+ * picks a victim), then the turn slot with the clock and the Roll or End turn button. Whose turn
+ * it is and what to do now are in the turn card just above the turn slot (turn-card.tsx). The
+ * parts are separate grid items of the footer (styles/game-layout.css): at xl the turn card and
+ * the turn slot are the foot of the rail, below xl they end the dock row. Once the game is over
+ * the turn slot holds "Show results" while the results are hidden.
  */
 export function CommandDock({
   botThinking,
   buildMode,
   game,
   isPaused,
-  latestMove = null,
   me,
   nextActionAt,
   onBuildMode,
@@ -38,15 +32,11 @@ export function CommandDock({
   onShowResults,
   pausedRemainingMs,
   pending,
-  phaseCopy,
-  phaseHeadingRef,
 }: {
   botThinking: boolean;
   buildMode: BoardBuildMode;
   game: PlayerGameView;
   isPaused: boolean;
-  /** What just happened, in a few words ("Peter Bot rolled 6"). */
-  latestMove?: string | null;
   me: PrivatePlayerState;
   nextActionAt?: number;
   onBuildMode(mode: BoardBuildMode): void;
@@ -55,103 +45,60 @@ export function CommandDock({
   onShowResults?: () => void;
   pausedRemainingMs?: number;
   pending: boolean;
-  phaseCopy: PhaseCopy;
-  phaseHeadingRef: Ref<HTMLHeadingElement>;
 }) {
   const legal = game.legalActions;
   const phase = game.phase;
-  const isFinished = phase.kind === "finished";
+
+  if (phase.kind === "finished") {
+    return onShowResults ? (
+      <div className="game-turn-slot" data-finished>
+        <Button autoFocus onClick={onShowResults} size="game-lg" variant="game-gold">
+          <Icon aria-hidden="true" icon={cupIcon} />
+          Show results
+        </Button>
+      </div>
+    ) : null;
+  }
+
   const choosingVictim =
     legal.isRequiredActor && legal.discardCount === null && phase.kind === "steal";
-  const spotlightPlayer =
-    game.players.find(
-      (player) => player.id === (isFinished ? game.winnerPlayerId : game.activePlayerId),
-    ) ?? me;
-  // The dice show once this turn's roll is in (a knight played before rolling keeps them hidden).
-  // A long name shrinks a step, then only the name shortens; "'s turn" stays whole
-  // (styles/game-dock.css).
-  const titleName = phaseCopy.title.name ?? null;
-  const rolledThisTurn =
-    phase.kind === "build_and_trade" ||
-    phase.kind === "discard" ||
-    ("resumePhase" in phase && phase.resumePhase === "build_and_trade");
+  const showsClock = legal.discardCount === null;
 
   return (
-    <div className="game-command-dock" data-finished={isFinished || undefined}>
-      <section
-        aria-labelledby="phase-title"
-        className={`game-phase-panel player-${getPlayerColor(spotlightPlayer)}`}
-      >
-        <DockPortrait player={spotlightPlayer} />
-        <h1
-          aria-label={phaseTitleText(phaseCopy.title)}
-          className="game-phase-title"
-          data-name-fit={titleName ? nameFit(titleName) : undefined}
-          id="phase-title"
-          ref={phaseHeadingRef}
-          tabIndex={-1}
-        >
-          {titleName ? <span className="game-phase-name">{titleName}</span> : null}
-          <span className="game-phase-rest">{phaseCopy.title.rest}</span>
-        </h1>
-        <p className="game-phase-detail">{phaseCopy.detail}</p>
-        {latestMove ? (
-          <p className="game-phase-last" title={latestMove}>
-            <span className="game-phase-last-label">Last move</span>
-            <span className="game-phase-last-text">{latestMove}</span>
-          </p>
-        ) : null}
-        {rolledThisTurn && game.lastDiceRoll ? (
-          <DiceRoll
-            className="game-phase-dice"
-            key={game.turnNumber}
-            roll={game.lastDiceRoll}
-            showTotal
+    <>
+      {choosingVictim ? (
+        <StealChooser game={game} onCommand={onCommand} pending={pending} />
+      ) : (
+        <BuildActions
+          buildMode={buildMode}
+          game={game}
+          isPaused={isPaused}
+          lockReason={getActionDockLockReason(game)}
+          me={me}
+          onBuildMode={onBuildMode}
+          onCommand={onCommand}
+          onPausedAction={onPausedAction}
+          pending={pending}
+        />
+      )}
+      <div className="game-turn-slot">
+        {showsClock ? (
+          <TurnClock
+            botThinking={botThinking}
+            durationMs={game.settings.turnTimerSeconds * 1_000}
+            isPaused={isPaused}
+            nextActionAt={nextActionAt}
+            pausedRemainingMs={pausedRemainingMs}
           />
         ) : null}
-      </section>
-      {isFinished ? (
-        onShowResults ? (
-          <Button
-            autoFocus
-            className="game-show-results"
-            onClick={onShowResults}
-            size="game-lg"
-            variant="game-gold"
-          >
-            <Icon aria-hidden="true" icon={cupIcon} />
-            Show results
-          </Button>
-        ) : null
-      ) : (
-        <>
-          {legal.discardCount === null ? (
-            <TurnClock
-              botThinking={botThinking}
-              durationMs={game.settings.turnTimerSeconds * 1_000}
-              isPaused={isPaused}
-              nextActionAt={nextActionAt}
-              pausedRemainingMs={pausedRemainingMs}
-            />
-          ) : null}
-          {choosingVictim ? (
-            <StealChooser game={game} onCommand={onCommand} pending={pending} />
-          ) : (
-            <BuildActions
-              buildMode={buildMode}
-              game={game}
-              isPaused={isPaused}
-              lockReason={getActionDockLockReason(game)}
-              me={me}
-              onBuildMode={onBuildMode}
-              onCommand={onCommand}
-              onPausedAction={onPausedAction}
-              pending={pending}
-            />
-          )}
-          <TurnControl game={game} onCommand={onCommand} pending={pending} />
-        </>
-      )}
-    </div>
+        <TurnControl
+          game={game}
+          isPaused={isPaused}
+          onCommand={onCommand}
+          onPausedAction={onPausedAction}
+          pending={pending}
+        />
+      </div>
+    </>
   );
 }

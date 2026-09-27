@@ -65,27 +65,22 @@ export function getTurnControlState(game: PlayerGameView): TurnControlState {
 }
 
 /**
- * Every panel-wide lock: the sentence for tooltips and callouts, and the few words a tile shows
- * beside its lock ("Roll first").
+ * Every panel-wide lock, as the sentence for tooltips and callouts. While one holds, the Build &
+ * Trade row only dims: the turn card says what to do.
  */
 const DOCK_LOCKS = {
-  discard: { note: "Discard first", reason: "Discard your cards first" },
-  otherTurn: { note: "Not your turn", reason: "It's not your turn yet" },
-  crewDiscarding: { note: "Wait a moment", reason: "Waiting for others to discard" },
-  roll: { note: "Roll first", reason: "Roll the dice first" },
-  robber: { note: "Move robber", reason: "Move the robber first" },
-  steal: { note: "Steal first", reason: "Pick someone to steal from first" },
-  freeRoads: { note: "Place roads", reason: "Place your free roads first" },
-  opening: { note: "Opening round", reason: "Place your starting pieces first" },
-} as const satisfies Record<string, { note: string; reason: string }>;
+  discard: { reason: "Discard your cards first" },
+  otherTurn: { reason: "It's not your turn yet" },
+  crewDiscarding: { reason: "Waiting for others to discard" },
+  roll: { reason: "Roll the dice first" },
+  robber: { reason: "Move the robber first" },
+  steal: { reason: "Pick someone to steal from first" },
+  freeRoads: { reason: "Place your free roads first" },
+  opening: { reason: "Place your starting pieces first" },
+} as const satisfies Record<string, { reason: string }>;
 
 /** The panel-wide lock before this turn's roll. */
 export const ROLL_FIRST_REASON = DOCK_LOCKS.roll.reason;
-
-/** The few words a locked tile shows for a lock sentence ("Roll first"). */
-export function getLockNote(reason: string): string {
-  return Object.values(DOCK_LOCKS).find((lock) => lock.reason === reason)?.note ?? "Not now";
-}
 
 /** Why every build and trade tile is locked right now, if they are. */
 export function getActionDockLockReason(game: PlayerGameView): string | undefined {
@@ -118,7 +113,7 @@ export function getActionDockLockReason(game: PlayerGameView): string | undefine
 
 export interface BuildPieceRule {
   label: string;
-  /** The few words a tile shows when the board has no place for the piece ("No open corner"). */
+  /** The tile's one short line when the board has no place for the piece ("No spot"). */
   noTargetNote: string;
   noTargetReason: string;
   outOfPiecesReason: string;
@@ -130,7 +125,7 @@ export interface BuildPieceRule {
 export const BUILD_PIECE_RULES: readonly BuildPieceRule[] = [
   {
     label: "Road",
-    noTargetNote: "No open path",
+    noTargetNote: "No spot",
     noTargetReason: "There's no open path for a road",
     outOfPiecesReason: "You've built all your roads",
     piece: "road",
@@ -139,7 +134,7 @@ export const BUILD_PIECE_RULES: readonly BuildPieceRule[] = [
   },
   {
     label: "Settlement",
-    noTargetNote: "No open corner",
+    noTargetNote: "No spot",
     noTargetReason: "There's no open corner for a settlement. Build a road out first",
     outOfPiecesReason: "You've built all your settlements",
     piece: "settlement",
@@ -148,7 +143,7 @@ export const BUILD_PIECE_RULES: readonly BuildPieceRule[] = [
   },
   {
     label: "City",
-    noTargetNote: "No settlement",
+    noTargetNote: "No spot",
     noTargetReason: "You need a settlement to upgrade",
     outOfPiecesReason: "You've built all your cities",
     piece: "city",
@@ -160,41 +155,25 @@ export const BUILD_PIECE_RULES: readonly BuildPieceRule[] = [
 /**
  * How a build or development card tile reads right now:
  * - ready: it can be used now;
- * - short: the player can't pay for it. `note` says what is missing in a few words ("Need 1
- *   Brick") and `reason` in full for the tooltip and callout;
- * - blocked: something other than the price stops it; `note` is a few words for the tile
- *   ("No open corner") and `reason` the full sentence. `by` says whether the supply ran out
- *   ("None left", which stands whatever the phase) or the board or the phase offers nothing right
- *   now ("No open corner", "Not now").
+ * - short: the player can't pay for it. `missing` is the cards still needed (the tile shows just
+ *   those), and `reason` says it in words for the tooltip and callout ("You need 1 Sheep and 1
+ *   Wheat");
+ * - blocked: something other than the price stops it; `note` is the tile's one short line
+ *   ("No spot") and `reason` the full sentence. `by` says whether the supply ran out ("None
+ *   left", which stands whatever the phase) or the board or the phase offers nothing right now
+ *   ("No spot", "Not now").
  */
 export type ActionTileStatus =
   | { by: "board" | "supply"; kind: "blocked"; note: string; reason: string }
   | { kind: "ready" }
-  | { kind: "short"; note: string; reason: string };
-
-/** More kinds of card than this and the "Need" line counts the cards instead of naming them. */
-const NEED_NOTE_KINDS = 2;
-
-/**
- * What a price still needs, short enough for one line of a tile: "Need 1 Brick", "Need 2 Stone,
- * 1 Wheat", or "Need 4 more cards" when three or more kinds are missing.
- */
-export function getNeedNote(missing: Readonly<ResourceInventory>): string {
-  const kinds = RESOURCE_ORDER.filter((resource) => missing[resource] > 0);
-  if (kinds.length > NEED_NOTE_KINDS) {
-    return `Need ${totalResources(missing)} more cards`;
-  }
-  return `Need ${kinds.map((resource) => `${missing[resource]} ${RESOURCE_LABELS[resource]}`).join(", ")}`;
-}
+  | { kind: "short"; missing: ResourceInventory; reason: string };
 
 function getPriceStatus(
   cost: Readonly<ResourceInventory>,
   resources: Readonly<ResourceInventory>,
 ): Extract<ActionTileStatus, { kind: "short" }> | null {
   const reason = getMissingResourcesReason(cost, resources);
-  return reason
-    ? { kind: "short", note: getNeedNote(getMissingInventory(cost, resources)), reason }
-    : null;
+  return reason ? { kind: "short", missing: getMissingInventory(cost, resources), reason } : null;
 }
 
 /**
@@ -238,21 +217,6 @@ export function getDevelopmentCardTileStatus(
   return game.legalActions.canBuyDevelopmentCard
     ? { kind: "ready" }
     : { by: "board", kind: "blocked", note: "Not now", reason: "You can't buy one right now" };
-}
-
-/** How many pieces are left to build before they run low; below this every tile says so. */
-const PIECES_LOW_AT = 2;
-
-/**
- * A quiet caption for a building tile: how many of the piece are left ("5 left", "Last one").
- * `low` is set once they run low; the wide rows (md up) show every count, and the phone tray only
- * the low ones.
- */
-export function getPiecesLeftCaption(left: number): { low: boolean; text: string } {
-  return {
-    low: left <= PIECES_LOW_AT,
-    text: left === 1 ? "Last one" : `${left} left`,
-  };
 }
 
 /** What a roll just paid the viewer, shown in the phase line until the next move. */

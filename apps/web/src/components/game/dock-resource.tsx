@@ -6,10 +6,18 @@ import { Icon } from "@iconify/react/offline";
 import Image from "next/image";
 
 import { Button } from "@/components/ui/button";
-import { RESOURCE_CARD_ASSET_PATHS } from "@/constants/game/card-assets";
+import { RESOURCE_CARD_ASSET_PATHS, RESOURCE_ICON_ASSET_PATHS } from "@/constants/game/card-assets";
 import { RESOURCE_LABELS } from "@/constants/game/labels";
 
-function ResourceArt({ className, resource }: { className: string; resource: ResourceType }) {
+function ResourceArt({
+  className,
+  resource,
+  sizes = "3.5rem",
+}: {
+  className: string;
+  resource: ResourceType;
+  sizes?: string;
+}) {
   return (
     <Image
       alt=""
@@ -17,7 +25,7 @@ function ResourceArt({ className, resource }: { className: string; resource: Res
       draggable={false}
       height={768}
       loading="eager"
-      sizes="3.5rem"
+      sizes={sizes}
       src={RESOURCE_CARD_ASSET_PATHS[resource]}
       width={512}
     />
@@ -25,23 +33,56 @@ function ResourceArt({ className, resource }: { className: string; resource: Res
 }
 
 /**
- * A price on one line: a coin per resource, in hand order, with "×n" beside the coin when more
- * than one card is needed. Every price is drawn the same way; what the player is missing is said
- * in words on the tile's status line, never marked on the coins.
+ * A price as one mini card per card it takes, in hand order (a city is two Wheat and three
+ * Stone). With `have`, the cards the player holds are in full color and the ones still missing
+ * are ghosted, so what is short reads without words; the tile's label and tooltip say it too.
  */
-export function CostPips({ cost }: { cost: Readonly<ResourceInventory> }) {
+export function CostCards({
+  cost,
+  have,
+}: {
+  cost: Readonly<ResourceInventory>;
+  have?: Readonly<ResourceInventory>;
+}) {
   return (
-    <span aria-hidden="true" className="game-cost-pips">
-      {RESOURCE_ORDER.filter((resource) => cost[resource] > 0).map((resource) => (
-        <span className="game-cost-item" key={resource}>
-          <span className="game-resource-coin">
-            <ResourceArt className="game-resource-coin-art" resource={resource} />
+    <span aria-hidden="true" className="game-cost-cards">
+      {RESOURCE_ORDER.flatMap((resource) =>
+        Array.from({ length: cost[resource] }, (_, index) => (
+          <span
+            className="game-cost-card"
+            data-missing={have && index >= have[resource] ? true : undefined}
+            key={`${resource}-${index}`}
+          >
+            <ResourceArt className="game-cost-card-art" resource={resource} sizes="1.25rem" />
           </span>
-          {cost[resource] > 1 ? (
-            <span className="game-cost-count">
-              <span className="game-cost-times">×</span>
-              {cost[resource]}
-            </span>
+        )),
+      )}
+    </span>
+  );
+}
+
+/**
+ * Cards as small resource icons in hand order, one icon per resource with its count after it when
+ * there is more than one ("×2"): a price (a city is Wheat ×2, Stone ×3) or the cards still
+ * missing. The words are in the surrounding label.
+ */
+export function ResourceIcons({ cards }: { cards: Readonly<ResourceInventory> }) {
+  return (
+    <span aria-hidden="true" className="game-resource-icons">
+      {RESOURCE_ORDER.filter((resource) => cards[resource] > 0).map((resource) => (
+        <span className="game-resource-icon" key={resource}>
+          <Image
+            alt=""
+            className="game-resource-icon-art"
+            draggable={false}
+            height={256}
+            loading="eager"
+            sizes="1.25rem"
+            src={RESOURCE_ICON_ASSET_PATHS[resource]}
+            width={256}
+          />
+          {cards[resource] > 1 ? (
+            <span className="game-resource-icon-count">×{cards[resource]}</span>
           ) : null}
         </span>
       ))}

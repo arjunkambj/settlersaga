@@ -20,7 +20,6 @@ import handshakeIcon from "@iconify-icons/solar/hand-shake-bold";
 import hourglassIcon from "@iconify-icons/solar/hourglass-bold";
 import storeIcon from "@iconify-icons/solar/shop-bold";
 import { Icon, type IconifyIcon } from "@iconify/react/offline";
-import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -31,7 +30,7 @@ import { isShownBesideControl, type SendCommand } from "@/lib/game/command-error
 import { formatInventory, getMissingInventory } from "@/lib/game/resources";
 import { getPlayerHudOrder } from "@/lib/game/view";
 
-import { ActionTile } from "./action-tile";
+import { ActionTile, TileArt } from "./action-tile";
 import { DockPortrait } from "./dock-portrait";
 import { ResourceCardRow, ResourcePicker } from "./dock-resource";
 import { DockSheet, DockStatus } from "./dock-sheet";
@@ -93,23 +92,13 @@ export function TradeCenter({
         ariaExpanded={isOpen || tradeOfferOpen}
         ariaLabel={
           tradeOfferOpen
-            ? "Go to the open trade offer"
-            : `${isOpen ? "Close trading" : "Trade with the bank or the crew"}${
-                lockReason ? `. ${lockReason}` : ""
-              }`
+            ? "Trade: go to the open trade offer"
+            : isOpen
+              ? "Trade: close trading"
+              : `Trade with the bank or the crew${lockReason ? `. ${lockReason}` : ""}`
         }
-        art={
-          <Image
-            alt=""
-            className="size-full object-contain"
-            draggable={false}
-            height={768}
-            loading="eager"
-            sizes="4.5rem"
-            src={ACTION_CARD_ASSET_PATHS.trade}
-            width={512}
-          />
-        }
+        art={<TileArt src={ACTION_CARD_ASSET_PATHS.trade} />}
+        caption="Bank or crew"
         kind="trade"
         lockReason={tradeOfferOpen ? null : lockReason}
         onClick={() => {
@@ -126,8 +115,9 @@ export function TradeCenter({
           }
         }}
         pressed={isOpen || tradeOfferOpen}
+        state={{ kind: lockReason || isPaused ? "quiet" : "ready" }}
         title="Trade"
-        tooltip="Trade with the bank or the crew"
+        tooltip={`Trade with the bank or the crew${lockReason ? `. ${lockReason}` : ""}`}
       />
       {isOpen ? (
         <TradeComposer

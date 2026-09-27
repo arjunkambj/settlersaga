@@ -53,7 +53,7 @@ export function EventLog({
     }
 
     const showLatest = () => {
-      list.scrollTop = list.scrollHeight;
+      list.scrollTop = getLatestScrollTop(list);
     };
     showLatest();
     // A hidden tab has no height to scroll; catch up on the moves it missed once it is shown.
@@ -68,11 +68,11 @@ export function EventLog({
         className="game-event-log-list game-scroll-fade"
         onScroll={(event) => {
           const list = event.currentTarget;
-          const atBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 40;
-          if (!atBottom && pinnedToLatest) {
+          const atLatest = list.scrollTop >= getLatestScrollTop(list) - 40;
+          if (!atLatest && pinnedToLatest) {
             setSeenEventId(lastEventId);
           }
-          setPinnedToLatest(atBottom);
+          setPinnedToLatest(atLatest);
         }}
         ref={listRef}
       >
@@ -94,6 +94,7 @@ export function EventLog({
 
             const actor = playersById.get(entry.actorPlayerId);
             const latest = entry.events.at(-1);
+            const isNewest = index === entries.length - 1;
             return (
               <li
                 className={cn(
@@ -101,7 +102,7 @@ export function EventLog({
                   actor && `player-${getPlayerColor(actor)}`,
                   isFresh && "motion-safe:animate-game-pop",
                 )}
-                data-latest={index === entries.length - 1 || undefined}
+                data-latest={isNewest || undefined}
                 key={entry.key}
               >
                 <PlayerAvatar
@@ -118,12 +119,12 @@ export function EventLog({
                 <div className="game-log-bubble">
                   <p className="game-log-head">
                     <strong className="game-log-name">{actor?.displayName ?? "Crew"}</strong>
-                    {/* One tag at most, so the name keeps its room: "You" on the viewer's
-                        bubbles, "Latest" on another player's newest one. */}
-                    {actor?.id === viewerPlayerId ? (
-                      <span className="game-you-tag">You</span>
-                    ) : index === entries.length - 1 ? (
+                    {/* One tag at most, so the name and the time keep one line: "Latest" on
+                        the newest bubble, whoever made it, and "You" on the viewer's others. */}
+                    {isNewest ? (
                       <span className="game-log-latest">Latest</span>
+                    ) : actor?.id === viewerPlayerId ? (
+                      <span className="game-you-tag">You</span>
                     ) : null}
                     {latest ? (
                       <time
@@ -173,4 +174,21 @@ export function EventLog({
       ) : null}
     </div>
   );
+}
+
+/**
+ * Where the list rests on its newest move: scrolled to the end, unless the newest bubble is
+ * taller than the list, in which case its name row stays in view at the top (just below the
+ * scroll fade) and its later lines run under the bottom edge.
+ */
+function getLatestScrollTop(list: HTMLElement): number {
+  const end = list.scrollHeight - list.clientHeight;
+  const newest = list.lastElementChild;
+  if (!(newest instanceof HTMLElement)) {
+    return end;
+  }
+  const fade = Number.parseFloat(getComputedStyle(list).getPropertyValue("--scroll-fade-size"));
+  // The list is the bubbles' offset parent (position: relative), so this ignores the scroll.
+  const newestTop = newest.offsetTop - (Number.isFinite(fade) ? fade : 0);
+  return Math.max(0, Math.min(end, newestTop));
 }

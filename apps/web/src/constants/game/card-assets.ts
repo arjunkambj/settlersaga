@@ -8,6 +8,15 @@ export const RESOURCE_CARD_ASSET_PATHS: Readonly<Record<ResourceType, string>> =
   wheat: "/game-assets/card-art/resources/wheat.png",
 };
 
+/** Each resource as a small icon (its terrain's own), for prices and what a player still needs. */
+export const RESOURCE_ICON_ASSET_PATHS: Readonly<Record<ResourceType, string>> = {
+  brick: "/game-assets/terrain/icons/hills.png",
+  sheep: "/game-assets/terrain/icons/pasture.png",
+  stone: "/game-assets/terrain/icons/mountains.png",
+  tree: "/game-assets/terrain/icons/forest.png",
+  wheat: "/game-assets/terrain/icons/fields.png",
+};
+
 export const DEVELOPMENT_CARD_BACK_ASSET_PATH = "/game-assets/card-art/development/card-back.png";
 
 export const UNKNOWN_RESOURCE_CARD_ASSET_PATH = "/game-assets/card-art/resources/unknown.png";

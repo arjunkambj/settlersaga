@@ -6,27 +6,29 @@
    styling source for the elements they name; markup adds Tailwind utilities
    only to children these classes do not cover.
 
-   The chrome stays quiet around the toon art: solid blue panels, one 2px navy
-   line, a 1px top highlight and a soft blurred shadow. HUD text is DM Sans;
-   Lilita One is kept for titles and button labels.
+   The chrome stays quiet around the toon art (E1 glass): frosted game-glass
+   panels, a 1px light hairline, a faint top highlight and one soft shadow.
+   All text is Plus Jakarta Sans; numbers are bold and tabular.
    ========================================================================= */
 
 /* --------------------------------------------------------------------------
    Shared surfaces
    ----------------------------------------------------------------------- */
 
-/* A HUD panel: one navy line, a 1px top highlight and a soft shadow. */
+/* A HUD panel: game glass, a 1px light hairline, a faint top highlight and one soft shadow. */
 .game-panel {
-  border: var(--ui-line) solid var(--game-outline);
+  border: var(--ui-line) solid var(--ui-hairline-game);
   border-radius: var(--ui-radius-hud);
-  background: linear-gradient(var(--ui-panel-top), var(--ui-panel-bottom));
+  background: var(--ui-glass-game);
   box-shadow:
     inset 0 1px 0 var(--ui-panel-highlight),
-    var(--ui-shadow-float);
+    var(--ui-shadow-panel);
   color: var(--foreground);
+  -webkit-backdrop-filter: var(--ui-glass-blur-game);
+  backdrop-filter: var(--ui-glass-blur-game);
 }
 
-/* The small uppercase label over a panel's content. */
+/* A panel's title ("Bank"): 16px heavy, sentence case. */
 .game-panel-heading {
   display: flex;
   align-items: center;
@@ -34,30 +36,30 @@
   gap: var(--ui-space-2);
   margin: 0;
   padding: 0 var(--ui-space-1) var(--ui-space-2);
-  color: var(--muted-foreground);
+  color: var(--foreground);
   font-family: var(--font-sans);
-  font-size: 0.75rem;
+  font-size: 1rem;
   font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
   line-height: 1.2;
   text-shadow: none;
-  text-transform: uppercase;
+  text-transform: none;
 }
 
-/* The gold "You" pill. */
+/* The "You" tag: a white pill with navy text. */
 .game-you-tag {
   display: inline-flex;
   flex: none;
   align-items: center;
   justify-content: center;
-  height: 1.125rem;
-  padding: 0 0.375rem;
-  border-radius: 9999px;
-  background: var(--ui-gold-top);
-  color: var(--ui-ink-on-gold);
+  height: 1.25rem;
+  padding: 0 0.4375rem;
+  border-radius: var(--ui-radius-pill);
+  background: var(--ui-tag-you);
+  color: var(--ui-ink-on-tag-you);
   font-family: var(--font-sans);
   font-size: 0.75rem;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0;
   line-height: 1;
   white-space: nowrap;
@@ -70,16 +72,24 @@
   flex: none;
   place-items: center;
   overflow: hidden;
-  border: 2px solid var(--player-color, var(--game-panel-edge));
-  border-radius: 9999px;
+  border: 2px solid var(--player-color, var(--ui-hairline-game));
+  border-radius: 50%;
   background: radial-gradient(
     circle at 50% 35%,
-    color-mix(in srgb, var(--player-color, var(--ui-panel-top)) 55%, var(--ui-panel-top)),
-    color-mix(in srgb, var(--player-color, var(--ui-panel-top)) 25%, var(--ui-panel-bottom))
+    color-mix(
+      in srgb,
+      var(--player-color, var(--ui-glass-game-top-solid)) 55%,
+      var(--ui-glass-game-top-solid)
+    ),
+    color-mix(
+      in srgb,
+      var(--player-color, var(--ui-glass-game-top-solid)) 25%,
+      var(--ui-glass-game-bottom-solid)
+    )
   );
-  box-shadow: 0 0 0 1.5px var(--game-outline);
   color: var(--foreground);
-  font-family: var(--font-display);
+  font-family: var(--font-sans);
+  font-weight: 800;
 }
 
 /* A one-off brightening when a turn passes to this player. Nothing moves or grows. */
@@ -104,36 +114,40 @@
 .game-brand,
 .game-brand-mark {
   height: auto;
-  filter: drop-shadow(0 2px 4px color-mix(in srgb, var(--game-outline) 45%, transparent));
+  filter: drop-shadow(0 2px 6px color-mix(in srgb, var(--ui-shadow-ink) 35%, transparent));
 }
 
-/* The goal, beside the table buttons: as tall as they are, so the row reads as one bar. */
+/* The goal, beside the table buttons: a glass capsule as tall as they are, so the row reads as
+   one bar. */
 .game-goal-chip {
   display: flex;
   align-items: center;
   gap: var(--ui-space-2);
   height: 2.5rem;
   margin: 0;
-  padding-inline: 0.625rem 0.875rem;
-  border: var(--ui-line) solid var(--game-outline);
-  border-radius: 9999px;
-  background: linear-gradient(var(--ui-panel-top), var(--ui-panel-bottom));
+  padding-inline: 0.75rem 0.875rem;
+  border: var(--ui-line) solid var(--ui-hairline-game);
+  border-radius: var(--ui-radius-pill);
+  background: var(--ui-glass-game);
   box-shadow:
     inset 0 1px 0 var(--ui-panel-highlight),
-    var(--ui-shadow-float);
+    var(--ui-shadow-control);
   color: var(--ui-text-soft);
   font-family: var(--font-sans);
   font-size: 0.875rem;
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
   line-height: 1;
   white-space: nowrap;
+  -webkit-backdrop-filter: var(--ui-glass-blur-game);
+  backdrop-filter: var(--ui-glass-blur-game);
 }
 
 .game-goal-icon {
   flex: none;
   width: 1.25rem;
   height: 1.25rem;
-  color: var(--brand-gold-top);
+  color: var(--ui-text-soft);
 }
 
 .game-goal-turn {
@@ -146,16 +160,6 @@
   font-weight: 800;
 }
 
-/* The same round 40px button with the same 2px edge as its icon-button neighbours; only the
-   face is red. */
-.game-header .game-header-leave {
-  --btn-edge-size: 2px;
-  width: 2.5rem;
-  height: 2.5rem;
-  padding: 0;
-  border-radius: 9999px;
-}
-
 .game-drawer-toggle {
   position: relative;
 }
@@ -164,9 +168,11 @@
   position: absolute;
   top: -0.375rem;
   right: -0.375rem;
+  box-shadow: 0 0 0 1.5px var(--game-outline);
 }
 
-/* A red count pill for unread chat. */
+/* A red count pill for unread chat; on the drawer button it overlaps the edge, so it gets a thin
+   navy ring there. */
 .game-unread-badge {
   display: inline-grid;
   flex: none;
@@ -175,9 +181,9 @@
   place-items: center;
   padding-inline: 0.3125rem;
   border: 0;
-  border-radius: 9999px;
+  border-radius: var(--ui-radius-pill);
   background: var(--ui-danger-bottom);
-  box-shadow: 0 0 0 1.5px var(--game-outline);
+  box-shadow: none;
   color: var(--ui-ink-on-primary);
   font-family: var(--font-sans);
   font-size: 0.75rem;
@@ -189,38 +195,8 @@
 }
 
 /* --------------------------------------------------------------------------
-   Board notices: the placement pill and toasts over the board
+   Board notices: toasts over the board
    ----------------------------------------------------------------------- */
-
-.game-placement-row {
-  display: flex;
-  align-items: center;
-  gap: var(--ui-space-2);
-  max-width: 100%;
-}
-
-/* The piece the player picked to place, in the board area's top band (2.75rem). */
-.game-placement-pill {
-  display: inline-flex;
-  align-items: center;
-  min-width: 0;
-  height: 2.25rem;
-  padding: 0 1rem;
-  overflow: hidden;
-  border: var(--ui-line) solid var(--game-outline);
-  border-radius: 9999px;
-  background: linear-gradient(var(--ui-panel-top), var(--ui-panel-bottom));
-  box-shadow:
-    inset 0 1px 0 var(--ui-panel-highlight),
-    var(--ui-shadow-float);
-  color: var(--brand-gold-top);
-  font-family: var(--font-display);
-  font-size: 1rem;
-  letter-spacing: 0.02em;
-  line-height: 1;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
 
 .game-toast {
   display: flex;
@@ -229,20 +205,23 @@
   max-width: 32rem;
   margin: 0;
   padding: var(--ui-space-2) var(--ui-space-3);
-  border: var(--ui-line) solid var(--game-outline);
-  border-radius: 1rem;
-  background: linear-gradient(var(--ui-panel-top), var(--ui-panel-bottom));
+  border: var(--ui-line) solid var(--ui-hairline-game);
+  border-radius: var(--ui-radius-control);
+  background: var(--ui-glass-game);
   box-shadow:
     inset 0 1px 0 var(--ui-panel-highlight),
-    var(--ui-shadow-float);
+    var(--ui-shadow-panel);
   color: var(--foreground);
   font-size: 0.875rem;
-  font-weight: 700;
+  font-weight: 600;
   text-shadow: none;
+  -webkit-backdrop-filter: var(--ui-glass-blur-game);
+  backdrop-filter: var(--ui-glass-blur-game);
 }
 
 .game-toast--error {
-  background: var(--ui-danger-bottom);
+  border-color: transparent;
+  background: var(--ui-danger-top);
   color: var(--ui-ink-on-primary);
 }
 
@@ -256,13 +235,9 @@
   list-style: none;
 }
 
-/* A calm pill in a faint seat tint: portrait, name and points. The seat color lives in the
-   portrait ring; only the player on turn gets a stronger tint and a gold line. Nothing hangs over
-   the portrait. */
+/* A neutral glass pill: portrait, name and points. The seat color lives in the portrait ring;
+   the player on turn gets a 2px sky rim. Nothing hangs over the portrait. */
 .game-strip-player {
-  --seat-tint-top: 10%;
-  --seat-tint-bottom: 6%;
-
   position: relative;
   display: flex;
   align-items: center;
@@ -271,31 +246,27 @@
   height: 3rem;
   gap: var(--ui-space-2);
   padding: 0 var(--ui-space-1);
-  border: var(--ui-line) solid var(--game-outline);
-  border-radius: 9999px;
-  background: linear-gradient(
-    color-mix(in srgb, var(--player-color) var(--seat-tint-top), var(--ui-panel-top)),
-    color-mix(in srgb, var(--player-color) var(--seat-tint-bottom), var(--ui-panel-bottom))
-  );
-  box-shadow: var(--ui-shadow-raise);
+  border: var(--ui-line) solid var(--ui-hairline-game);
+  border-radius: var(--ui-radius-pill);
+  background: var(--ui-glass-game);
+  box-shadow:
+    inset 0 1px 0 var(--ui-panel-highlight),
+    var(--ui-shadow-control);
   container-type: inline-size;
+  -webkit-backdrop-filter: var(--ui-glass-blur-game);
+  backdrop-filter: var(--ui-glass-blur-game);
   transition:
     border-color 150ms,
     box-shadow 150ms;
 }
 
-/* On turn: a stronger seat tint and one gold line (the pill's own border). The gold keeps a blue
-   seat readable on the blue HUD. No second rim, no glow. */
+/* On turn: a 2px sky rim (the border and one inner line). No glow. */
 .game-strip-player[aria-current="true"] {
-  --seat-tint-top: var(--ui-seat-tint-top);
-  --seat-tint-bottom: var(--ui-seat-tint-bottom);
-
-  border-color: var(--brand-gold-top);
+  border-color: var(--ui-active-rim);
+  box-shadow:
+    inset 0 0 0 1px var(--ui-active-rim),
+    var(--ui-shadow-control);
   animation: game-hud-turn 600ms ease-out;
-}
-
-.game-strip-player[data-away]:not([aria-current="true"]) {
-  background: color-mix(in srgb, var(--player-color) 6%, var(--ui-panel-bottom));
 }
 
 .game-strip-player[data-away] .game-strip-avatar {
@@ -337,7 +308,7 @@
   color: var(--foreground);
   font-family: var(--font-sans);
   font-size: 0.875rem;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0;
   line-height: 1.2;
   text-overflow: ellipsis;
@@ -363,19 +334,19 @@
   white-space: normal;
 }
 
-/* "Away": a quiet outlined pill after the name, as on the rail's rows. */
+/* "Away": a quiet pill after the name, as on the rail's rows. */
 .game-strip-away {
   display: inline-flex;
   flex: none;
   align-items: center;
-  height: 1.125rem;
-  padding: 0 0.375rem;
-  border-radius: 9999px;
-  box-shadow: inset 0 0 0 1px var(--muted-foreground);
-  color: var(--muted-foreground);
+  height: 1.25rem;
+  padding: 0 0.4375rem;
+  border-radius: var(--ui-radius-pill);
+  background: var(--ui-tag-quiet);
+  color: var(--foreground);
   font-family: var(--font-sans);
   font-size: 0.75rem;
-  font-weight: 800;
+  font-weight: 700;
   line-height: 1;
   white-space: nowrap;
 }
@@ -401,15 +372,15 @@
 }
 
 /* A held Longest Road or Largest Army: the award's art in a small gold-lined chip, as on the
-   rail's rows. */
+   rail's rows (held awards are one of the few things drawn in gold). */
 .game-strip-award {
   display: grid;
   width: 1.5rem;
   height: 1.5rem;
   place-items: center;
-  border-radius: 9999px;
-  background: color-mix(in srgb, var(--brand-gold-bottom) 22%, var(--ui-well));
-  box-shadow: inset 0 0 0 1.5px var(--brand-gold-top);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--ui-gold-bottom) 22%, var(--ui-well));
+  box-shadow: inset 0 0 0 1px var(--ui-gold-top);
   cursor: default;
 }
 
@@ -422,7 +393,7 @@
 /* "You" under the viewer's points, only where the pill is too narrow for names. */
 .game-strip-you {
   display: none;
-  color: var(--brand-gold-top);
+  color: var(--foreground);
   font-family: var(--font-sans);
   font-size: 0.75rem;
   font-weight: 800;
@@ -430,8 +401,8 @@
   white-space: nowrap;
 }
 
-/* Victory points as a small gold chip, as on the rows: solid gold for the leader (or leaders),
-   a quiet gold-lined chip for everyone else. The target lives in the header. */
+/* Victory points as a small chip, as on the rows: solid gold for the leader (or leaders), quiet
+   white for everyone else. The target lives in the header. */
 .game-strip-points {
   display: inline-flex;
   flex: none;
@@ -440,12 +411,11 @@
   gap: 0.125rem;
   min-width: 1.75rem;
   height: 1.625rem;
-  padding-inline: 0.375rem;
+  padding-inline: 0.4375rem;
   border: 0;
-  border-radius: 9999px;
-  background: color-mix(in srgb, var(--brand-gold-bottom) 14%, var(--ui-well));
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--brand-gold-top) 45%, transparent);
-  color: var(--brand-gold-top);
+  border-radius: var(--ui-radius-pill);
+  background: var(--ui-tag-quiet);
+  color: var(--foreground);
   font-family: var(--font-sans);
   font-size: 0.9375rem;
   font-weight: 800;
@@ -455,14 +425,12 @@
 }
 
 .game-strip-player[data-leader] .game-strip-points {
-  background: var(--ui-gold-top);
-  box-shadow: 0 0 0 1.5px var(--game-outline);
-  color: var(--ui-ink-on-gold);
+  background: var(--ui-leader);
+  color: var(--ui-ink-on-leader);
 }
 
 .game-strip-vp {
   font-size: 0.75rem;
-  letter-spacing: 0.02em;
 }
 
 /* Resource and development card counts; only the crew column beside the board
@@ -546,8 +514,10 @@
 /* Very narrow pills (a full table on a phone) hang the points on the portrait, and "You" and the
    awards wait in the drawer. */
 @container (width < 4.25rem) {
+  /* On the portrait's corner the points get a thin navy ring. */
   .game-strip-points {
     position: absolute;
+    box-shadow: 0 0 0 1.5px var(--game-outline);
     right: -0.25rem;
     bottom: -0.25rem;
     min-width: 1.375rem;
@@ -582,17 +552,17 @@
   padding: var(--ui-space-3);
 }
 
-/* Log | Chat: a compact segmented control in a sunken track (36px tall). */
+/* Log | Chat: a compact segmented control (34px): a well-colored track, the chosen tab a royal
+   pill, the other white at 80%. The same look as the kit's .game-segmented. */
 .game-feed-tabs {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   flex: none;
-  gap: 0.125rem;
-  padding: 0.125rem;
+  gap: 2px;
+  padding: 2px;
   border: var(--ui-line) solid var(--ui-well-border);
-  border-radius: 9999px;
+  border-radius: var(--ui-radius-pill);
   background: var(--ui-well);
-  box-shadow: var(--ui-shadow-inset);
 }
 
 .game-feed-tab {
@@ -603,13 +573,13 @@
   gap: 0.375rem;
   padding: 0 var(--ui-space-3);
   border: 0;
-  border-radius: 9999px;
+  border-radius: var(--ui-radius-pill);
   background: transparent;
-  color: var(--muted-foreground);
+  color: color-mix(in srgb, var(--foreground) 80%, transparent);
   font-family: var(--font-sans);
   font-size: 0.875rem;
-  font-weight: 800;
-  letter-spacing: 0.01em;
+  font-weight: 700;
+  letter-spacing: 0;
   line-height: 1;
   text-shadow: none;
   cursor: pointer;
@@ -619,15 +589,13 @@
 }
 
 .game-feed-tab:hover:not([aria-selected="true"]) {
-  background: color-mix(in srgb, var(--foreground) 7%, transparent);
+  background: var(--ui-glass-hover);
   color: var(--foreground);
 }
 
 .game-feed-tab[aria-selected="true"] {
-  background: linear-gradient(var(--ui-primary-top), var(--ui-primary-bottom));
-  box-shadow:
-    inset 0 1px 0 color-mix(in srgb, var(--foreground) 22%, transparent),
-    inset 0 -2px 0 var(--ui-primary-edge);
+  background: var(--ui-royal);
+  box-shadow: var(--ui-shadow-control);
   color: var(--ui-ink-on-primary);
 }
 
@@ -635,13 +603,12 @@
 .game-feed-tab .game-unread-badge {
   min-width: 1.125rem;
   height: 1.125rem;
-  box-shadow: none;
 }
 
 /* Inside the track, so the track never clips it. */
 .game-feed-tab:focus-visible {
-  outline: 3px solid var(--ui-focus-ring);
-  outline-offset: -3px;
+  outline: 2px solid var(--ui-focus-ring);
+  outline-offset: -2px;
 }
 
 .game-feed-panel {
@@ -671,11 +638,9 @@
 }
 
 /* Portrait | name and tags over a quiet stat line | points over the "Playing" pill. Every row
-   has this structure and this height, whatever it shows; nothing hangs over an edge. */
+   has this structure and this height (76px, 48px portrait, 16px name), whatever it shows;
+   nothing hangs over an edge. A neutral glass card; the seat color lives in the portrait ring. */
 .game-player {
-  --seat-tint-top: 10%;
-  --seat-tint-bottom: 6%;
-
   position: relative;
   display: grid;
   flex: none;
@@ -688,39 +653,32 @@
   align-items: center;
   height: 4.75rem;
   gap: var(--ui-space-1) var(--ui-space-2);
-  padding: 0 0.625rem;
+  padding: 0 0.625rem 0 0.75rem;
   container-type: inline-size;
-  border: var(--ui-line) solid var(--game-outline);
-  border-radius: var(--ui-radius-hud);
-  background: linear-gradient(
-    color-mix(in srgb, var(--player-color) var(--seat-tint-top), var(--ui-panel-top)),
-    color-mix(in srgb, var(--player-color) var(--seat-tint-bottom), var(--ui-panel-bottom))
-  );
+  border: var(--ui-line) solid var(--ui-hairline-game);
+  border-radius: var(--ui-radius-control);
+  background: var(--ui-glass-game);
   box-shadow:
     inset 0 1px 0 var(--ui-panel-highlight),
-    var(--ui-shadow-raise);
+    var(--ui-shadow-control);
+  -webkit-backdrop-filter: var(--ui-glass-blur-game);
+  backdrop-filter: var(--ui-glass-blur-game);
   transition:
-    background-color 150ms,
+    border-color 150ms,
     box-shadow 150ms;
 }
 
-/* The turn (or the win): a stronger seat tint and a 2px seat-color rim. No halo, no extra pill;
-   the turn card in the dock names whose turn it is. */
+/* The turn (or the win): a 2px sky rim (the border and one inner line) and the "Playing" (or
+   "Winner") pill under the points. No halo. */
 .game-player:is([aria-current="true"], [data-winner]) {
-  --seat-tint-top: var(--ui-seat-tint-top);
-  --seat-tint-bottom: var(--ui-seat-tint-bottom);
-
+  border-color: var(--ui-active-rim);
   box-shadow:
-    inset 0 0 0 2px var(--player-color),
-    var(--ui-shadow-raise);
+    inset 0 0 0 1px var(--ui-active-rim),
+    var(--ui-shadow-control);
 }
 
 .game-player[aria-current="true"] {
   animation: game-hud-turn 600ms ease-out;
-}
-
-.game-player[data-away]:not([aria-current="true"], [data-winner]) {
-  background: color-mix(in srgb, var(--player-color) 6%, var(--ui-panel-bottom));
 }
 
 .game-player[data-away] .game-player-avatar {
@@ -757,7 +715,7 @@
   color: var(--foreground);
   font-family: var(--font-sans);
   font-size: 1rem;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0;
   line-height: 1.2;
   text-overflow: ellipsis;
@@ -769,19 +727,20 @@
   font-size: 0.9375rem;
 }
 
-/* "You", "Bot" and "Away": small pills beside the name. "You" is gold (.game-you-tag). */
+/* "You", "Bot" and "Away": small pills beside the name. "You" is white with navy text
+   (.game-you-tag); "Bot" and "Away" are quiet. */
 .game-player-flag {
   display: inline-flex;
   flex: none;
   align-items: center;
   height: 1.25rem;
   padding: 0 0.4375rem;
-  border-radius: 9999px;
-  background: var(--ui-well);
+  border-radius: var(--ui-radius-pill);
+  background: var(--ui-tag-quiet);
   color: var(--foreground);
   font-family: var(--font-sans);
-  font-size: 0.8125rem;
-  font-weight: 800;
+  font-size: 0.75rem;
+  font-weight: 700;
   letter-spacing: 0;
   line-height: 1;
   text-transform: none;
@@ -789,26 +748,20 @@
 }
 
 .game-player-flag.game-you-tag {
-  background: var(--ui-gold-top);
-  color: var(--ui-ink-on-gold);
+  background: var(--ui-tag-you);
+  color: var(--ui-ink-on-tag-you);
 }
 
-.game-player-flag[data-tone="away"] {
-  background: transparent;
-  box-shadow: inset 0 0 0 1px var(--muted-foreground);
-  color: var(--muted-foreground);
-}
-
-/* The room's host: a small gold crown beside the name. */
+/* The room's host: a small crown beside the name, on a quiet chip. */
 .game-host-crown {
   display: inline-grid;
   flex: none;
   width: 1.25rem;
   height: 1.25rem;
   place-items: center;
-  border-radius: 9999px;
-  background: var(--ui-gold-top);
-  color: var(--ui-ink-on-gold);
+  border-radius: 50%;
+  background: var(--ui-tag-quiet);
+  color: var(--foreground);
   cursor: default;
 }
 
@@ -878,7 +831,7 @@
 }
 
 /* One quiet line of counts: cards in hand and development cards by their card backs, then
-   "Road 5" and "Army 2" in words, in the muted color. */
+   "Road 5" and "Army 2", the words in the muted color. */
 .game-player-stats {
   display: flex;
   grid-area: stats;
@@ -892,8 +845,9 @@
   list-style: none;
 }
 
-/* With no "Winner" pill in the row, the counts take the whole line under the name. */
-.game-player:not([data-winner]) .game-player-stats {
+/* With no "Playing" or "Winner" pill in the row, the counts take the whole line under the
+   name. */
+.game-player:not([data-winner], [aria-current="true"]) .game-player-stats {
   grid-column: 2 / -1;
 }
 
@@ -921,32 +875,51 @@
 }
 
 .game-stat-word {
+  color: var(--ui-text-muted);
   font-size: 0.8125rem;
   font-weight: 700;
-  letter-spacing: 0.01em;
 }
 
 .game-stat[data-shape="award"]:not([data-held]) {
-  color: var(--muted-foreground);
+  color: var(--ui-text-soft);
 }
 
-/* An award this player holds: a gold chip with the points it is worth. */
+/* An award this player holds: a gold-lined chip with the points it is worth. */
 .game-stat[data-held] {
-  padding: 0 0.375rem;
-  border-radius: 9999px;
-  background: color-mix(in srgb, var(--brand-gold-bottom) 22%, var(--ui-well));
-  box-shadow: inset 0 0 0 1.5px var(--brand-gold-top);
-  color: var(--brand-gold-top);
+  padding: 0 0.4375rem;
+  border-radius: var(--ui-radius-pill);
+  background: color-mix(in srgb, var(--ui-gold-bottom) 22%, var(--ui-well));
+  box-shadow: inset 0 0 0 1px var(--ui-gold-top);
+  color: var(--ui-gold-top);
+}
+
+.game-stat[data-held] .game-stat-word {
+  color: inherit;
 }
 
 .game-stat-bonus {
   font-size: 0.75rem;
-  letter-spacing: 0.02em;
 }
 
-/* Victory points as a small gold chip that reads "3 VP": solid gold for the leader (or leaders),
-   a quiet gold-lined chip for everyone else, so who is winning reads without comparing numbers.
-   The target lives in the header. */
+/* A narrow row (the rail at 1280) keeps every count on the line: tighter gaps, smaller card
+   icons. */
+@container (width < 22rem) {
+  .game-player-stats {
+    gap: 0.4375rem;
+  }
+
+  .game-stat {
+    gap: 0.25rem;
+  }
+
+  .game-stat img {
+    height: 1.25rem;
+  }
+}
+
+/* Victory points as a chip that reads "3 VP": solid gold for the leader (or leaders), quiet
+   white for everyone else, so who is winning reads without comparing numbers. The target lives
+   in the header. */
 .game-player-score {
   display: inline-flex;
   grid-area: score;
@@ -958,10 +931,9 @@
   height: 1.625rem;
   margin: 0;
   padding: 0 0.625rem;
-  border-radius: 9999px;
-  background: color-mix(in srgb, var(--brand-gold-bottom) 14%, var(--ui-well));
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--brand-gold-top) 45%, transparent);
-  color: var(--brand-gold-top);
+  border-radius: var(--ui-radius-pill);
+  background: var(--ui-tag-quiet);
+  color: var(--foreground);
   font-family: var(--font-sans);
   font-variant-numeric: tabular-nums;
   line-height: 1.625rem;
@@ -970,23 +942,21 @@
 }
 
 .game-player[data-leader] .game-player-score {
-  background: var(--ui-gold-top);
-  box-shadow: 0 0 0 1.5px var(--game-outline);
-  color: var(--ui-ink-on-gold);
+  background: var(--ui-leader);
+  color: var(--ui-ink-on-leader);
 }
 
 .game-vp-number {
-  font-size: 1.125rem;
+  font-size: 1.0625rem;
   font-weight: 800;
 }
 
 .game-vp-label {
   font-size: 0.8125rem;
   font-weight: 800;
-  letter-spacing: 0.04em;
 }
 
-/* "Playing" or "Winner": a small pill inside the row, under the points. */
+/* "Playing" (royal) or "Winner" (gold): a small pill inside the row, under the points. */
 .game-player-status {
   display: inline-flex;
   grid-area: status;
@@ -994,46 +964,42 @@
   justify-self: end;
   height: 1.25rem;
   padding: 0 0.5rem;
-  border-radius: 9999px;
-  background: var(--foreground);
-  color: var(--game-outline);
+  border-radius: var(--ui-radius-pill);
+  background: var(--ui-royal);
+  color: var(--ui-ink-on-primary);
   font-family: var(--font-sans);
-  font-size: 0.8125rem;
-  font-weight: 800;
+  font-size: 0.75rem;
+  font-weight: 700;
   letter-spacing: 0;
   line-height: 1;
   white-space: nowrap;
 }
 
-.game-player[data-winner] .game-player-status {
-  background: var(--ui-gold-top);
-  color: var(--ui-ink-on-gold);
+.game-player-status[data-tone="winner"] {
+  background: var(--ui-leader);
+  color: var(--ui-ink-on-leader);
 }
 
 /* --------------------------------------------------------------------------
    Resource bank
    ----------------------------------------------------------------------- */
 
-/* The label sits in the flow at the top. The cards sit as far inside the
-   bottom rim as the count pills hang below them. */
+/* One row: the title, then the six cards (five resources and the development deck), each with
+   its count hanging off its bottom edge. The row stays short so the log below it keeps the
+   height. */
 .game-bank {
   position: relative;
+  display: grid;
   flex-shrink: 0;
-  padding: var(--ui-space-3) var(--ui-space-3) var(--ui-space-4);
-}
-
-/* On the rail the bank is a compact row, so the log below it gets the height. */
-@media (width >= 80rem) {
-  .game-bank {
-    --bank-card-width: 2.25rem;
-
-    padding-top: var(--ui-space-2);
-  }
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--ui-space-3);
+  padding: var(--ui-space-2) var(--ui-space-3) 0.875rem;
 }
 
 .game-bank-title {
   position: static;
-  margin: 0 0 var(--ui-space-2);
+  margin: 0;
   padding: 0;
   border: 0;
   background: none;
@@ -1058,14 +1024,15 @@
 
 .game-bank-card img {
   width: 100%;
-  max-width: var(--bank-card-width, 2.75rem);
+  max-width: 2.25rem;
   height: auto;
   aspect-ratio: 2 / 3;
   border-radius: 0.375rem;
-  box-shadow: 0 0 0 1.5px var(--game-outline);
+  box-shadow: var(--ui-shadow-control);
 }
 
-/* A centered count pill hanging off the card's bottom edge. */
+/* A centered count pill hanging off the card's bottom edge (a thin navy ring, since it overlaps
+   the card). */
 .game-bank-count {
   position: absolute;
   bottom: -0.5rem;
@@ -1079,9 +1046,9 @@
   place-items: center;
   padding-inline: 0.3125rem;
   border: 0;
-  border-radius: 9999px;
-  background: var(--ui-well);
-  box-shadow: 0 0 0 1.5px var(--game-outline);
+  border-radius: var(--ui-radius-pill);
+  background: var(--ui-glass-game-top-solid);
+  box-shadow: 0 0 0 1px var(--ui-hairline-game);
   color: var(--foreground);
   font-family: var(--font-sans);
   font-size: 0.75rem;
@@ -1098,6 +1065,7 @@
 
 .game-bank-card[data-empty] .game-bank-count {
   background: var(--ui-danger-bottom);
+  box-shadow: 0 0 0 1.5px var(--game-outline);
   color: var(--ui-ink-on-primary);
 }
 
@@ -1107,22 +1075,21 @@
   grid-column: span 5;
   align-items: center;
   min-width: 0;
-  gap: 0.625rem;
-  padding: 0.375rem 0.625rem;
+  gap: var(--ui-space-2);
+  padding: 0.25rem 0.5rem;
   border: var(--ui-line) solid var(--ui-well-border);
   border-radius: var(--ui-radius-control);
   background: var(--ui-well);
-  box-shadow: var(--ui-shadow-inset);
-  color: var(--foreground);
-  font-size: 0.875rem;
-  font-weight: 700;
+  color: var(--ui-text-soft);
+  font-size: 0.8125rem;
+  font-weight: 600;
   line-height: 1.25;
 }
 
 .game-bank-hidden img {
   flex: none;
-  width: 3.25rem;
-  height: 3.25rem;
+  width: 2.25rem;
+  height: 2.25rem;
 }
 
 /* --------------------------------------------------------------------------
@@ -1138,6 +1105,7 @@
 }
 
 .game-event-log-list {
+  position: relative;
   display: flex;
   flex: 1;
   flex-direction: column;
@@ -1151,8 +1119,12 @@
   scrollbar-color: var(--game-panel-edge) transparent;
 }
 
-/* The list opens on the newest move. Bubbles scroll whole, with their name rows; an older bubble
-   cut by the top edge fades out there (the kit's scroll fade), so nothing sits over a line. */
+/* The list opens on the newest move, whole, with its name row (event-log.tsx). An older bubble
+   cut by the top edge fades out there (the kit's scroll fade, kept short so a short log still
+   reads), so nothing sits over a line. */
+.game-event-log-list.game-scroll-fade {
+  --scroll-fade-size: 1.25rem;
+}
 
 /* A player's back-to-back moves: their portrait beside one bubble. */
 .game-log-entry {
@@ -1169,16 +1141,16 @@
   font-size: 0.75rem;
 }
 
-/* A calm, neutral dark bubble. The seat color lives on the portrait's ring beside it, so every
-   name and line reads white on the same navy. */
+/* A calm, neutral well. The seat color lives on the portrait's ring beside it, so every name and
+   line reads white on the same navy. */
 .game-log-bubble {
   display: grid;
   min-width: 0;
   gap: var(--ui-space-1);
   padding: var(--ui-space-2) 0.625rem;
-  border: 1px solid var(--ui-divider);
+  border: var(--ui-line) solid var(--ui-well-border);
   border-radius: var(--ui-radius-control);
-  background: var(--ui-bubble);
+  background: var(--ui-well);
   box-shadow: none;
 }
 
@@ -1192,7 +1164,6 @@
   gap: 0.375rem;
   margin: 0;
   padding-bottom: 0.125rem;
-  background: var(--ui-bubble);
   line-height: 1.2;
 }
 
@@ -1201,15 +1172,15 @@
   display: inline-flex;
   flex: none;
   align-items: center;
-  height: 1.125rem;
-  padding: 0 0.375rem;
-  border-radius: 9999px;
-  background: var(--ui-primary-bottom);
+  height: 1.25rem;
+  padding: 0 0.4375rem;
+  border-radius: var(--ui-radius-pill);
+  background: var(--ui-royal);
   color: var(--ui-ink-on-primary);
   font-family: var(--font-sans);
   font-size: 0.75rem;
-  font-weight: 800;
-  letter-spacing: 0.02em;
+  font-weight: 700;
+  letter-spacing: 0;
   line-height: 1;
   white-space: nowrap;
 }
@@ -1220,7 +1191,7 @@
   color: var(--foreground);
   font-family: var(--font-sans);
   font-size: 0.875rem;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1229,9 +1200,9 @@
 .game-log-time {
   flex: none;
   margin-inline-start: auto;
-  color: var(--muted-foreground);
+  color: var(--ui-text-muted);
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 
@@ -1250,14 +1221,14 @@
   gap: 0.375rem;
   color: var(--foreground);
   font-size: 0.875rem;
-  font-weight: 600;
+  font-weight: 500;
   line-height: 1.35;
   overflow-wrap: anywhere;
 }
 
 /* Older moves step back so the newest bubble reads first. */
 .game-log-entry:not([data-latest]) .game-log-line {
-  color: var(--muted-foreground);
+  color: var(--ui-text-soft);
 }
 
 /* A light coin like the board's number tokens, so dark art (the robber) reads
@@ -1268,8 +1239,8 @@
   height: 1.25rem;
   flex: none;
   place-items: center;
-  border: 1.5px solid var(--game-outline);
-  border-radius: 9999px;
+  border: 1px solid var(--board-token-edge);
+  border-radius: 50%;
   background: var(--board-token-face);
   box-shadow: none;
   color: var(--board-token-ink);
@@ -1300,12 +1271,13 @@
   max-width: 100%;
   gap: var(--ui-space-2);
   padding: 0.375rem var(--ui-space-3);
-  border-radius: 9999px;
+  border: var(--ui-line) solid var(--ui-well-border);
+  border-radius: var(--ui-radius-pill);
   background: var(--ui-well);
   box-shadow: none;
-  color: var(--foreground);
-  font-size: 0.75rem;
-  font-weight: 700;
+  color: var(--ui-text-soft);
+  font-size: 0.8125rem;
+  font-weight: 600;
   line-height: 1.3;
 }
 
@@ -1314,7 +1286,7 @@
   flex: 1;
   place-items: center;
   padding: 1rem;
-  color: var(--muted-foreground);
+  color: var(--ui-text-muted);
   font-size: 0.875rem;
   font-weight: 600;
   text-align: center;
@@ -1386,15 +1358,15 @@
 
 .game-results-heading {
   margin: 0;
-  color: var(--brand-gold-top);
+  color: var(--foreground);
   font-family: var(--font-sans);
-  font-size: 0.75rem;
+  font-size: 1.125rem;
   font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: -0.01em;
   line-height: 1.2;
   text-align: center;
   text-shadow: none;
-  text-transform: uppercase;
+  text-transform: none;
 }
 
 /* The podium art with room above it for the winner's portrait. Its transparent
@@ -1482,13 +1454,12 @@
   overflow: hidden;
   padding: 0.25rem 0.375rem;
   border: 2px solid var(--player-color);
-  border-radius: 0.75rem;
-  background: var(--ui-well);
-  box-shadow: 0 0 0 1.5px var(--game-outline);
+  border-radius: var(--ui-radius-pill);
+  background: var(--ui-glass-game-bottom-solid);
   color: var(--foreground);
   font-family: var(--font-sans);
   font-size: 0.8125rem;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0;
   line-height: 1.15;
   text-align: center;
@@ -1525,8 +1496,8 @@
   width: 1.75rem;
   height: 1.75rem;
   place-items: center;
-  border: 1.5px solid var(--ui-well-border);
-  border-radius: 9999px;
+  border: var(--ui-line) solid var(--ui-well-border);
+  border-radius: 50%;
   background: var(--ui-well);
   box-shadow: none;
   color: var(--foreground);
@@ -1540,15 +1511,15 @@
 .game-medal[data-place="1"],
 .game-medal[data-place="2"],
 .game-medal[data-place="3"] {
-  border-color: var(--game-outline);
+  border-color: transparent;
   background: linear-gradient(var(--coin-top), var(--coin-bottom));
-  box-shadow: none;
+  box-shadow: var(--ui-shadow-control);
 }
 
 .game-medal[data-place="1"] {
-  --coin-top: var(--brand-gold-top);
-  --coin-bottom: var(--brand-gold-bottom);
-  color: var(--brand-outline);
+  --coin-top: var(--ui-gold-top);
+  --coin-bottom: var(--ui-gold-bottom);
+  color: var(--ui-ink-on-gold);
 }
 
 .game-medal[data-place="2"] {
@@ -1571,32 +1542,23 @@
   list-style: none;
 }
 
-/* Place | portrait | name and tags | points, one height for every row. */
+/* Place | portrait | name and tags | points, one height for every row. Neutral wells; the seat
+   color lives in the portrait ring, and the winner's row has a 2px gold rim (no glow). */
 .game-standing {
-  --plaque-rim-color: var(--player-color);
-
   display: grid;
   grid-template-columns: auto auto minmax(0, 1fr) auto;
   align-items: center;
   height: 3.5rem;
   gap: var(--ui-space-3);
   padding: 0 var(--ui-space-3);
-  border: var(--ui-line) solid var(--game-outline);
-  border-radius: var(--ui-radius-hud);
-  background: linear-gradient(
-    color-mix(in srgb, var(--player-color) var(--ui-seat-tint-top), var(--ui-panel-top)),
-    color-mix(in srgb, var(--player-color) var(--ui-seat-tint-bottom), var(--ui-panel-bottom))
-  );
-  box-shadow:
-    inset 0 0 0 2px var(--plaque-rim-color),
-    var(--ui-shadow-raise);
+  border: var(--ui-line) solid var(--ui-well-border);
+  border-radius: var(--ui-radius-control);
+  background: var(--ui-well);
 }
 
 .game-standing[data-winner] {
-  box-shadow:
-    inset 0 0 0 2px var(--plaque-rim-color),
-    0 0 0 3px var(--brand-gold-top),
-    0 0 14px 2px color-mix(in srgb, var(--brand-gold-top) 45%, transparent);
+  border-color: var(--ui-gold-top);
+  box-shadow: inset 0 0 0 1px var(--ui-gold-top);
 }
 
 .game-standing-avatar {
@@ -1610,7 +1572,7 @@
   color: var(--foreground);
   font-family: var(--font-sans);
   font-size: 1rem;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0;
   line-height: 1.2;
   text-overflow: ellipsis;
@@ -1629,8 +1591,8 @@
 .game-standing-meta {
   overflow: hidden;
   color: var(--muted-foreground);
-  font-size: 0.75rem;
-  font-weight: 700;
+  font-size: 0.8125rem;
+  font-weight: 600;
   line-height: 1.2;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1653,7 +1615,6 @@
   color: var(--muted-foreground);
   font-size: 0.75rem;
   font-weight: 800;
-  letter-spacing: 0.04em;
 }
 
 /* Where the featured player's points came from: equal tiles, wrapping 5, 3 + 2 on phones.
@@ -1689,7 +1650,6 @@
   border: var(--ui-line) solid var(--ui-well-border);
   border-radius: var(--ui-radius-control);
   background: var(--ui-well);
-  box-shadow: var(--ui-shadow-inset);
 }
 
 .game-score-art {
@@ -1727,7 +1687,7 @@
   place-items: center;
   padding-inline: 0.375rem;
   border: 0;
-  border-radius: 9999px;
+  border-radius: var(--ui-radius-pill);
   background: var(--ui-gold-top);
   box-shadow: 0 0 0 1.5px var(--game-outline);
   color: var(--ui-ink-on-gold);
@@ -1739,8 +1699,8 @@
 }
 
 .game-score-tile[data-zero] .game-score-points {
-  background: var(--ui-panel-bottom);
-  color: var(--foreground);
+  background: var(--ui-locked);
+  color: var(--ui-ink-on-locked);
 }
 
 .game-score-tile[data-zero] img {
@@ -1759,18 +1719,12 @@
 
 .game-score-label {
   color: var(--foreground);
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .game-score-detail {
   color: var(--muted-foreground);
   font-weight: 600;
-}
-
-/* The results open with focus on Play again. Its face is already gold, so its focus ring is
-   white: one gold edge, not two. */
-.game-results-actions .game-button-gold:focus-visible {
-  outline-color: var(--foreground);
 }
 
 /* In the Play again slot while only the host can start one. */
@@ -1785,10 +1739,9 @@
   border: var(--ui-line) solid var(--ui-well-border);
   border-radius: var(--ui-radius-control);
   background: var(--ui-well);
-  box-shadow: var(--ui-shadow-inset);
-  color: var(--foreground);
+  color: var(--ui-text-soft);
   font-size: 0.875rem;
-  font-weight: 700;
+  font-weight: 600;
   line-height: 1.25;
   text-align: center;
 }
@@ -1797,19 +1750,18 @@
    How to play (GameHelpDialog)
    ----------------------------------------------------------------------- */
 
-/* A compact segmented control in a sunken track (36px tall), the same as Log | Chat. Topics
-   share the width equally, and scroll sideways rather than shrink below a readable size. */
+/* A compact segmented control (34px), the same as Log | Chat. Topics share the width equally,
+   and scroll sideways rather than shrink below a readable size. */
 .game-guide-tabs {
   display: grid;
   grid-auto-columns: minmax(4rem, 1fr);
   grid-auto-flow: column;
-  gap: 0.125rem;
-  padding: 0.125rem;
+  gap: 2px;
+  padding: 2px;
   overflow-x: auto;
   border: var(--ui-line) solid var(--ui-well-border);
-  border-radius: 9999px;
+  border-radius: var(--ui-radius-pill);
   background: var(--ui-well);
-  box-shadow: var(--ui-shadow-inset);
   scrollbar-width: none;
 }
 
@@ -1817,13 +1769,13 @@
   height: 1.75rem;
   padding: 0 var(--ui-space-3);
   border: 0;
-  border-radius: 9999px;
+  border-radius: var(--ui-radius-pill);
   background: transparent;
-  color: var(--muted-foreground);
+  color: color-mix(in srgb, var(--foreground) 80%, transparent);
   font-family: var(--font-sans);
   font-size: 0.875rem;
-  font-weight: 800;
-  letter-spacing: 0.01em;
+  font-weight: 700;
+  letter-spacing: 0;
   line-height: 1;
   text-shadow: none;
   white-space: nowrap;
@@ -1896,27 +1848,27 @@
 }
 
 .game-guide-tab:hover:not([aria-selected="true"]) {
-  background: color-mix(in srgb, var(--foreground) 7%, transparent);
+  background: var(--ui-glass-hover);
   color: var(--foreground);
 }
 
 .game-guide-tab[aria-selected="true"] {
-  background: linear-gradient(var(--ui-primary-top), var(--ui-primary-bottom));
-  box-shadow:
-    inset 0 1px 0 color-mix(in srgb, var(--foreground) 22%, transparent),
-    inset 0 -2px 0 var(--ui-primary-edge);
+  background: var(--ui-royal);
+  box-shadow: var(--ui-shadow-control);
   color: var(--ui-ink-on-primary);
 }
 
 .game-guide-tab:focus-visible {
-  outline: 3px solid var(--ui-focus-ring);
-  outline-offset: -3px;
+  outline: 2px solid var(--ui-focus-ring);
+  outline-offset: -2px;
 }
 
+/* Page dots: quiet wells, the current page a wider white pill. */
 .game-guide-dot {
   width: 0.625rem;
   height: 0.625rem;
-  border-radius: 9999px;
+  border: var(--ui-line) solid var(--ui-well-border);
+  border-radius: var(--ui-radius-pill);
   background: var(--ui-well);
   box-shadow: none;
   transition:
@@ -1926,8 +1878,8 @@
 
 .game-guide-dot[data-active] {
   width: 1.5rem;
-  border: 1.5px solid var(--game-outline);
-  background: var(--ui-gold-top);
+  border-color: transparent;
+  background: var(--foreground);
   box-shadow: none;
 }
 
@@ -1938,7 +1890,7 @@
   place-items: center;
   padding-inline: var(--ui-space-2);
   border: 0;
-  border-radius: 9999px;
+  border-radius: var(--ui-radius-pill);
   background: var(--ui-well);
   box-shadow: none;
   color: var(--foreground);
@@ -1946,7 +1898,6 @@
   font-size: 0.8125rem;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
-  letter-spacing: 0.04em;
   line-height: 1;
   text-shadow: none;
 }
@@ -1958,7 +1909,7 @@
   }
 }
 
-/* One of a page's three tips: a sunken well led by a gold number. */
+/* One of a page's three tips: a well led by a royal number. */
 .game-guide-tip {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
@@ -1969,7 +1920,6 @@
   border: var(--ui-line) solid var(--ui-well-border);
   border-radius: var(--ui-radius-control);
   background: var(--ui-well);
-  box-shadow: var(--ui-shadow-inset);
 }
 
 /* Phones: tighter tips, so the second one peeks above the footer as a cue to scroll. */
@@ -1995,11 +1945,11 @@
   width: 1.5rem;
   height: 1.5rem;
   place-items: center;
-  border: 1.5px solid var(--game-outline);
-  border-radius: 9999px;
-  background: var(--ui-gold-top);
+  border: 0;
+  border-radius: 50%;
+  background: var(--ui-royal);
   box-shadow: none;
-  color: var(--ui-ink-on-gold);
+  color: var(--ui-ink-on-primary);
   font-family: var(--font-sans);
   font-size: 0.8125rem;
   font-weight: 800;
@@ -2009,9 +1959,10 @@
 .game-guide-tip-title {
   margin: 0;
   color: var(--foreground);
-  font-family: var(--font-display);
+  font-family: var(--font-sans);
   font-size: 1.0625rem;
-  letter-spacing: 0.02em;
+  font-weight: 800;
+  letter-spacing: 0;
   line-height: 1.2;
   text-shadow: none;
 }
@@ -2021,7 +1972,7 @@
   align-self: start;
   margin: 0;
   color: var(--muted-foreground);
-  font-size: 0.875rem;
+  font-size: 0.9375rem;
   font-weight: 500;
   line-height: 1.5;
 }

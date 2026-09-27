@@ -1,35 +1,46 @@
 /* ============================================================================
-   In-game layout: where the header, crew strip, board, dock, sheets and the
-   table sidebar sit at each breakpoint. Component looks live in
-   game-board.css, game-hud.css and game-dock.css.
+   In-game layout: where the header, crew strip, board, dock, turn card, sheets
+   and the table sidebar sit at each breakpoint, and the turn card's look.
+   Other component looks live in game-board.css, game-hud.css and game-dock.css.
 
-   phone  < 48rem   header / crew strip / board / dock (phase, hand, action bar)
-   md     48–64rem  header / crew strip / board / dock (hand row + actions row)
-   lg     64–80rem  header / board + crew column / dock (one row)
-   xl     80rem+    header / board + rail / dock; the rail replaces the drawer
+   phone  < 48rem   brand + tools / crew strip / board / dock (the turn card,
+                    the hand, then the action bar beside the clock and button)
+   md     48–64rem  header / crew strip / board / dock
+   lg     64–80rem  header / board + crew column / dock
+   xl     80rem+    header / board + rail / dock + rail foot
+
+   The header holds the brand on the left and the goal and table buttons on
+   the right; nothing sits over the board at the top center. Whose turn it is
+   lives in the turn card, beside the action it drives.
+
+   From md up the dock is ONE row (--dock-height): the hand, as wide as its
+   cards, then Build & Trade taking the rest, then at its right end the turn
+   card over the clock and the Roll or End turn button. At xl the turn card,
+   the clock and the button leave the dock for the foot of the rail, the
+   button level with the dock's bottom edge.
 
    Below xl the sidebar (crew plaques, bank, log, chat) is a drawer that the
    header opens. The ocean art covers the whole screen at every size and the
    page never scrolls; the board floats on it, and when zoomed it slides
    under the HUD panels instead of being clipped to its own area.
 
-   The board keeps one size through the game: the dock row is at least
-   --dock-height tall in every state, and a band at the top of the board area
-   is kept free for the placement pill whether or not it is showing.
+   The board keeps one size through the game: the dock row has one height in
+   every state, and the turn card keeps its height whatever it says.
    ========================================================================= */
 
 .game-shell {
   --game-gutter: clamp(0.5rem, 1.2vw, 1rem);
   --game-gap: clamp(0.5rem, 1vw, 0.75rem);
   --game-rail: clamp(330px, 26vw, 384px);
+  --game-brand-width: clamp(6.5rem, 12vw, 11rem);
+  /* Phone hand cards and Build & Trade tiles (the action bar sets its own tile width below).
+     From md up the dock parts size themselves from game-dock.css (--dock-*). */
   --hand-card-width: 2.75rem;
-  /* Build & Trade tiles are 5rem wide by default. The phone action bar, which fits three tiles
-     beside the clock, uses 4.5rem and its building tray 5.75rem; md tiles share the row's width.
-     From lg up the building and card tiles are wide rows (--action-row-*) in a 2×2 grid. */
   --action-tile-width: 5rem;
   --action-tile-art-height: 2.5rem;
-  --board-banner-band: 2.75rem;
-  --dock-height: 0px;
+  /* The phone dock's least height (the turn card, the hand, then the action bar), so the board
+     never jumps. */
+  --dock-height: 20.375rem;
 
   position: fixed;
   top: 0;
@@ -38,13 +49,13 @@
   display: grid;
   width: 100%;
   height: 100dvh;
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) auto;
   grid-template-rows: auto auto minmax(0, 1fr) minmax(var(--dock-height), auto);
   grid-template-areas:
-    "header"
-    "strip"
-    "board"
-    "dock";
+    "brand tools"
+    "strip strip"
+    "board board"
+    "dock dock";
   gap: var(--game-gap);
   padding: max(var(--game-gutter), env(safe-area-inset-top))
     max(var(--game-gutter), env(safe-area-inset-right))
@@ -61,6 +72,8 @@
 
 /* HUD panels sit above the board, so a zoomed island passes underneath them. */
 .game-header,
+.game-header-start,
+.game-header-end,
 .game-player-strip,
 .game-footer,
 .game-sidebar {
@@ -69,35 +82,27 @@
 }
 
 /* --------------------------------------------------------------------------
-   Header: equal side slots keep the match chip centered
+   Header. On phones it dissolves into the shell grid: the brand and the tools
+   share the top row.
    ----------------------------------------------------------------------- */
 
 .game-header {
-  grid-area: header;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-  align-items: center;
-  gap: var(--game-gap);
-  pointer-events: none;
-}
-
-.game-header > * {
-  pointer-events: auto;
+  display: contents;
 }
 
 .game-header-start {
+  grid-area: brand;
   justify-self: start;
   min-width: 0;
 }
 
-/* Always the last column: the middle one stays free over the board. */
 .game-header-end {
-  grid-column: -2 / -1;
+  grid-area: tools;
   justify-self: end;
 }
 
 .game-brand {
-  width: clamp(6.5rem, 12vw, 11rem);
+  width: var(--game-brand-width);
   max-width: 100%;
 }
 
@@ -124,6 +129,422 @@
   }
 }
 
+@media (width >= 48rem) {
+  .game-header {
+    grid-area: header;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas: "start . end";
+    align-items: center;
+    gap: var(--game-gap);
+    pointer-events: none;
+  }
+
+  .game-header > * {
+    pointer-events: auto;
+  }
+
+  .game-header-start {
+    grid-area: start;
+  }
+
+  .game-header-end {
+    grid-area: end;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Turn card: whose turn it is, the one thing to do now, and this turn's dice.
+   A glass card beside the action it drives: at the rail foot above the clock
+   and the button (xl), at the dock's right end with them (md, lg), and above
+   the hand on phones. Its height is fixed at each size, so the dock and the
+   board never move whatever it says.
+   ----------------------------------------------------------------------- */
+
+.game-turn-card {
+  display: grid;
+  grid-area: card;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  grid-template-areas: "portrait text dice cancel";
+  align-items: center;
+  min-width: 0;
+  column-gap: var(--ui-space-3);
+  padding: var(--ui-space-2) var(--ui-space-3);
+  border: var(--ui-line) solid var(--ui-hairline-game);
+  border-radius: var(--ui-radius-hud);
+  background: var(--ui-glass-game);
+  box-shadow:
+    inset 0 1px 0 var(--ui-panel-highlight),
+    var(--ui-shadow-panel);
+  color: var(--foreground);
+  -webkit-backdrop-filter: var(--ui-glass-blur-game);
+  backdrop-filter: var(--ui-glass-blur-game);
+}
+
+/* Without a Cancel there is no fourth track, so no empty gap takes room from the title. (Kept at
+   the card's own weight, so the md and lg layouts below can replace it.) */
+.game-turn-card:where(:not(:has(> .game-turn-card-cancel))) {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas: "portrait text dice";
+}
+
+.game-turn-card > .game-dock-portrait {
+  --portrait-size: 2.5rem;
+
+  grid-area: portrait;
+}
+
+.game-turn-card-text {
+  display: grid;
+  grid-area: text;
+  align-content: center;
+  min-width: 0;
+  gap: 0.125rem;
+}
+
+/* One line. A long name comes as its first word (getShortPlayerName); should even that not fit,
+   only the name shortens, so "’s turn" always stays whole beside it. */
+.game-turn-card-title {
+  display: flex;
+  min-width: 0;
+  margin: 0;
+  color: var(--foreground);
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  /* One line box at every size, so a long name never changes the card's height. */
+  line-height: 1.375rem;
+  white-space: nowrap;
+}
+
+/* A long name shrinks the title a step before the name shortens. */
+.game-turn-card-title[data-name-fit="long"] {
+  font-size: 1rem;
+}
+
+.game-turn-card-title[data-name-fit="xlong"] {
+  font-size: 0.9375rem;
+  letter-spacing: 0;
+}
+
+.game-turn-card-title:focus-visible {
+  border-radius: var(--ui-radius-small);
+  outline: 2px solid var(--ui-focus-ring);
+  outline-offset: 2px;
+}
+
+.game-turn-card-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.game-turn-card-rest {
+  flex: none;
+  white-space: pre;
+}
+
+/* The one thing to do now: one line on phones, up to two from md up (its whole text is in the
+   live region). */
+.game-turn-card-detail {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  margin: 0;
+  gap: 0.375rem;
+  color: var(--ui-text-soft);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  line-height: 1.25rem;
+}
+
+.game-turn-card-detail-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.game-turn-card-icon {
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+  color: var(--ui-text-soft);
+}
+
+/* What just happened: one quiet line, wherever the log is in the drawer (below xl). At xl the log
+   is in the rail beside the card, so the card keeps to its title and the thing to do now. */
+.game-turn-card-last {
+  display: flex;
+  min-width: 0;
+  margin: 0;
+  gap: 0.375rem;
+  color: var(--ui-text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.game-turn-card-last-label {
+  flex: none;
+  font-weight: 800;
+}
+
+.game-turn-card-last-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* This turn's roll: the dice tumble in. */
+.game-turn-card-dice {
+  display: flex;
+  grid-area: dice;
+  flex: none;
+  align-items: center;
+}
+
+.game-turn-card-dice .die-face {
+  width: 2rem;
+  height: 2rem;
+  animation: turn-card-dice-land 560ms cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+}
+
+.game-turn-card-dice .die-face + .die-face {
+  animation-delay: 90ms;
+}
+
+.game-turn-card-cancel {
+  grid-area: cancel;
+}
+
+@keyframes turn-card-dice-land {
+  0% {
+    opacity: 0;
+    rotate: -200deg;
+    scale: 0.3;
+  }
+
+  70% {
+    opacity: 1;
+    rotate: 12deg;
+    scale: 1.08;
+  }
+
+  100% {
+    rotate: 0deg;
+    scale: 1;
+  }
+}
+
+/* Phones: a HUD panel above the hand. A fixed least height, so the board keeps its size whether
+   or not there is a last move or dice. */
+@media (width < 48rem) {
+  .game-turn-card {
+    min-height: 5rem;
+  }
+
+  .game-turn-card-dice .die-face {
+    width: 1.75rem;
+    height: 1.75rem;
+  }
+}
+
+/* md up: as tall as --turn-card-height, the thing to do now on up to two lines. */
+@media (width >= 48rem) {
+  .game-turn-card {
+    height: var(--turn-card-height);
+    column-gap: 0.625rem;
+    padding: var(--ui-space-2) 0.625rem var(--ui-space-2) var(--ui-space-2);
+  }
+
+  .game-turn-card-detail {
+    font-size: 0.875rem;
+    line-height: 1.125rem;
+  }
+
+  /* Two lines of about even length, never a lone word on the second. */
+  .game-turn-card-detail-text {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    white-space: normal;
+    text-wrap: balance;
+  }
+
+  /* A 32px box draws a 28px die. */
+  .game-turn-card-dice .die-face {
+    width: 2rem;
+    height: 2rem;
+  }
+}
+
+/* Phones: the card is narrow for its words, so this turn's roll takes the portrait's place. */
+@media (width < 48rem) {
+  .game-turn-card:has(.game-turn-card-dice) > .game-dock-portrait {
+    display: none;
+  }
+
+  .game-turn-card:has(.game-turn-card-dice) {
+    grid-template-areas: "text text dice cancel";
+  }
+
+  .game-turn-card:has(.game-turn-card-dice):not(:has(> .game-turn-card-cancel)) {
+    grid-template-areas: "text text dice";
+  }
+}
+
+/* md and lg: the card stands over the clock and the button at the dock's right end, and the log
+   is in the drawer, so the card also says what just happened, on a line of its own across the
+   card's foot. The card is narrow, so this turn's roll or a picked build's Cancel takes the
+   portrait's place, and while the game is paused the words get the whole width. The roll sits
+   beside the thing to do now, so the title keeps the card's width for a long name. The Cancel
+   stands in the title's row, so the prompt under it reads whole on two lines; what just happened
+   waits until the spot is picked.
+     portrait title    |  title  title  |  title  cancel
+     portrait detail   |  detail dice   |  detail detail
+     last     last     |  last   last   |                  */
+@media (48rem <= width < 80rem) {
+  .game-turn-card {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-rows: auto auto auto;
+    grid-template-areas:
+      "portrait title"
+      "portrait detail"
+      "last last";
+    align-content: center;
+    row-gap: 0.125rem;
+    padding-block: 0.375rem;
+  }
+
+  .game-turn-card-text {
+    display: contents;
+  }
+
+  .game-turn-card-title {
+    grid-area: title;
+  }
+
+  .game-turn-card-detail {
+    grid-area: detail;
+  }
+
+  .game-turn-card-last {
+    grid-area: last;
+  }
+
+  .game-turn-card:is(
+      :has(> .game-turn-card-dice),
+      :has(> .game-turn-card-cancel),
+      [data-state="paused"]
+    )
+    > .game-dock-portrait {
+    display: none;
+  }
+
+  .game-turn-card:has(> .game-turn-card-dice) {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "title title"
+      "detail dice"
+      "last last";
+  }
+
+  .game-turn-card:has(> .game-turn-card-cancel) {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: auto auto;
+    grid-template-areas:
+      "title cancel"
+      "detail detail";
+  }
+
+  .game-turn-card:has(> .game-turn-card-cancel) .game-turn-card-last {
+    display: none;
+  }
+
+  .game-turn-card[data-state="paused"] {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "title"
+      "detail"
+      "last";
+  }
+}
+
+/* xl: the card stands in the board area's bottom-right corner (--turn-card-width). The portrait,
+   then a 20px title across the card and, under it, the thing to do now beside this turn's dice (a
+   picked build's Cancel stands in the title's row). What just happened is in the log in the rail.
+     portrait title  title   |  portrait title  cancel
+     portrait detail dice    |  portrait detail detail  */
+@media (width >= 80rem) {
+  .game-turn-card {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-rows: auto auto;
+    grid-template-areas:
+      "portrait title title"
+      "portrait detail dice";
+    align-content: center;
+    gap: 0.125rem var(--ui-space-3);
+    padding: 0.625rem var(--ui-space-3);
+  }
+
+  .game-turn-card:has(> .game-turn-card-cancel) {
+    grid-template-areas:
+      "portrait title cancel"
+      "portrait detail detail";
+  }
+
+  .game-turn-card-text {
+    display: contents;
+  }
+
+  .game-turn-card-title {
+    grid-area: title;
+  }
+
+  .game-turn-card-detail {
+    grid-area: detail;
+  }
+
+  .game-turn-card-last {
+    display: none;
+  }
+
+  .game-turn-card-title {
+    font-size: 1.25rem;
+    line-height: 1.5rem;
+  }
+
+  .game-turn-card-title[data-name-fit="long"] {
+    font-size: 1.0625rem;
+  }
+
+  .game-turn-card-title[data-name-fit="xlong"] {
+    font-size: 1rem;
+  }
+
+  .game-turn-card-detail {
+    font-size: 0.9375rem;
+    line-height: 1.1875rem;
+  }
+
+  /* A 36px box draws a 31px die. */
+  .game-turn-card-dice .die-face {
+    width: 2.25rem;
+    height: 2.25rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .game-turn-card-dice .die-face {
+    animation: none;
+  }
+}
+
 /* --------------------------------------------------------------------------
    Crew strip: a row of pills (phone, md), a column beside the board (lg)
    ----------------------------------------------------------------------- */
@@ -140,8 +561,8 @@
    Board area: the board, and what floats over it
    ----------------------------------------------------------------------- */
 
-/* The top padding is the placement pill's band; the stage is sized from the
-   content box (container query units), so the island never sits under it. */
+/* The stage is sized from the content box (container query units), so the island fills the free
+   area between the header and the dock, centered both ways. */
 .board-shell {
   grid-area: board;
   position: relative;
@@ -149,7 +570,6 @@
   display: grid;
   min-width: 0;
   min-height: 0;
-  padding-block-start: var(--board-banner-band);
   place-items: center;
   container-type: size;
 }
@@ -200,45 +620,48 @@
   opacity: 1;
 }
 
-/* Placement pill (in the board area's top band) and toasts under it. */
-.game-board-notices {
+/* Toasts and the trade and discard sheets, centered at the bottom of the board area just above
+   the dock: a toast stacks over an open sheet. The top center of the board stays clear. */
+.game-board-overlay {
   grid-area: board;
   z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 0;
+  min-height: 0;
+  gap: 0.5rem;
+  pointer-events: none;
+}
+
+.game-board-notices {
   display: grid;
-  align-self: start;
-  justify-self: center;
+  flex: none;
   justify-items: center;
   max-width: 100%;
   gap: 0.5rem;
-  pointer-events: none;
+}
+
+.game-board-notices:empty {
+  display: none;
 }
 
 .game-board-notices > * {
   pointer-events: auto;
 }
 
-/* The placement row lets taps through to the board targets under it; only Cancel is live. */
-.game-board-notices > .game-placement-row {
-  pointer-events: none;
-}
-
-.game-placement-row > button {
-  pointer-events: auto;
-}
-
-/* Trade and discard sheets (HandDockPortal), centered just above the dock. */
+/* Trade and discard sheets (HandDockPortal). */
 .game-sheet-root {
-  grid-area: board;
-  z-index: 20;
   display: grid;
-  align-self: end;
-  justify-self: center;
+  flex: 0 1 auto;
   width: min(33rem, 100%);
-  max-height: 100%;
+  min-height: 0;
   gap: 0.5rem;
   padding: 0.375rem;
   overflow-y: auto;
   overscroll-behavior: contain;
+  pointer-events: auto;
 }
 
 .game-sheet-root:empty {
@@ -246,11 +669,10 @@
 }
 
 /* --------------------------------------------------------------------------
-   Dock
+   Dock: the turn card, the hand, Build & Trade (or the steal chooser), and
+   the turn slot (the clock and the Roll or End turn button)
    ----------------------------------------------------------------------- */
 
-/* Taller than its content in some states (--dock-height); the spare room
-   goes above the panels, never inside them. */
 .game-footer {
   grid-area: dock;
   display: grid;
@@ -263,27 +685,40 @@
   grid-area: hand;
 }
 
-.game-phase-panel {
-  grid-area: phase;
-}
-
-.game-turn-clock {
-  grid-area: clock;
-}
-
 .game-build-panel,
 .game-steal-chooser {
   grid-area: actions;
 }
 
-.game-turn-control,
-.game-show-results {
+.game-turn-slot {
+  display: grid;
   grid-area: turn;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+  min-width: 0;
+  gap: 0.5rem;
 }
 
-.game-show-results {
-  align-self: center;
-  justify-self: center;
+/* Without a clock (discarding, a finished game) the turn control takes the whole slot. */
+.game-turn-slot:not(:has(.game-turn-clock)) {
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.game-turn-slot[data-finished] {
+  align-content: center;
+}
+
+/* Beside the clock the status is a pill like the clock: one line of words, no art. */
+.game-turn-slot:has(.game-turn-clock) .game-turn-control[data-kind] {
+  border-radius: var(--ui-radius-pill);
+}
+
+.game-turn-slot:has(.game-turn-clock) .game-turn-control[data-kind] .game-turn-art {
+  display: none;
+}
+
+.game-turn-clock .game-clock-ring {
+  max-height: 1.75rem;
 }
 
 /* The Build tile only exists on phones, where it opens the building tray. */
@@ -300,54 +735,30 @@
 }
 
 /* --------------------------------------------------------------------------
-   Phone (< 48rem): the command dock dissolves into the footer grid so the
-   hand sits between the phase line and the action bar, and the clock tops
-   the turn column:
-     phase   phase
+   Phone (< 48rem): the turn card, the hand on its own row, then the action
+   bar beside the turn slot:
+     card    card
      hand    hand
-     actions clock
      actions turn
    The island fills the width here, so the camera keeps off it: pinch zooms,
    and Recenter appears only once the view has moved.
    ----------------------------------------------------------------------- */
 
 @media (width < 48rem) {
-  .game-shell {
-    --dock-height: 21.375rem;
-  }
-
-  /* Three tiles share the action bar; a step wider than their art so the Dev card's three
-     22px coins fit on one line (still narrower on the smallest phones). */
+  /* Three tiles share the action bar (still narrower on the smallest phones). */
   .game-build-actions {
     --action-tile-width: min(4.625rem, calc((100% - 0.5rem) / 3));
     --action-tile-art-height: 2rem;
   }
 
-  /* Trade has no price or status: its art and name sit in the middle of the tile. */
-  .game-build-actions .game-action-tile[data-action-kind="trade"] {
-    align-content: center;
-  }
-
-  /* A compact clock, so the turn column stays as short as the action bar. */
+  /* A compact clock, so the turn slot stays as short as the action bar. */
   .game-turn-clock {
     gap: 0.375rem;
     padding-block: 0.125rem;
   }
 
-  .game-turn-clock .game-clock-ring {
-    max-height: 1.75rem;
-  }
-
   .game-turn-clock-time {
     font-size: 1rem;
-  }
-
-  .game-action-tile[data-action-kind="development-card"] {
-    --cost-coin-size: 1.375rem;
-  }
-
-  .game-action-tile[data-action-kind="development-card"] .game-cost-pips {
-    gap: 0.125rem;
   }
 
   .game-build-pieces {
@@ -368,36 +779,21 @@
   .game-footer {
     grid-template-columns: minmax(0, 1fr) auto;
     grid-template-areas:
-      "phase phase"
+      "card card"
       "hand hand"
-      "actions clock"
       "actions turn";
   }
 
-  .game-footer:not(:has(.game-turn-clock)) .game-turn-control {
-    grid-row: clock-start / turn-end;
+  /* The clock level with the action bar's top edge, the button a 52px pill level with its
+     bottom edge. */
+  .game-turn-slot {
+    grid-template-rows: auto auto;
+    align-content: space-between;
+    gap: 0.375rem;
   }
 
-  .game-command-dock {
-    display: contents;
-  }
-
-  /* This turn's roll takes the portrait's place, so the plaque keeps its height. */
-  .game-phase-panel:has(.game-phase-dice) {
-    grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-areas:
-      "title dice"
-      "detail dice"
-      "last dice";
-  }
-
-  .game-phase-panel:has(.game-phase-dice) > .game-dock-portrait {
-    display: none;
-  }
-
-  /* One line, so a long name can't grow the dock and shrink the board. */
-  .game-phase-detail {
-    -webkit-line-clamp: 1;
+  .game-turn-slot[data-finished] {
+    grid-column: 1 / -1;
   }
 
   .game-build-panel {
@@ -424,12 +820,14 @@
     justify-content: center;
     gap: 0.5rem;
     padding: 0.75rem;
-    border: var(--ui-line) solid var(--game-outline);
+    border: var(--ui-line) solid var(--ui-hairline-game);
     border-radius: var(--ui-radius-hud);
-    background: linear-gradient(var(--ui-panel-top), var(--ui-panel-bottom));
+    background: var(--ui-glass-game);
     box-shadow:
       inset 0 1px 0 var(--ui-panel-highlight),
-      var(--ui-shadow-float);
+      var(--ui-shadow-panel);
+    -webkit-backdrop-filter: var(--ui-glass-blur-game);
+    backdrop-filter: var(--ui-glass-blur-game);
   }
 
   .game-build-pieces[data-open] {
@@ -441,20 +839,8 @@
     grid-column: 1 / -1;
   }
 
-  .game-turn-control {
-    align-self: stretch;
-  }
-
-  .game-footer:has(.game-turn-clock) .game-turn-control[data-kind] {
-    border-radius: 9999px;
-  }
-
-  .game-footer:has(.game-turn-clock) .game-turn-control[data-kind] .game-turn-art {
-    display: none;
-  }
-
-  /* The opening round in the narrow action bar: the title, then the four steps as a short list
-     of number and name. */
+  /* The opening round in the narrow action bar: the title, then the four steps as two short
+     rows of two (number and name), so all four fit the bar's height under the lead. */
   .game-build-setup {
     gap: var(--ui-space-1);
   }
@@ -465,15 +851,16 @@
   }
 
   .game-setup-steps {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 0.125rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-content: center;
+    gap: 0.375rem;
   }
 
   .game-setup-step {
-    gap: var(--ui-space-2);
-    padding: 0 var(--ui-space-1);
-    border-width: 1.5px;
-    border-radius: 9999px;
+    min-height: 2rem;
+    gap: 0.25rem;
+    padding: 0 0.25rem;
+    border-radius: var(--ui-radius-pill);
   }
 
   .game-setup-step-number {
@@ -487,413 +874,146 @@
   }
 
   /* The status pill beside the clock keeps its words whole. */
-  .game-footer:has(.game-turn-clock) .game-turn-control[data-kind] {
+  .game-turn-slot:has(.game-turn-clock) .game-turn-control[data-kind] {
     padding-inline: var(--ui-space-1);
   }
 
   .game-turn-control .game-turn-button {
-    height: 100%;
-    min-height: 3rem;
-  }
-
-  .game-command-dock[data-finished] .game-show-results {
-    grid-column: 1 / -1;
-    grid-row: clock-start / turn-end;
-    justify-self: stretch;
-  }
-
-  .game-sheet-root {
-    justify-self: stretch;
-    width: auto;
-  }
-}
-
-/* --------------------------------------------------------------------------
-   md (48–64rem): board large, hand on its own row, then phase, actions and
-   the turn column, all at touch size
-   ----------------------------------------------------------------------- */
-
-@media (48rem <= width < 64rem) {
-  .game-shell {
-    --hand-card-width: 3.5rem;
-    --dock-height: 23rem;
-  }
-
-  .game-player-strip .game-strip-player {
     height: 3.25rem;
   }
 
-  .game-footer {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-areas:
-      "hand"
-      "command";
-  }
-
-  .game-command-dock {
-    grid-area: command;
+  .game-sheet-root {
+    align-self: stretch;
+    width: auto;
   }
 }
 
 /* --------------------------------------------------------------------------
-   Build & trade tiles, md up: the phone Build tile stays hidden
+   md up: the dock is ONE row, --dock-height tall in every state: the hand
+   (from the left), Build & Trade (five tiles, laid out in game-dock.css) right
+   after it, open sea, then the turn column: the turn card over the clock and
+   the Roll or End turn button, side by side. The hand and Build & Trade each
+   keep their own width (game-dock.css), so the dock never shifts as cards
+   come and go; the sea takes what is left. The row is the dock parts' own
+   height (--dock-row-height, game-dock.css).
+     hand actions card
+     hand actions turn
    ----------------------------------------------------------------------- */
 
 @media (width >= 48rem) {
   .game-shell {
-    --action-row-gap: var(--ui-space-1);
-    --build-panel-pad: 0.375rem;
-    --turn-button-width: 7.25rem;
-  }
+    --dock-height: var(--dock-row-height, 7rem);
+    --turn-column-width: 12.5rem;
 
-  .game-build-panel {
-    padding: var(--build-panel-pad);
-  }
-
-  /* Road and Settlement over City and Dev card as wide rows (art, then the name and a quiet
-     caption over the price, then the status line), and a slim Trade bar under them. The rows
-     share the panel on md and take a fixed width from lg up (--action-row-width), where the dock
-     column hugs them. */
-  .game-build-actions {
-    display: grid;
-    flex: 1;
-    grid-template-columns: repeat(2, var(--action-row-width, minmax(0, 1fr)));
-    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto minmax(0, 1fr) var(--dock-height);
     grid-template-areas:
-      "road settlement"
-      "city card"
-      "trade trade";
-    gap: var(--action-row-gap);
+      "header"
+      "strip"
+      "board"
+      "dock";
   }
 
-  .game-action-tile[data-action-kind="road"] {
-    grid-area: road;
-  }
-
-  .game-action-tile[data-action-kind="settlement"] {
-    grid-area: settlement;
-  }
-
-  .game-action-tile[data-action-kind="city"] {
-    grid-area: city;
-  }
-
-  .game-action-tile[data-action-kind="development-card"] {
-    grid-area: card;
-  }
-
-  .game-action-tile:is(
-    [data-action-kind="road"],
-    [data-action-kind="settlement"],
-    [data-action-kind="city"],
-    [data-action-kind="development-card"]
-  ) {
-    grid-template-columns: 2.5rem minmax(0, 1fr);
-    grid-template-rows: auto auto auto;
-    grid-template-areas:
-      "art head"
-      "art cost"
-      "status status";
-    align-content: center;
-    align-items: center;
-    justify-items: start;
-    width: auto;
-    height: 100%;
-    gap: 0.125rem var(--ui-space-2);
-    padding: var(--ui-space-1) var(--ui-space-2);
-  }
-
-  :is(
-      [data-action-kind="road"],
-      [data-action-kind="settlement"],
-      [data-action-kind="city"],
-      [data-action-kind="development-card"]
-    )
-    > :is(.game-action-head, .game-action-tile-cost, .game-action-status-slot) {
-    justify-content: flex-start;
-    width: 100%;
-    max-width: 100%;
-    margin-inline: 0;
-  }
-
-  /* The name, then its caption ("5 left") at the row's end, on one line. */
-  :is(
-      [data-action-kind="road"],
-      [data-action-kind="settlement"],
-      [data-action-kind="city"],
-      [data-action-kind="development-card"]
-    )
-    > .game-action-head {
-    flex-wrap: nowrap;
-    align-items: baseline;
-    justify-content: space-between;
-  }
-
-  :is(
-      [data-action-kind="road"],
-      [data-action-kind="settlement"],
-      [data-action-kind="city"],
-      [data-action-kind="development-card"]
-    )
-    > .game-action-status-slot {
-    margin-top: 0.125rem;
-  }
-
-  :is(
-      [data-action-kind="road"],
-      [data-action-kind="settlement"],
-      [data-action-kind="city"],
-      [data-action-kind="development-card"]
-    )
-    .game-action-status {
-    justify-content: flex-start;
-    overflow: hidden;
-    text-align: start;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  :is(
-      [data-action-kind="road"],
-      [data-action-kind="settlement"],
-      [data-action-kind="city"],
-      [data-action-kind="development-card"]
-    )
-    > .game-action-tile-art {
-    width: 2.5rem;
-    height: 2.5rem;
-    align-self: center;
-    overflow: hidden;
-    border-radius: var(--ui-radius-small);
-    box-shadow: 0 0 0 1.5px var(--game-outline);
-    filter: none;
-  }
-
-  /* A square crop of the card: its frame falls outside, so the piece fills the thumbnail. */
-  :is(
-      [data-action-kind="road"],
-      [data-action-kind="settlement"],
-      [data-action-kind="city"],
-      [data-action-kind="development-card"],
-      [data-action-kind="trade"]
-    )
-    > .game-action-tile-art
-    img {
-    object-fit: cover;
-    scale: 1.14;
-  }
-
-  :is(
-      [data-action-kind="road"],
-      [data-action-kind="settlement"],
-      [data-action-kind="city"],
-      [data-action-kind="development-card"]
-    )
-    .game-action-label {
-    font-size: 0.9375rem;
-  }
-
-  /* Trade: a slim bar across the grid, its icon and name centered, and the lock and reason
-     beside them while it is locked. */
-  .game-action-tile[data-action-kind="trade"] {
-    display: flex;
-    grid-area: trade;
-    align-items: center;
-    justify-content: center;
-    width: auto;
-    height: 2.375rem;
-    gap: var(--ui-space-2);
-    padding: 0 var(--ui-space-3);
-  }
-
-  .game-action-tile[data-action-kind="trade"] > .game-action-tile-art {
-    width: 1.5rem;
-    height: 1.5rem;
-    overflow: hidden;
-    border-radius: 0.375rem;
-    box-shadow: 0 0 0 1.5px var(--game-outline);
-    filter: none;
-  }
-
-  .game-action-tile[data-action-kind="trade"] .game-action-label {
-    font-size: 1rem;
-  }
-
-  .game-action-tile[data-action-kind="trade"] > :is(.game-action-head, .game-action-status-slot) {
-    width: auto;
-    min-height: 0;
-    margin: 0;
-  }
-
-  .game-action-tile[data-action-kind="trade"] > .game-action-status-slot:empty {
-    display: none;
-  }
-}
-
-/* --------------------------------------------------------------------------
-   lg and xl (64rem+): hand and command dock share one row
-   ----------------------------------------------------------------------- */
-
-@media (width >= 64rem) {
-  .game-shell {
-    --hand-card-width: 3rem;
-    --action-row-width: 11.5rem;
-    --build-panel-width: calc(
-      2 * var(--action-row-width) + var(--action-row-gap) + 2 * var(--build-panel-pad) + 2 *
-        var(--ui-line)
-    );
-    --dock-height: 14rem;
-
-    grid-template-rows: auto minmax(0, 1fr) minmax(var(--dock-height), auto);
-  }
-
-  /* The hand takes all the room beside the command dock, so it stays anchored at the same place
-     and width whatever cards it holds or which phase is up. */
   .game-footer {
-    grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-areas: "hand command";
-    align-items: end;
+    grid-template-columns: max-content minmax(0, 1fr) var(--turn-column-width);
+    grid-template-rows: var(--turn-card-height) var(--turn-row-height);
+    grid-template-areas:
+      "hand actions card"
+      "hand actions turn";
+    align-content: stretch;
+    align-items: stretch;
+    gap: var(--ui-space-2) var(--game-gap);
   }
 
-  /* Every held card in view: the five resource cards make the first row and development cards
-     (five kinds at most) a second row under them, both from the left, so none hides behind a
-     scroll arrow. Two rows fit the dock's height (--dock-height). */
-  .game-hand-cards {
-    display: grid;
-    grid-template-columns: repeat(5, var(--hand-card-width));
-    gap: 0.5rem var(--ui-space-2);
-  }
-
-  .game-command-dock {
-    grid-area: command;
-  }
-
+  .game-hand,
   .game-build-panel,
   .game-steal-chooser {
-    width: var(--build-panel-width);
-  }
-}
-
-/* Every lg screen and short desktop screens: a compact dock, so the board keeps its height. */
-@media (64rem <= width < 80rem), (width >= 80rem) and (height < 53rem) {
-  .game-shell {
-    --dock-height: 13.5rem;
-  }
-}
-
-/* Wide, tall desktop screens: the hand panel is wide, so its cards grow a step to use it (two
-   rows still fit the taller dock), and the action rows grow with them so the dock's two halves
-   keep one top edge. */
-@media (width >= 90rem) and (height >= 53rem) {
-  .game-shell {
-    --hand-card-width: 3.5rem;
-    --action-row-width: 12.5rem;
-    --turn-button-width: 8.5rem;
-    --dock-height: 15.5rem;
-  }
-}
-
-/* md up: Build & Trade on the left; on the right the turn plaque over the clock and the Roll or
-   End turn button, so the dock reads from the cards, to what can be done, to the turn. The plaque
-   takes the height the tiles leave. A missing clock leaves no hole: the turn control takes its
-   cell too. Once the game is over the dock is the plaque and "Show results". */
-@media (width >= 48rem) {
-  .game-command-dock {
-    display: grid;
-    grid-template-columns:
-      var(--build-panel-width, minmax(0, 1fr)) minmax(5.5rem, auto)
-      var(--turn-button-width);
-    grid-template-rows: minmax(0, 1fr) auto;
-    grid-template-areas:
-      "actions phase phase"
-      "actions clock turn";
-    gap: 0.5rem;
+    height: auto;
+    min-height: 0;
+    align-self: stretch;
   }
 
-  .game-command-dock:not(:has(.game-turn-clock)) .game-turn-control {
-    grid-column: clock-start / turn-end;
-  }
-
-  .game-command-dock[data-finished] {
-    grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-rows: auto;
-    grid-template-areas: "phase turn";
-    align-items: center;
-  }
-
-  /* The plaque in its narrow column: the portrait beside whose turn it is, then the thing to do,
-     this turn's dice and the last move under them, the last move at the foot. */
-  .game-command-dock:not([data-finished]) .game-phase-panel {
+  /* The clock and the button side by side, level with the dock's bottom edge. */
+  .game-turn-slot {
     grid-template-columns: auto minmax(0, 1fr);
-    grid-template-rows: auto auto auto minmax(0, 1fr);
-    grid-template-areas:
-      "portrait title"
-      "detail detail"
-      "dice dice"
-      "last last";
-    align-content: stretch;
-    gap: 0.375rem var(--ui-space-2);
-    /* The clock and the turn button set the column; the plaque wraps to fit it. */
-    contain: inline-size;
-    padding: var(--ui-space-2) var(--ui-space-3);
+    grid-template-rows: minmax(0, 1fr);
+    gap: var(--ui-space-2);
   }
 
-  .game-command-dock:not([data-finished]) .game-phase-last {
-    align-self: end;
-    padding-top: 0.375rem;
-    border-top: 1px solid var(--ui-divider);
+  .game-turn-slot:not(:has(.game-turn-clock)) {
+    grid-template-columns: minmax(0, 1fr);
   }
 
-  .game-command-dock:not([data-finished]) .game-phase-dice .die-face {
-    width: 1.25rem;
-    height: 1.25rem;
+  .game-turn-slot > * {
+    height: 100%;
   }
 
-  .game-turn-control .game-turn-button {
-    min-width: 0;
-    min-height: 3rem;
-  }
-
+  .game-turn-control .game-turn-button,
   .game-turn-control[data-kind] {
     min-width: 0;
-    min-height: 3rem;
+    min-height: 0;
   }
 
-  /* Beside the clock the status is a pill like the clock: one line of words, no art. */
-  .game-command-dock:has(.game-turn-clock) .game-turn-control[data-kind] {
-    border-radius: 9999px;
-  }
-
-  .game-command-dock:has(.game-turn-clock) .game-turn-control[data-kind] .game-turn-art {
-    display: none;
-  }
-
+  /* A compact clock, so the button beside it keeps its label whole in the narrow column. */
   .game-turn-clock {
-    min-width: 5.5rem;
-    gap: 0.375rem;
-    padding-inline: 0.375rem 0.625rem;
+    min-width: 0;
+    gap: var(--ui-space-1);
+    padding-inline: var(--ui-space-1) 0.625rem;
   }
 
   .game-turn-clock .game-clock-ring {
+    min-height: 1.75rem;
     max-height: 1.75rem;
   }
 }
 
-/* xl: the log is in view beside the dock, so the plaque drops its "Last move" line and sizes to
-   what is left, sitting on the clock row; the spare height stays above it. */
-@media (width >= 80rem) {
-  .game-phase-last {
-    display: none;
+/* md and lg: the turn column is narrow. The clock's ring and time and the button's icon run a
+   step smaller, and the status pill keeps its words whole ("Reply to offer"). */
+@media (48rem <= width < 80rem) {
+  .game-turn-clock {
+    padding-inline-end: var(--ui-space-2);
   }
 
-  .game-command-dock:not([data-finished]) .game-phase-panel {
-    grid-template-rows: auto auto auto;
-    grid-template-areas:
-      "portrait title"
-      "detail detail"
-      "dice dice";
-    align-self: end;
-    align-content: start;
+  .game-turn-clock .game-clock-ring {
+    min-height: 1.5rem;
+    max-height: 1.5rem;
+  }
+
+  .game-turn-clock-time {
+    font-size: 1rem;
+  }
+
+  .game-turn-slot .game-turn-control[data-kind] {
+    padding-inline: var(--ui-space-2);
+  }
+
+  .game-turn-slot .game-turn-button-icon,
+  .game-turn-slot .game-roll-dice .die-face {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+}
+
+/* md (48–64rem): the crew strip stays a row of pills over the board. */
+@media (48rem <= width < 64rem) {
+  .game-player-strip .game-strip-player {
+    height: 3.25rem;
+  }
+
+  /* The pills are short: a long name keeps to one line and ends in an ellipsis. */
+  .game-player-strip .game-strip-name:where([data-name-fit]) {
+    display: block;
+    white-space: nowrap;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   lg and xl (64rem+)
+   ----------------------------------------------------------------------- */
+
+@media (width >= 64rem) {
+  .game-shell {
+    grid-template-rows: auto minmax(0, 1fr) var(--dock-height);
   }
 }
 
@@ -903,18 +1023,16 @@
 
 @media (64rem <= width < 80rem) {
   .game-shell {
+    --game-strip-width: clamp(12rem, 19vw, 15rem);
+    /* The camera buttons sit in one row under the column, so the crew and its key keep the
+       height. */
+    --game-camera-height: 2.75rem;
+
     grid-template-columns: minmax(0, 1fr) auto;
     grid-template-areas:
       "header header"
       "board strip"
       "dock dock";
-  }
-
-  .game-shell {
-    --game-strip-width: clamp(12rem, 19vw, 15rem);
-    /* The camera buttons sit in one row under the column, so the crew and its key keep the
-       height. */
-    --game-camera-height: 2.75rem;
   }
 
   /* The crew column stops above the map buttons, which sit in a row under it at the screen's
@@ -1020,11 +1138,22 @@
 }
 
 /* --------------------------------------------------------------------------
-   xl (80rem+): the sidebar is a rail beside the board
+   xl (80rem+): the sidebar is a rail beside the board, and its foot holds the
+   clock and the Roll or End turn button, level with the dock's bottom edge.
+   The turn card stands in the board area's bottom-right corner, just above
+   the dock and left of the rail, over the open sea beside the island (the
+   board stays centered and full size); the map buttons move to the area's
+   top-right corner, and the sheets rise above the card. The footer spans the
+   board and dock rows:
+     .    .       .
+     card card    .        (the card at the end of its row)
+     hand actions turn
    ----------------------------------------------------------------------- */
 
 @media (width >= 80rem) {
   .game-shell {
+    --turn-card-width: 19rem;
+
     grid-template-columns: minmax(0, 1fr) var(--game-rail);
     grid-template-areas:
       "header header"
@@ -1032,15 +1161,60 @@
       "dock rail";
   }
 
-  /* The middle track centers on the board column (the same axis as the placement pill, the
-     board and the dock). The goal and the table buttons end over the rail, and the goal may
-     reach left past it. */
-  .game-header {
-    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) var(--game-rail);
+  /* Only the dock row, the turn card and the rail foot catch the pointer; the board shows through
+     the rest. */
+  .game-footer {
+    grid-column: 1 / -1;
+    grid-row: 2 / 4;
+    grid-template-columns: max-content minmax(0, 1fr) var(--game-rail);
+    grid-template-rows: minmax(0, 1fr) var(--turn-card-height) var(--dock-row-height);
+    grid-template-areas:
+      ". . ."
+      "card card ."
+      "hand actions turn";
+    row-gap: var(--game-gap);
+    pointer-events: none;
   }
 
-  .game-header-end {
-    grid-column: 3 / -1;
+  .game-footer > * {
+    pointer-events: auto;
+  }
+
+  .game-footer > :is(.game-hand, .game-build-panel, .game-steal-chooser) {
+    height: var(--dock-row-height);
+  }
+
+  .game-turn-card {
+    justify-self: end;
+    width: var(--turn-card-width);
+  }
+
+  /* The clock and the button at the rail's foot, level with the dock's bottom edge. */
+  .game-turn-slot {
+    align-self: end;
+    height: var(--turn-row-height);
+    gap: var(--game-gap);
+  }
+
+  /* The sheets and toasts rise above the turn card, so they never cover it. */
+  .game-board-overlay {
+    padding-bottom: calc(var(--turn-card-height) + var(--game-gap));
+  }
+
+  /* The map buttons move to the board area's top-right corner, over open sea. */
+  .board-camera {
+    top: 0;
+    bottom: auto;
+  }
+
+  .game-turn-clock {
+    gap: 0.375rem;
+    padding-inline: 0.5rem 0.875rem;
+  }
+
+  .game-turn-clock .game-clock-ring {
+    min-height: 1.75rem;
+    max-height: 2.25rem;
   }
 
   .game-player-strip,
@@ -1051,20 +1225,82 @@
   }
 
   /* The plaques get their full height first; only when the feed would drop
-     under its minimum does the list scroll. */
+     under its minimum does the list scroll. The rail's foot holds only the
+     clock and the button, so the plaques stand taller than elsewhere (88px,
+     a 52px portrait and a taller points chip, the names keeping their width)
+     and the feed takes the rest. */
   .game-sidebar {
     grid-area: rail;
-    grid-template-rows: minmax(0, auto) auto minmax(11rem, 1fr);
+    grid-template-rows: minmax(0, auto) auto minmax(7rem, 1fr);
     grid-template-areas:
       "crew"
       "bank"
       "feed";
     min-height: 0;
+    margin-bottom: calc(var(--turn-row-height) + var(--game-gap));
     gap: var(--game-gap);
   }
 
   .game-sidebar .game-player-list {
     min-height: 0;
+  }
+
+  .game-sidebar .game-player {
+    grid-template-columns: 3.25rem minmax(0, 1fr) auto;
+    grid-template-rows: 1.75rem 1.75rem;
+    height: 5.5rem;
+  }
+
+  .game-sidebar .game-player-avatar {
+    width: 3.25rem;
+    height: 3.25rem;
+  }
+
+  .game-sidebar .game-player-score {
+    height: 1.875rem;
+    line-height: 1.875rem;
+  }
+
+  .game-sidebar .game-vp-number {
+    font-size: 1.1875rem;
+  }
+
+  .game-sidebar .game-vp-label {
+    font-size: 0.875rem;
+  }
+}
+
+/* xl up to 1440: the rail is at its narrowest, so the plaques' spacing tightens a little and the
+   names keep their width beside the larger portrait. */
+@media (80rem <= width < 90rem) {
+  .game-sidebar .game-player {
+    column-gap: 0.375rem;
+    padding-inline-start: 0.625rem;
+  }
+}
+
+/* xl on a short screen (under 820px, 1280x800): the rail tightens its spacing so the log below
+   keeps room for about two moves, the newest whole. The plaques keep their full height, the bank
+   cards are a step smaller, and the feed's padding is lighter. */
+@media (width >= 80rem) and (height < 51.25rem) {
+  .game-sidebar {
+    grid-template-rows: minmax(0, auto) auto minmax(9.5rem, 1fr);
+  }
+
+  .game-sidebar .game-player-list {
+    gap: 0.375rem;
+  }
+
+  .game-sidebar .game-bank {
+    padding-block: 0.375rem 0.75rem;
+  }
+
+  .game-sidebar .game-bank-card img {
+    max-width: 1.875rem;
+  }
+
+  .game-sidebar .game-feed {
+    padding: var(--ui-space-2) 0.625rem;
   }
 }
 
@@ -1114,12 +1350,14 @@
     padding: 1rem;
     overflow-y: auto;
     overscroll-behavior: contain;
-    border: var(--ui-line) solid var(--game-outline);
+    border: var(--ui-line) solid var(--ui-hairline-game);
     border-radius: var(--ui-radius-panel);
-    background: linear-gradient(var(--ui-panel-top), var(--ui-panel-bottom));
+    background: var(--ui-glass-game);
     box-shadow:
       inset 0 1px 0 var(--ui-panel-highlight),
-      var(--ui-shadow-menu);
+      var(--ui-shadow-panel);
+    -webkit-backdrop-filter: var(--ui-glass-blur-game);
+    backdrop-filter: var(--ui-glass-blur-game);
     visibility: hidden;
     translate: calc(100% + 2 * var(--game-gutter)) 0;
     transition:
