@@ -498,6 +498,13 @@ function createGamePreviewState(mode: GamePreviewMode, seed?: string): GameState
       return createTradeOfferPreviewGame();
     case "game-trade-watch":
       return createTradeWatchPreviewGame();
+    case "game-waiting":
+      // Another player's turn after their roll: the viewer's hand and dock while they wait.
+      return givePreviewPlayerEveryDevelopmentCard(
+        createPreviewState({ activePlayerId: "player-3", showActions: true }),
+      );
+    case "game-cities":
+      return createCitiesPreviewGame();
   }
 }
 
@@ -643,6 +650,34 @@ function createTradeConfirmPreviewGame(): GameState {
   state = proposePreviewTrade(state, "player-1", ["player-2", "player-3", "player-4"]);
   state = answerPreviewTrade(state, "player-3", true);
   return answerPreviewTrade(state, "player-4", false);
+}
+
+/**
+ * The viewer's build-and-trade turn with a city for Bartholomew and one for the viewer, built
+ * through the rules so pieces and scores stay consistent; both hands end as they started.
+ */
+function createCitiesPreviewGame(): GameState {
+  const state = upgradePreviewSettlement(
+    createPreviewState({ activePlayerId: "player-3", showActions: true }),
+    "player-3",
+  );
+  return givePreviewPlayerEveryDevelopmentCard(
+    upgradePreviewSettlement({ ...state, activePlayerId: "player-1" }, "player-1"),
+  );
+}
+
+function upgradePreviewSettlement(state: GameState, playerId: string): GameState {
+  const player = state.players.find((candidate) => candidate.id === playerId);
+  const settlement = state.board.buildings.find(
+    (building) => building.playerId === playerId && building.kind === "settlement",
+  );
+  if (!player || !settlement) throw new Error(`Preview game requires a settlement for ${playerId}`);
+  const funded = replacePreviewPlayerResources(state, playerId, {
+    ...player.resources,
+    stone: player.resources.stone + 3,
+    wheat: player.resources.wheat + 2,
+  });
+  return applyCommand(funded, playerId, { kind: "build_city", vertexKey: settlement.vertexKey });
 }
 
 /** Someone else's trade, which the viewer only watches. */
