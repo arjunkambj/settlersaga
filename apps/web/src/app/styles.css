@@ -202,6 +202,9 @@
   --ui-danger-top: #d23d4d; /* white on it: 4.6:1 */
   --ui-danger-bottom: #c93545;
   --ui-ink-on-primary: #ffffff;
+  --ui-light-face: var(--foreground); /* the white sign-in button */
+  --ui-light-face-hover: #e8f1fd;
+  --ui-ink-on-light: var(--game-outline); /* 16:1 or better */
   --ui-disabled-face: #2a4470;
   --ui-disabled-edge: #1f3558;
   --ui-disabled-ink: #d0dcee; /* 7.4:1 on the disabled face */
