@@ -331,9 +331,11 @@
   -webkit-backdrop-filter: var(--ui-glass-blur-game);
   backdrop-filter: var(--ui-glass-blur-game);
 }
+/* The pill radius keeps square icon buttons round, and lets a wide one (an
+   icon with a label, the account capsule) stay a pill instead of an oval. */
 .game-button-icon,
 .game-button-icon-danger {
-  border-radius: 50%;
+  border-radius: var(--ui-radius-pill);
 }
 
 /* Hover: the face and line brighten in place. No lift. */
