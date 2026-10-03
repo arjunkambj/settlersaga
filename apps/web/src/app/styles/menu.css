@@ -598,8 +598,9 @@
   background: var(--ui-well);
 }
 
-/* Text input and select trigger: a well with a hairline; focus adds the white
-   ring over a navy gap. */
+/* Text input and select trigger: a well with a hairline; focus turns the line
+   sky and adds a soft glow around it. The transparent outline still shows in
+   forced-colors mode. */
 .game-input {
   border: var(--ui-line) solid var(--ui-well-border);
   border-radius: var(--ui-radius-input);
@@ -622,10 +623,9 @@
 }
 .game-input:focus-visible,
 .game-input[data-popup-open] {
-  border-color: var(--ui-focus-ring);
-  outline: 2px solid var(--ui-focus-ring);
-  outline-offset: 2px;
-  box-shadow: 0 0 0 calc(var(--ui-line) + 2px) var(--ui-focus-offset);
+  border-color: var(--ui-input-focus-line);
+  outline: 2px solid transparent;
+  box-shadow: 0 0 0 3px var(--ui-input-focus-glow);
 }
 .game-input[aria-invalid="true"] {
   border-color: var(--ui-danger-top);

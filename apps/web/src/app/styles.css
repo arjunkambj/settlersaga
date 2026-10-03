@@ -220,6 +220,12 @@
   /* States */
   --ui-focus-ring: #ffffff; /* a 2px white ring... */
   --ui-focus-offset: var(--game-outline); /* ...over a 2px navy gap */
+  --ui-input-focus-line: var(--ui-active-rim); /* a focused field: a sky line... */
+  --ui-input-focus-glow: color-mix(
+    in srgb,
+    var(--ui-active-rim) 35%,
+    transparent
+  ); /* ...and glow */
   --ui-active-rim: #8ed8fb; /* the active player's row: a 2px sky rim */
   --ui-selected-face: var(--ui-royal);
   --ui-selected-ring: var(--ui-active-rim);
