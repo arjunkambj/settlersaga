@@ -69,19 +69,10 @@
   backdrop-filter: var(--ui-glass-blur-game);
 }
 
-/* A whole panel that is one big button (the home mode cards). On hover its
-   shadow grows softer and wider in place; it settles 1px when pressed. */
+/* A whole panel that is one big button (the home mode cards). Hover changes
+   nothing (no lift, no shadow); it settles 1px when pressed. */
 .game-card-button {
-  transition:
-    translate 120ms ease-out,
-    box-shadow 150ms ease-out;
-}
-@media (hover: hover) {
-  .game-card-button:hover:not(:disabled) {
-    box-shadow:
-      inset 0 1px 0 var(--ui-panel-highlight),
-      var(--ui-shadow-lift);
-  }
+  transition: translate 120ms ease-out;
 }
 .game-card-button:active:not(:disabled) {
   translate: 0 1px;
@@ -338,7 +329,7 @@
   border-radius: var(--ui-radius-pill);
 }
 
-/* Hover: the face and line brighten in place. No lift. */
+/* Hover: the face and line brighten in place. No lift, no shadow. */
 @media (hover: hover) {
   :is(
       .game-button,
@@ -351,15 +342,6 @@
     ):hover:not(:disabled, [data-disabled]) {
     --btn-face: var(--btn-face-hover);
     --btn-line: var(--btn-line-hover, transparent);
-  }
-  :is(
-      .game-button,
-      .game-button-gold,
-      .game-button-danger,
-      .game-button-icon,
-      .game-button-icon-danger
-    ):hover:not(:disabled, [data-disabled]) {
-    --btn-drop: var(--ui-shadow-hover);
   }
 }
 

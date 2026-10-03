@@ -186,11 +186,8 @@
   --ui-shadow-panel: 0 12px 32px color-mix(in srgb, var(--ui-shadow-ink) 35%, transparent);
   --ui-shadow-control: 0 4px 12px color-mix(in srgb, var(--ui-shadow-ink) 30%, transparent);
   --ui-shadow-raise: var(--ui-shadow-control);
-  /* Hover on raised controls: a slightly wider soft shadow, never a lift. */
-  --ui-shadow-hover: 0 6px 16px color-mix(in srgb, var(--ui-shadow-ink) 34%, transparent);
   --ui-shadow-float: var(--ui-shadow-panel);
   --ui-shadow-menu: var(--ui-shadow-panel);
-  --ui-shadow-lift: 0 16px 36px color-mix(in srgb, var(--ui-shadow-ink) 40%, transparent);
   --ui-shadow-inset: inset 0 1px 2px color-mix(in srgb, var(--ui-shadow-ink) 25%, transparent);
 
   /* Button faces. Gold is the primary; royal the strong secondary. */

@@ -140,7 +140,7 @@
 }
 
 /* Phone: art, title and button in one compact row. The glass, hairline, highlight and soft
-   shadow come from .game-menu-panel; the hover shadow and press from .game-card-button. */
+   shadow come from .game-menu-panel; the press from .game-card-button. */
 .home-mode-card {
   display: grid;
   grid-template-columns: 4.5rem minmax(0, 1fr) auto;
