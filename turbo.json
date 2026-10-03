@@ -5,6 +5,7 @@
     "build": {
       "dependsOn": ["^build"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "env": ["HEXCLAVE_SECRET_SERVER_KEY"],
       "outputs": [".next/**", "!.next/cache/**"]
     },
     "check-types": {
