@@ -19,11 +19,12 @@ const buttonVariants = cva(
           "bg-destructive text-destructive-foreground hover:bg-destructive/80 focus-visible:border-destructive/40 focus-visible:ring-destructive/30",
         // Game buttons: pills, or circles for the icon ones. Their faces, lines, press, focus
         // and disabled states live in `.game-button*` (app/styles/menu.css); pair them with the
-        // `game-*` sizes. Gold is the primary, `game` the royal secondary, `game-secondary` the
-        // quiet one beside a primary (Go back, Cancel).
+        // `game-*` sizes. Gold is the primary, `game` the royal secondary, `game-light` a white
+        // sign-in button, `game-secondary` the quiet one beside a primary (Go back, Cancel).
         game: "game-button",
         "game-secondary": "game-button-secondary",
         "game-gold": "game-button-gold",
+        "game-light": "game-button-light",
         "game-danger": "game-button-danger",
         "game-ghost": "game-button-ghost",
         "game-icon": "game-button-icon [&_svg:not([class*='size-'])]:size-5",

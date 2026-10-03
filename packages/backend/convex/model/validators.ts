@@ -157,6 +157,8 @@ const roomMemberViewValidator = v.object({
 export const roomViewValidator = v.object({
   botDifficulty: botDifficultyValidator,
   botThinking: v.boolean(),
+  /** The viewer is the host and may remove the room (see canHostRemoveRoom). */
+  canRemove: v.boolean(),
   code: v.string(),
   events: v.array(gameEventViewValidator),
   gameJson: v.optional(v.string()),

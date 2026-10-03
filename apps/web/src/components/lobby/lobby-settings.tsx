@@ -13,10 +13,8 @@ import {
   type GameMapId,
   type PlayerCount,
 } from "@settersaga/game";
-import addIcon from "@iconify-icons/solar/add-circle-bold";
 import cardsIcon from "@iconify-icons/solar/card-2-bold";
 import trophyIcon from "@iconify-icons/solar/cup-star-bold";
-import minusIcon from "@iconify-icons/solar/minus-circle-bold";
 import usersIcon from "@iconify-icons/solar/users-group-rounded-bold";
 import timerIcon from "@iconify-icons/solar/stopwatch-bold";
 import { Icon, type IconifyIcon } from "@iconify/react/offline";
@@ -25,6 +23,7 @@ import { useId, type ReactNode } from "react";
 
 import { MapPreview } from "@/components/lobby/map-preview";
 import { Button } from "@/components/ui/button";
+import { MinusIcon, PlusIcon } from "@/components/ui/step-icons";
 import { BOT_DIFFICULTY_DETAILS, BOT_DIFFICULTY_OPTIONS } from "@/lib/lobby/bot-difficulty";
 import { HOUSE_RULE_OPTIONS } from "@/lib/lobby/house-rules";
 import {
@@ -363,7 +362,7 @@ function Stepper({
           size="game-md"
           variant="game-icon"
         >
-          <Icon icon={minusIcon} />
+          <MinusIcon />
         </Button>
       )}
       <output aria-live="polite" className="lobby-counter flex-1">
@@ -377,7 +376,7 @@ function Stepper({
           size="game-md"
           variant="game-icon"
         >
-          <Icon icon={addIcon} />
+          <PlusIcon />
         </Button>
       )}
     </div>

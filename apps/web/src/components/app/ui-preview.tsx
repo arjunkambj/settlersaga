@@ -121,8 +121,11 @@ export function UiPreview({ mode, seed }: { mode: UiPreviewMode; seed?: string }
             onDismissError={() => undefined}
             onJoinRoom={async () => undefined}
             onQuickPlay={async () => undefined}
+            onRemoveRoom={async () => undefined}
             pendingAction={null}
-            rejoinRoom={mode === "home" ? { code: "DGZ9J6", status: "active" } : null}
+            rejoinRoom={
+              mode === "home" ? { canRemove: true, code: "DGZ9J6", status: "active" } : null
+            }
           />
         </PreviewAppSessionProvider>
       );
@@ -261,12 +264,14 @@ function createLobbyRoom({
     role: seat.role ?? "player",
     seatIndex,
   }));
+  const isHost = members.some((member) => member.isViewer && member.role === "host");
   return {
     botDifficulty,
     botThinking: false,
+    canRemove: isHost,
     code: "SPUA6U",
     events: [],
-    isHost: members.some((member) => member.isViewer && member.role === "host"),
+    isHost,
     isPaused: false,
     members,
     settings: { ...settings },
@@ -399,6 +404,7 @@ function LobbyPreview({ fixture }: { fixture: LobbyPreviewFixture }) {
         error=""
         offlineSeatIndexes={offlineSeatIndexes}
         onLeave={async () => undefined}
+        onRemoveRoom={async () => undefined}
         onReplacePlayer={removeMember}
         onSaveSettings={saveSettings}
         onStart={async () => undefined}

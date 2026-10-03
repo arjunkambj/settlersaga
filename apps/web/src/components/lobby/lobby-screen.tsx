@@ -6,6 +6,7 @@ import chatIcon from "@iconify-icons/solar/chat-round-dots-bold";
 import closeIcon from "@iconify-icons/solar/close-circle-bold";
 import logoutIcon from "@iconify-icons/solar/logout-2-bold";
 import playIcon from "@iconify-icons/solar/play-bold";
+import trashIcon from "@iconify-icons/solar/trash-bin-2-bold";
 import { Icon } from "@iconify/react/offline";
 import Image from "next/image";
 import {
@@ -58,6 +59,7 @@ function getRootFontSize(): number {
 }
 
 type LobbyConfirmation =
+  | { kind: "close" }
   | { kind: "leave" }
   | { displayName: string; kind: "remove"; targetSeatId: string };
 
@@ -68,6 +70,8 @@ export interface LobbyScreenProps {
   offlineSeatIndexes: ReadonlySet<number>;
   /** Rejects when the server refuses, so the confirmation can say why and offer a retry. */
   onLeave(): Promise<void>;
+  /** The host closes the lobby for everyone. Rejects when the server refuses. */
+  onRemoveRoom(): Promise<void>;
   /** Rejects when the server refuses, so the confirmation can say why and offer a retry. */
   onReplacePlayer(targetSeatId: string): Promise<void>;
   /** Settles once the server has answered; a refusal is reported through `error`. */
@@ -83,6 +87,7 @@ export function LobbyScreen({
   error,
   offlineSeatIndexes,
   onLeave,
+  onRemoveRoom,
   onReplacePlayer,
   onSaveSettings,
   onStart,
@@ -123,7 +128,7 @@ export function LobbyScreen({
   const nextHostName = room.members.find(
     (member) => member.controller === "player" && !member.isViewer,
   )?.displayName;
-  const leaving = confirming && confirmation?.kind === "leave";
+  const leaving = confirming && (confirmation?.kind === "leave" || confirmation?.kind === "close");
   const busy = confirming || (pendingAction !== null && pendingAction !== "settings");
   const locked = leaving || pendingAction === "start";
   // One save at a time, and no start during one: whichever settles first would end the other's
@@ -205,7 +210,11 @@ export function LobbyScreen({
     setConfirming(true);
     setConfirmError("");
     try {
-      await (target.kind === "leave" ? onLeave() : onReplacePlayer(target.targetSeatId));
+      await (target.kind === "leave"
+        ? onLeave()
+        : target.kind === "close"
+          ? onRemoveRoom()
+          : onReplacePlayer(target.targetSeatId));
       setConfirmation(null);
     } catch (cause) {
       setConfirmError(toActionableError(cause));
@@ -228,9 +237,31 @@ export function LobbyScreen({
               size="game-md"
               variant="game-icon-danger"
             >
-              {leaving ? <Spinner className="size-5" /> : <Icon icon={logoutIcon} />}
+              {confirming && confirmation?.kind === "leave" ? (
+                <Spinner className="size-5" />
+              ) : (
+                <Icon icon={logoutIcon} />
+              )}
             </Button>
           </Tooltip>
+          {room.canRemove ? (
+            <Tooltip label="Remove lobby">
+              <Button
+                aria-label="Remove lobby"
+                className="lobby-remove"
+                disabled={busy}
+                onClick={() => openConfirmation({ kind: "close" })}
+                size="game-md"
+                variant="game-icon"
+              >
+                {confirming && confirmation?.kind === "close" ? (
+                  <Spinner className="size-5" />
+                ) : (
+                  <Icon icon={trashIcon} />
+                )}
+              </Button>
+            </Tooltip>
+          ) : null}
           <Tooltip label="How to play">
             <Button
               aria-label="How to play"
@@ -435,11 +466,15 @@ export function LobbyScreen({
           description={
             confirmation.kind === "remove"
               ? "They can't rejoin this game, and a bot takes their seat."
-              : !nextHostName
-                ? "You're the last one here, so the game closes when you leave."
-                : room.isHost
-                  ? `${nextHostName} becomes the host when you leave.`
-                  : "Your seat opens up for someone else."
+              : confirmation.kind === "close"
+                ? nextHostName
+                  ? "Everyone here is sent home, and the code stops working."
+                  : "The lobby closes, and the code stops working."
+                : !nextHostName
+                  ? "You're the last one here, so the game closes when you leave."
+                  : room.isHost
+                    ? `${nextHostName} becomes the host when you leave.`
+                    : "Your seat opens up for someone else."
           }
           onCancel={() => setConfirmation(null)}
           error={confirmError}
@@ -447,7 +482,9 @@ export function LobbyScreen({
           title={
             confirmation.kind === "remove"
               ? `Remove ${confirmation.displayName} from the table?`
-              : "Leave this game?"
+              : confirmation.kind === "close"
+                ? "Remove this lobby?"
+                : "Leave this game?"
           }
         />
       ) : null}

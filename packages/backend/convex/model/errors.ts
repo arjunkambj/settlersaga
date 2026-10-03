@@ -23,6 +23,7 @@ export type ServerErrorCode =
   | "ROOM_CLOSED"
   | "ROOM_CODE_EXHAUSTED"
   | "ROOM_FULL"
+  | "ROOM_HAS_PLAYERS"
   | "ROOM_NOT_FOUND"
   | "ROOM_NOT_READY"
   | "ROOM_STARTED"

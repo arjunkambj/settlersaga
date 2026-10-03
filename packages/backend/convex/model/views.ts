@@ -8,6 +8,7 @@ import {
 
 import { commandTargetPlayerId } from "./commands";
 import { fail } from "./errors";
+import { canHostRemoveRoom } from "./roomQueries";
 import { requiredAutomatedActor, resumedRemainingMs } from "./scheduling";
 import { parseGameState } from "./storage";
 import type { GameDoc, GameEventView, GameId, ReadCtx, RoomDoc, RoomView, SeatDoc } from "./types";
@@ -55,12 +56,14 @@ export async function toRoomView(
   viewerSeat: SeatDoc,
   seats: readonly SeatDoc[],
 ): Promise<RoomView> {
+  const isHost = viewerSeat._id === room.hostSeatId;
   const base: RoomView = {
     botDifficulty: room.botDifficulty,
     botThinking: false,
+    canRemove: isHost && canHostRemoveRoom(room, seats, viewerSeat),
     code: room.code,
     events: [],
-    isHost: viewerSeat._id === room.hostSeatId,
+    isHost,
     isPaused: false,
     members: seats.map((member) => ({
       controller: member.kind === "bot" ? "bot" : "player",

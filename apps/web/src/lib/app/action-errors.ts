@@ -27,6 +27,7 @@ const MESSAGES_BY_CODE: Partial<Record<string, string>> = {
   ROOM_CLOSED: "That game has closed.",
   ROOM_CODE_EXHAUSTED: "Every game code is taken right now. Try again in a moment.",
   ROOM_FULL: "That game is full.",
+  ROOM_HAS_PLAYERS: "Other players are still in this game, so it can't be removed.",
   ROOM_NOT_FOUND: "No game has that code. Check it and try again.",
   ROOM_NOT_READY: "Fill every seat before starting.",
   ROOM_STARTED: "That game has already started.",

@@ -1,14 +1,13 @@
 "use client";
 
 import type { BotDifficulty } from "@settersaga/game";
-import addIcon from "@iconify-icons/solar/add-circle-bold";
 import crownIcon from "@iconify-icons/solar/crown-minimalistic-bold";
-import minusIcon from "@iconify-icons/solar/minus-circle-bold";
 import { Icon } from "@iconify/react/offline";
 import Image from "next/image";
 
 import { CopyButton } from "@/components/lobby/copy-button";
 import { Button } from "@/components/ui/button";
+import { MinusIcon, PlusIcon } from "@/components/ui/step-icons";
 import { Tooltip } from "@/components/ui/tooltip";
 import { getPlayerPortraitPath } from "@/constants/game/player-assets";
 import { EMPTY_SEAT_ASSET_PATH } from "@/constants/game/ui-assets";
@@ -69,7 +68,7 @@ export function LobbyCrew({
               size="game-sm"
               variant="game-icon"
             >
-              <Icon icon={minusIcon} />
+              <MinusIcon />
             </Button>
             <output aria-live="polite" className="lobby-counter lobby-counter-small">
               {botCount}
@@ -82,7 +81,7 @@ export function LobbyCrew({
               size="game-sm"
               variant="game-icon"
             >
-              <Icon icon={addIcon} />
+              <PlusIcon />
             </Button>
           </div>
         </div>

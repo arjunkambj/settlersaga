@@ -186,11 +186,8 @@
   --ui-shadow-panel: 0 12px 32px color-mix(in srgb, var(--ui-shadow-ink) 35%, transparent);
   --ui-shadow-control: 0 4px 12px color-mix(in srgb, var(--ui-shadow-ink) 30%, transparent);
   --ui-shadow-raise: var(--ui-shadow-control);
-  /* Hover on raised controls: a slightly wider soft shadow, never a lift. */
-  --ui-shadow-hover: 0 6px 16px color-mix(in srgb, var(--ui-shadow-ink) 34%, transparent);
   --ui-shadow-float: var(--ui-shadow-panel);
   --ui-shadow-menu: var(--ui-shadow-panel);
-  --ui-shadow-lift: 0 16px 36px color-mix(in srgb, var(--ui-shadow-ink) 40%, transparent);
   --ui-shadow-inset: inset 0 1px 2px color-mix(in srgb, var(--ui-shadow-ink) 25%, transparent);
 
   /* Button faces. Gold is the primary; royal the strong secondary. */
@@ -205,6 +202,9 @@
   --ui-danger-top: #d23d4d; /* white on it: 4.6:1 */
   --ui-danger-bottom: #c93545;
   --ui-ink-on-primary: #ffffff;
+  --ui-light-face: var(--foreground); /* the white sign-in button */
+  --ui-light-face-hover: #e8f1fd;
+  --ui-ink-on-light: var(--game-outline); /* 16:1 or better */
   --ui-disabled-face: #2a4470;
   --ui-disabled-edge: #1f3558;
   --ui-disabled-ink: #d0dcee; /* 7.4:1 on the disabled face */
@@ -220,6 +220,12 @@
   /* States */
   --ui-focus-ring: #ffffff; /* a 2px white ring... */
   --ui-focus-offset: var(--game-outline); /* ...over a 2px navy gap */
+  --ui-input-focus-line: var(--ui-active-rim); /* a focused field: a sky line... */
+  --ui-input-focus-glow: color-mix(
+    in srgb,
+    var(--ui-active-rim) 35%,
+    transparent
+  ); /* ...and glow */
   --ui-active-rim: #8ed8fb; /* the active player's row: a 2px sky rim */
   --ui-selected-face: var(--ui-royal);
   --ui-selected-ring: var(--ui-active-rim);

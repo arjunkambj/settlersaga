@@ -3,6 +3,7 @@
 import bookIcon from "@iconify-icons/solar/book-bookmark-bold";
 import linkIcon from "@iconify-icons/solar/link-round-bold";
 import playIcon from "@iconify-icons/solar/play-bold";
+import trashIcon from "@iconify-icons/solar/trash-bin-2-bold";
 import usersIcon from "@iconify-icons/solar/users-group-rounded-bold";
 import { Icon, type IconifyIcon } from "@iconify/react/offline";
 import { ROOM_CODE_LENGTH } from "@settersaga/backend/convex/model/constants";
@@ -17,6 +18,7 @@ import { SceneBackdrop } from "@/components/app/scene-backdrop";
 import { GameHelpDialog } from "@/components/game/game-help-dialog";
 import { QuickMatchDialog } from "@/components/quick-match/quick-match-dialog";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import {
   Dialog,
   DialogContent,
@@ -29,6 +31,8 @@ import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { LiveMessage } from "@/components/ui/live-message";
 import { Spinner } from "@/components/ui/spinner";
+import { Tooltip } from "@/components/ui/tooltip";
+import { toActionableError } from "@/lib/app/action-errors";
 import type { PendingAction } from "@/lib/app/pending-action";
 import { isRoomCode, normalizeRoomCode } from "@/lib/session";
 import { cn } from "@/lib/utils";
@@ -40,6 +44,8 @@ import quickMatchArt from "../../../public/home-assets/menu/quick-match.png";
 
 /** A room this player is still seated in, offered as a one-tap rejoin. */
 export interface RejoinRoom {
+  /** The viewer is the host and may remove it: a lobby, or a game only bots are left playing. */
+  canRemove: boolean;
   code: string;
   status: "active" | "waiting";
 }
@@ -52,6 +58,8 @@ export interface HomeScreenProps {
   onDismissError(): void;
   onJoinRoom(code: string): Promise<void>;
   onQuickPlay(botDifficulty: BotDifficulty): Promise<void>;
+  /** Rejects when the server refuses, so the confirmation can say why and offer a retry. */
+  onRemoveRoom(code: string): Promise<void>;
   pendingAction: PendingAction;
   rejoinRoom: RejoinRoom | null;
 }
@@ -64,6 +72,7 @@ export function HomeScreen({
   onDismissError,
   onJoinRoom,
   onQuickPlay,
+  onRemoveRoom,
   pendingAction,
   rejoinRoom,
 }: HomeScreenProps) {
@@ -105,7 +114,9 @@ export function HomeScreen({
           bar is showing. */}
       <div className="home-stage">
         <div className="home-lead relative z-20">
-          {rejoinRoom ? <RejoinBar room={rejoinRoom} /> : null}
+          {rejoinRoom ? (
+            <RejoinBar disabled={isPending} onRemove={onRemoveRoom} room={rejoinRoom} />
+          ) : null}
           <h1 className="game-heading game-title-on-art home-title">Pick a way to play</h1>
         </div>
 
@@ -243,39 +254,97 @@ export function HomeScreen({
   );
 }
 
-function RejoinBar({ room }: { room: RejoinRoom }) {
+function RejoinBar({
+  disabled,
+  onRemove,
+  room,
+}: {
+  disabled: boolean;
+  onRemove(code: string): Promise<void>;
+  room: RejoinRoom;
+}) {
+  const [confirming, setConfirming] = useState(false);
+  const [removing, setRemoving] = useState(false);
+  const [removeError, setRemoveError] = useState("");
+  const isLobby = room.status === "waiting";
+
+  // The dialog closes as soon as the server agrees, without waiting for the bar to go away.
+  const remove = async () => {
+    setRemoving(true);
+    setRemoveError("");
+    try {
+      await onRemove(room.code);
+      setConfirming(false);
+    } catch (cause) {
+      setRemoveError(toActionableError(cause));
+    } finally {
+      setRemoving(false);
+    }
+  };
+
   return (
-    <Link
-      className="game-menu-panel game-card-button home-rejoin motion-safe:animate-game-rise"
-      href={`/room/${encodeURIComponent(room.code)}`}
-    >
-      <span className="game-art-stage home-rejoin-thumb max-[22.5rem]:hidden">
-        <Image
-          alt=""
-          className="size-9 object-contain"
-          placeholder="blur"
-          sizes="36px"
-          src={hostIslandArt}
+    <div className="game-menu-panel home-rejoin motion-safe:animate-game-rise">
+      <Link className="home-rejoin-link" href={`/room/${encodeURIComponent(room.code)}`}>
+        <span className="game-art-stage home-rejoin-thumb max-[22.5rem]:hidden">
+          <Image
+            alt=""
+            className="size-9 object-contain"
+            placeholder="blur"
+            sizes="36px"
+            src={hostIslandArt}
+          />
+          <span aria-hidden="true" className="home-rejoin-live" />
+        </span>
+        <span className="home-rejoin-text">
+          <span className="game-title home-rejoin-title">
+            {isLobby ? "Your crew is waiting" : "Your game is still on"}
+          </span>
+          <span className="home-rejoin-code">
+            Code <span>{room.code}</span>
+          </span>
+        </span>
+        <span
+          className={cn(
+            buttonVariants({ size: "game-md", variant: "game-gold" }),
+            "home-rejoin-button",
+          )}
+        >
+          Rejoin
+        </span>
+      </Link>
+      {room.canRemove ? (
+        <Tooltip label={isLobby ? "Remove lobby" : "Remove game"}>
+          <Button
+            aria-label={isLobby ? "Remove lobby" : "Remove game"}
+            disabled={disabled || removing}
+            onClick={() => {
+              setRemoveError("");
+              setConfirming(true);
+            }}
+            size="game-md"
+            variant="game-icon"
+          >
+            {removing ? <Spinner className="size-5" /> : <Icon icon={trashIcon} />}
+          </Button>
+        </Tooltip>
+      ) : null}
+
+      {confirming ? (
+        <ConfirmationDialog
+          busy={removing}
+          confirmLabel="Remove"
+          description={
+            isLobby
+              ? "Anyone waiting in it is sent home, and the code stops working."
+              : "Only bots are left playing, so the game ends for good."
+          }
+          error={removeError}
+          onCancel={() => setConfirming(false)}
+          onConfirm={() => void remove()}
+          title={isLobby ? "Remove this lobby?" : "Remove this game?"}
         />
-        <span aria-hidden="true" className="home-rejoin-live" />
-      </span>
-      <span className="home-rejoin-text">
-        <span className="game-title home-rejoin-title">
-          {room.status === "waiting" ? "Your crew is waiting" : "Your game is still on"}
-        </span>
-        <span className="home-rejoin-code">
-          Code <span>{room.code}</span>
-        </span>
-      </span>
-      <span
-        className={cn(
-          buttonVariants({ size: "game-md", variant: "game-gold" }),
-          "home-rejoin-button",
-        )}
-      >
-        Rejoin
-      </span>
-    </Link>
+      ) : null}
+    </div>
   );
 }
 

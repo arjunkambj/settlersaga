@@ -69,19 +69,10 @@
   backdrop-filter: var(--ui-glass-blur-game);
 }
 
-/* A whole panel that is one big button (the home mode cards). On hover its
-   shadow grows softer and wider in place; it settles 1px when pressed. */
+/* A whole panel that is one big button (the home mode cards). Hover changes
+   nothing (no lift, no shadow); it settles 1px when pressed. */
 .game-card-button {
-  transition:
-    translate 120ms ease-out,
-    box-shadow 150ms ease-out;
-}
-@media (hover: hover) {
-  .game-card-button:hover:not(:disabled) {
-    box-shadow:
-      inset 0 1px 0 var(--ui-panel-highlight),
-      var(--ui-shadow-lift);
-  }
+  transition: translate 120ms ease-out;
 }
 .game-card-button:active:not(:disabled) {
   translate: 0 1px;
@@ -234,7 +225,7 @@
 }
 
 /* ----------------------------------------------------------------------------
-   Buttons (Button variants "game-gold", "game", "game-secondary",
+   Buttons (Button variants "game-gold", "game", "game-light", "game-secondary",
    "game-ghost", "game-danger", "game-icon" and "game-icon-danger"). Every one
    is a pill (the icon ones a circle) with a 1px line and at most one soft
    shadow: no inside bottom edge, no thick outline. Each variant only sets the
@@ -245,6 +236,7 @@
 .game-button,
 .game-button-secondary,
 .game-button-gold,
+.game-button-light,
 .game-button-danger,
 .game-button-ghost,
 .game-button-icon,
@@ -299,6 +291,15 @@
   --btn-highlight: color-mix(in srgb, var(--foreground) 45%, transparent);
 }
 
+/* Light: a white face with navy ink, for a third-party sign-in (Continue with
+   Google) that should read as that brand's own button. */
+.game-button-light {
+  --btn-face: var(--ui-light-face);
+  --btn-face-hover: var(--ui-light-face-hover);
+  --btn-ink: var(--ui-ink-on-light);
+  --btn-highlight: transparent;
+}
+
 /* Danger: leave, remove, sign out of a guest account. */
 .game-button-danger,
 .game-button-icon-danger {
@@ -331,17 +332,20 @@
   -webkit-backdrop-filter: var(--ui-glass-blur-game);
   backdrop-filter: var(--ui-glass-blur-game);
 }
+/* The pill radius keeps square icon buttons round, and lets a wide one (an
+   icon with a label, the account capsule) stay a pill instead of an oval. */
 .game-button-icon,
 .game-button-icon-danger {
-  border-radius: 50%;
+  border-radius: var(--ui-radius-pill);
 }
 
-/* Hover: the face and line brighten in place. No lift. */
+/* Hover: the face and line brighten in place. No lift, no shadow. */
 @media (hover: hover) {
   :is(
       .game-button,
       .game-button-secondary,
       .game-button-gold,
+      .game-button-light,
       .game-button-danger,
       .game-button-ghost,
       .game-button-icon,
@@ -350,15 +354,6 @@
     --btn-face: var(--btn-face-hover);
     --btn-line: var(--btn-line-hover, transparent);
   }
-  :is(
-      .game-button,
-      .game-button-gold,
-      .game-button-danger,
-      .game-button-icon,
-      .game-button-icon-danger
-    ):hover:not(:disabled, [data-disabled]) {
-    --btn-drop: var(--ui-shadow-hover);
-  }
 }
 
 /* Pressed: down 1px, the shadow tightens. */
@@ -366,6 +361,7 @@
     .game-button,
     .game-button-secondary,
     .game-button-gold,
+    .game-button-light,
     .game-button-danger,
     .game-button-ghost,
     .game-button-icon,
@@ -377,6 +373,7 @@
 :is(
     .game-button,
     .game-button-gold,
+    .game-button-light,
     .game-button-danger,
     .game-button-icon,
     .game-button-icon-danger
@@ -390,6 +387,7 @@
   .game-button,
   .game-button-secondary,
   .game-button-gold,
+  .game-button-light,
   .game-button-danger,
   .game-button-ghost,
   .game-button-icon,
@@ -406,6 +404,7 @@
   .game-button,
   .game-button-secondary,
   .game-button-gold,
+  .game-button-light,
   .game-button-danger,
   .game-button-ghost,
   .game-button-icon,
@@ -426,6 +425,7 @@
     .game-button,
     .game-button-secondary,
     .game-button-gold,
+    .game-button-light,
     .game-button-danger,
     .game-button-icon,
     .game-button-icon-danger,
@@ -442,6 +442,7 @@
     .game-button,
     .game-button-secondary,
     .game-button-gold,
+    .game-button-light,
     .game-button-danger,
     .game-button-icon,
     .game-button-icon-danger,
@@ -596,8 +597,9 @@
   background: var(--ui-well);
 }
 
-/* Text input and select trigger: a well with a hairline; focus adds the white
-   ring over a navy gap. */
+/* Text input and select trigger: a well with a hairline; focus turns the line
+   sky and adds a soft glow around it. The transparent outline still shows in
+   forced-colors mode. */
 .game-input {
   border: var(--ui-line) solid var(--ui-well-border);
   border-radius: var(--ui-radius-input);
@@ -620,10 +622,9 @@
 }
 .game-input:focus-visible,
 .game-input[data-popup-open] {
-  border-color: var(--ui-focus-ring);
-  outline: 2px solid var(--ui-focus-ring);
-  outline-offset: 2px;
-  box-shadow: 0 0 0 calc(var(--ui-line) + 2px) var(--ui-focus-offset);
+  border-color: var(--ui-input-focus-line);
+  outline: 2px solid transparent;
+  box-shadow: 0 0 0 3px var(--ui-input-focus-glow);
 }
 .game-input[aria-invalid="true"] {
   border-color: var(--ui-danger-top);

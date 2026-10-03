@@ -35,6 +35,7 @@ export function RoomScreenContainer({ roomCode }: { roomCode: string }) {
   const leaveRoomMutation = useMutation(api.rooms.leaveRoom);
   const pauseGame = useMutation(api.games.pauseGame);
   const rematch = useMutation(api.rooms.rematch);
+  const removeRoomMutation = useMutation(api.rooms.removeRoom);
   const replacePlayerWithBot = useMutation(api.rooms.replacePlayerWithBot);
   const resumeGame = useMutation(api.games.resumeGame);
   const sendChatMessage = useMutation(api.rooms.sendChatMessage);
@@ -174,6 +175,18 @@ export function RoomScreenContainer({ roomCode }: { roomCode: string }) {
     exitRoomLocally();
   };
 
+  // Like leaving: the room nulls out before the redirect home lands.
+  const removeRoom = async () => {
+    setLeaving(true);
+    try {
+      await removeRoomMutation({ code: normalizedCode });
+    } catch (cause) {
+      setLeaving(false);
+      throw cause;
+    }
+    exitRoomLocally();
+  };
+
   const replacePlayer = async (targetSeatId: string) => {
     await replacePlayerWithBot({ code: normalizedCode, targetSeatId });
   };
@@ -201,6 +214,7 @@ export function RoomScreenContainer({ roomCode }: { roomCode: string }) {
           error={error}
           offlineSeatIndexes={offlineSeatIndexes}
           onLeave={leaveRoom}
+          onRemoveRoom={removeRoom}
           onReplacePlayer={replacePlayer}
           onSaveSettings={(value) => runAction("settings", () => saveLobbySettings(value))}
           onStart={(option) =>

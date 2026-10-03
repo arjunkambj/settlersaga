@@ -343,12 +343,6 @@
   box-shadow: 0 0 0 2px var(--ui-focus-offset);
 }
 
-@media (hover: hover) {
-  .game-picker-card:hover:not(:disabled) {
-    box-shadow: var(--ui-shadow-hover);
-  }
-}
-
 /* Sizes the kit's round icon button for the picker; the hit area reaches 44px. */
 .game-picker-minus {
   position: absolute;
@@ -611,12 +605,6 @@
   outline: 2px solid var(--ui-focus-ring);
   outline-offset: 2px;
   box-shadow: 0 0 0 2px var(--ui-focus-offset);
-}
-
-@media (hover: hover) {
-  .game-hand-card:has(.game-hand-card-button:hover:not(:disabled)) .game-hand-card-face {
-    box-shadow: var(--ui-shadow-hover);
-  }
 }
 
 /* "Play" on a playable development card: a small gold pill on the lower edge of the card face,
@@ -2660,7 +2648,6 @@
     --reply-color: color-mix(in srgb, var(--foreground) 34%, transparent);
 
     background: var(--ui-royal-hover);
-    box-shadow: var(--ui-shadow-hover);
   }
 }
 
