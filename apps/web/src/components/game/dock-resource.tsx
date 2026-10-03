@@ -1,11 +1,10 @@
 "use client";
 
 import { RESOURCE_ORDER, type ResourceInventory, type ResourceType } from "@settersaga/game";
-import minusIcon from "@iconify-icons/solar/minus-circle-bold";
-import { Icon } from "@iconify/react/offline";
 import Image from "next/image";
 
 import { Button } from "@/components/ui/button";
+import { MinusIcon } from "@/components/ui/step-icons";
 import { RESOURCE_CARD_ASSET_PATHS, RESOURCE_ICON_ASSET_PATHS } from "@/constants/game/card-assets";
 import { RESOURCE_LABELS } from "@/constants/game/labels";
 
@@ -192,7 +191,7 @@ export function ResourcePicker({
                 size="game-sm"
                 variant="game-icon"
               >
-                <Icon aria-hidden="true" className="size-4" icon={minusIcon} />
+                <MinusIcon className="size-4" />
               </Button>
             ) : null}
           </li>
