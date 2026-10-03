@@ -13,6 +13,7 @@ import {
 } from "./model/normalize";
 import { clearPresence, findPresence, recordHeartbeat, requireActingHost } from "./model/presence";
 import {
+  canHostRemoveRoom,
   findHumanMembership,
   listSeats,
   nextOpenSeatIndex,
@@ -206,6 +207,26 @@ export const leaveRoom = mutation({
       ),
       ...handOverHost,
     ]);
+    return null;
+  },
+});
+
+/** The host closes the room for good, for everyone in it (see canHostRemoveRoom). */
+export const removeRoom = mutation({
+  args: {
+    code: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const user = await requireCurrentHexclaveUser(ctx);
+    const membership = await findHumanMembership(ctx, args.code, user.id);
+    if (!membership) return null;
+    const { room, seat, seats } = membership;
+    requireHost(room, seat, "Only the host can remove this game.");
+    if (!canHostRemoveRoom(room, seats, seat)) {
+      fail("ROOM_HAS_PLAYERS", "Other players are still in this game, so it can't be removed.");
+    }
+    await closeRoom(ctx, room);
     return null;
   },
 });

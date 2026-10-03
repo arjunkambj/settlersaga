@@ -67,15 +67,41 @@
    gold pill.
    ------------------------------------------------------------------------ */
 
+/* The bar is glass holding the rejoin link and, for the host, a remove button beside it. */
 .home-rejoin {
   display: flex;
   width: 100%;
   align-items: center;
-  gap: var(--ui-space-3);
+  gap: var(--ui-space-2);
   padding: var(--ui-space-2);
-  padding-inline-start: var(--ui-space-2);
   border-radius: var(--ui-radius-pill);
   text-align: start;
+}
+/* The link is the thumbnail, the text and the Rejoin pill; it settles 1px when pressed. */
+.home-rejoin-link {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  align-items: center;
+  gap: var(--ui-space-3);
+  border-radius: var(--ui-radius-pill);
+  color: inherit;
+  transition: translate 120ms ease-out;
+}
+.home-rejoin-link:active {
+  translate: 0 1px;
+}
+.home-rejoin-link:focus-visible {
+  outline: 2px solid var(--ui-focus-ring);
+  outline-offset: 3px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .home-rejoin-link {
+    transition: none;
+  }
+  .home-rejoin-link:active {
+    translate: none;
+  }
 }
 .home-rejoin-thumb {
   position: relative;

@@ -32,6 +32,14 @@
   margin-inline: auto;
   padding: max(0.75rem, env(safe-area-inset-top)) var(--lobby-inset-right) 0 var(--lobby-inset-left);
 }
+/* The host's Remove lobby button takes a fourth spot in the phone's button row. */
+.lobby-header:has(.lobby-remove) {
+  grid-template-columns: repeat(4, auto) minmax(0, 1fr) auto;
+  grid-template-areas:
+    ". . . . . end"
+    "title title title title title title"
+    "code code code code code code";
+}
 
 .lobby-header-start {
   display: contents;
@@ -216,7 +224,8 @@
   }
 
   /* Tablets keep every button on the top row and give the title the whole row below. */
-  .lobby-header {
+  .lobby-header,
+  .lobby-header:has(.lobby-remove) {
     grid-template-columns: auto minmax(0, 1fr) auto;
     grid-template-areas:
       "start . end"

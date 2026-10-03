@@ -117,6 +117,18 @@ export async function requireWaitingHost(
  * The other humans in the order of `seats`; with listSeats' seat order, the first one inherits
  * the host role.
  */
+/**
+ * Whether the host may remove the room for good: always before the game starts, and after that
+ * only while no other person holds a seat, so a host never ends a game others are playing.
+ */
+export function canHostRemoveRoom(
+  room: Pick<RoomDoc, "status">,
+  seats: readonly SeatRecord[],
+  hostSeat: SeatRecord,
+): boolean {
+  return room.status === "waiting" || otherHumans(seats, hostSeat).length === 0;
+}
+
 export function otherHumans<Seat extends SeatRecord>(
   seats: readonly Seat[],
   leavingSeat: SeatRecord,

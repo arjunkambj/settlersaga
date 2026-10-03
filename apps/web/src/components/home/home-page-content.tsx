@@ -27,10 +27,12 @@ export function HomePageContent({
     runAction,
     session,
     setError,
+    updateSession,
   } = useAppSession();
   const joinRoom = useMutation(api.rooms.joinRoom);
   const createRoom = useMutation(api.rooms.createRoom);
   const createQuickGame = useMutation(api.games.createQuickGame);
+  const removeRoom = useMutation(api.rooms.removeRoom);
 
   // The remembered room is only worth offering while this player still has a live seat in it.
   // Errors (a revoked seat, an expired sign-in) just hide the offer instead of failing the page.
@@ -41,7 +43,11 @@ export function HomePageContent({
   const rejoinRoom: RejoinRoom | null =
     activeRoom.status === "success" &&
     (activeRoom.data?.status === "waiting" || activeRoom.data?.status === "active")
-      ? { code: activeRoom.data.code, status: activeRoom.data.status }
+      ? {
+          canRemove: activeRoom.data.canRemove,
+          code: activeRoom.data.code,
+          status: activeRoom.data.status,
+        }
       : null;
 
   // Set once an action lands in a room, until the room page replaces this one. Entering makes the
@@ -78,6 +84,13 @@ export function HomePageContent({
     if (result) enterFrom("join", result.code);
   };
 
+  const handleRemoveRoom = async (code: string) => {
+    await removeRoom({ code });
+    updateSession(({ activeCode, ...current }) =>
+      activeCode === code ? current : { ...current, activeCode },
+    );
+  };
+
   return (
     <>
       <BackgroundMusic src="/music/main-lobby-music.mp3" volume={audioSettings.lobbyMusicVolume} />
@@ -89,6 +102,7 @@ export function HomePageContent({
         onDismissError={() => setError("")}
         onJoinRoom={handleJoinRoom}
         onQuickPlay={handleQuickPlay}
+        onRemoveRoom={handleRemoveRoom}
         pendingAction={entering?.action ?? pendingAction}
         rejoinRoom={entering ? entering.rejoinRoom : rejoinRoom}
       />
