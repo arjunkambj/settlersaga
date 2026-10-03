@@ -2875,7 +2875,6 @@
 .game-dev-card-art {
   width: 4.5rem;
   height: auto;
-  filter: drop-shadow(0 4px 8px color-mix(in srgb, var(--ui-shadow-ink) 35%, transparent));
 }
 
 .game-dev-card-footer {

@@ -183,7 +183,6 @@
 }
 .home-mode-art > img {
   object-fit: contain;
-  filter: drop-shadow(0 6px 10px color-mix(in srgb, var(--ui-shadow-ink) 35%, transparent));
 }
 .home-mode-text {
   display: flex;

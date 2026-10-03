@@ -70,7 +70,7 @@ export function QuickMatchDialog({
             >
               <Image
                 alt=""
-                className="aspect-square w-full max-w-24 object-contain drop-shadow-md"
+                className="aspect-square w-full max-w-24 object-contain"
                 height={512}
                 sizes="96px"
                 src={option.artSrc}

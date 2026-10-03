@@ -10,7 +10,7 @@ export function FullPageStatus({ label }: { label: string }) {
     <MenuScreen>
       <Image
         alt=""
-        className="size-32 drop-shadow-lg motion-safe:animate-game-sway"
+        className="size-32 motion-safe:animate-game-sway"
         height={512}
         preload
         sizes="128px"

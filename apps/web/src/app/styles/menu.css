@@ -39,6 +39,9 @@
    Glass surfaces. Each is a translucent gradient with a backdrop blur, a 1px
    hairline, a faint top highlight and one soft ambient shadow. Where
    backdrop-filter is missing, the glass tokens turn nearly solid instead.
+   Never put a CSS filter (drop-shadow and the like) on anything inside the
+   glass: Chromium then redraws the blur wrongly around that element's box,
+   leaving dark squares or seams across the panel.
    ------------------------------------------------------------------------- */
 
 /* Menu glass: home cards, header capsules, lobby panels, auth, results. */
