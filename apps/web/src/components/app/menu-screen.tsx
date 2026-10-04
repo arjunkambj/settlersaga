@@ -19,12 +19,14 @@ export function MenuScreen({
 }) {
   return (
     <main
-      className="relative flex min-h-dvh items-center justify-center px-4 py-10 sm:px-6"
+      className="relative flex min-h-dvh flex-col items-center px-4 py-10 sm:px-6"
       id="main-content"
     >
       <SceneBackdrop />
-      <div className="flex w-full max-w-sm flex-col items-center gap-4 motion-safe:animate-game-pop sm:max-w-md lg:max-w-lg lg:gap-5">
-        <BrandWordmark className="w-56 sm:w-72 lg:w-[26rem]" priority />
+      {/* Three rows: the wordmark at the foot of the top one, the panel, and an equal row below,
+          so the panel itself sits on the screen's center line. */}
+      <div className="grid w-full max-w-sm flex-1 grid-rows-[1fr_auto_1fr] justify-items-center gap-4 motion-safe:animate-game-pop sm:max-w-md lg:max-w-lg lg:gap-5">
+        <BrandWordmark className="w-56 self-end sm:w-72 lg:w-[26rem]" priority />
         <section className="game-menu-panel flex w-full flex-col items-center gap-5 px-6 py-6 text-center lg:gap-6 lg:px-10 lg:py-8">
           {title ? <h1 className="game-heading text-[1.75rem] lg:text-[2rem]">{title}</h1> : null}
           {children}
