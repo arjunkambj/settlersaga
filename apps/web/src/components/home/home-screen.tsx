@@ -1,7 +1,7 @@
 "use client";
 
 import bookIcon from "@iconify-icons/solar/book-bookmark-bold";
-import linkIcon from "@iconify-icons/solar/link-round-bold";
+import joinIcon from "@iconify-icons/solar/login-3-bold";
 import playIcon from "@iconify-icons/solar/play-bold";
 import trashIcon from "@iconify-icons/solar/trash-bin-2-bold";
 import usersIcon from "@iconify-icons/solar/users-group-rounded-bold";
@@ -145,7 +145,7 @@ export function HomeScreen({
           />
           <PlayModeCard
             art={joinCrewArt}
-            buttonIcon={linkIcon}
+            buttonIcon={joinIcon}
             buttonLabel="Join"
             description="Got a code? Join in"
             disabled={isPending}
