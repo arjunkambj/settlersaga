@@ -93,31 +93,32 @@ export function HomeScreen({
     <main className="home-screen relative" id="main-content">
       <SceneBackdrop />
 
-      <header className="home-header relative z-20">
-        <BrandWordmark className="w-32 shrink-0 sm:w-48 lg:w-56" priority />
-        <div className="flex items-center gap-2 sm:gap-3">
-          <Button
-            className="sm:w-auto sm:px-4 lg:h-12 lg:px-5 lg:text-[0.9375rem]"
-            onClick={() => setShowHelp(true)}
-            size="game-md"
-            variant="game-icon"
-          >
-            <Icon icon={bookIcon} />
-            <span className="sr-only sm:not-sr-only">How to play</span>
-          </Button>
-          <AccountToolbar roomy />
-        </div>
-      </header>
-
-      {/* Three rows under the header: the lead, the cards, and an equal row below. The outer
-          rows share the leftover height, so the cards stay centered whether or not the rejoin
-          bar is showing. */}
+      {/* Three rows: the header and lead, the cards, and an equal row below. The outer rows
+          share the leftover height, so the cards sit on the screen's center line whether or not
+          the rejoin bar is showing. */}
       <div className="home-stage">
-        <div className="home-lead relative z-20">
-          {rejoinRoom ? (
-            <RejoinBar disabled={isPending} onRemove={onRemoveRoom} room={rejoinRoom} />
-          ) : null}
-          <h1 className="game-heading game-title-on-art home-title">Pick a way to play</h1>
+        <div className="home-top">
+          <header className="home-header relative z-20">
+            <BrandWordmark className="w-32 shrink-0 sm:w-48 lg:w-56" priority />
+            <div className="flex items-center gap-2 sm:gap-3">
+              <Button
+                className="sm:w-auto sm:px-4 lg:h-12 lg:px-5 lg:text-[0.9375rem]"
+                onClick={() => setShowHelp(true)}
+                size="game-md"
+                variant="game-icon"
+              >
+                <Icon icon={bookIcon} />
+                <span className="sr-only sm:not-sr-only">How to play</span>
+              </Button>
+              <AccountToolbar roomy />
+            </div>
+          </header>
+          <div className="home-lead relative z-20">
+            {rejoinRoom ? (
+              <RejoinBar disabled={isPending} onRemove={onRemoveRoom} room={rejoinRoom} />
+            ) : null}
+            <h1 className="game-heading game-title-on-art home-title">Pick a way to play</h1>
+          </div>
         </div>
 
         <div className="home-modes relative z-10">

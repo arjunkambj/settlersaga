@@ -2,10 +2,10 @@
    Home menu: the header capsules, the centered title, the rejoin bar and the
    three glass play cards.
 
-   The header sits on top; everything else is a stage with three rows: the
-   lead (rejoin bar and title), the cards, and an equal row below. The outer
-   rows share the leftover height, so the cards sit on the stage's center line
-   with or without the rejoin bar.
+   The screen is a stage with three rows: the header and lead (rejoin bar and
+   title), the cards, and an equal row below. The outer rows share the leftover
+   height, so the cards sit on the screen's center line with or without the
+   rejoin bar.
 
    Phones stack the cards as compact rows (art, text, button). From 768px the
    three cards stand side by side, each with its island art breaking out above
@@ -39,7 +39,13 @@
   grid-template-rows: 1fr auto 1fr;
 }
 
-/* The rejoin bar and the title sit at the bottom of the top row, right above the cards. */
+/* The header tops the first row; the rejoin bar and the title sit at its bottom, right above
+   the cards. */
+.home-top {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
 .home-lead,
 .home-modes,
 .home-foot {
@@ -279,12 +285,13 @@
   .home-screen {
     --home-gutter: 1.25rem;
     --home-gap: var(--ui-space-5);
-    /* The height everything but the art needs: the header, twice the lead (the row below
-       mirrors it) and the card's own chrome. Taller with the rejoin bar. */
-    --home-reserve: 26rem;
+    /* The height everything but the art needs: twice the header and lead (the row below
+       mirrors them), the space below the cards and their own chrome. Taller with the rejoin
+       bar. */
+    --home-reserve: 36rem;
   }
   .home-screen:has(.home-rejoin) {
-    --home-reserve: 34rem;
+    --home-reserve: 44rem;
   }
   .home-lead,
   .home-foot {
@@ -297,7 +304,8 @@
     grid-template-columns: repeat(3, minmax(0, 21.25rem));
     justify-content: center;
     gap: var(--ui-space-4);
-    padding-top: var(--home-breakout);
+    /* The same space below as the art takes above, so the card panels sit on the center line. */
+    padding-block: var(--home-breakout);
   }
   .home-mode-card {
     display: flex;
@@ -374,7 +382,7 @@
   .home-modes {
     min-height: 0;
     grid-template-rows: minmax(0, 1fr);
-    padding-top: 0;
+    padding-block: 0;
   }
   .home-mode-card {
     padding: var(--ui-space-3);
