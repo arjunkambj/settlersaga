@@ -10,7 +10,7 @@ import {
 
 import { ROBBER_ASSET_PATH } from "@/constants/game/board-assets";
 import {
-  ACTION_CARD_ASSET_PATHS,
+  ACTION_ICON_ASSET_PATHS,
   UNKNOWN_RESOURCE_CARD_ASSET_PATH,
 } from "@/constants/game/card-assets";
 
@@ -38,7 +38,7 @@ export function getTurnControlState(game: PlayerGameView): TurnControlState {
     return { art: UNKNOWN_RESOURCE_CARD_ASSET_PATH, kind: "task", label: "Pick cards" };
   }
   if (legal.canRespondToTrade) {
-    return { art: ACTION_CARD_ASSET_PATHS.trade, kind: "task", label: "Reply to offer" };
+    return { art: ACTION_ICON_ASSET_PATHS.trade, kind: "task", label: "Reply to offer" };
   }
   if (game.activePlayerId !== game.viewerPlayerId || !legal.isRequiredActor) {
     return { kind: "waiting" };
@@ -54,11 +54,11 @@ export function getTurnControlState(game: PlayerGameView): TurnControlState {
     case "steal":
       return { art: ROBBER_ASSET_PATH, kind: "task", label: "Pick a player" };
     case "road_building":
-      return { art: ACTION_CARD_ASSET_PATHS.road, kind: "task", label: "Pick a path" };
+      return { art: ACTION_ICON_ASSET_PATHS.road, kind: "task", label: "Pick a path" };
     case "setup_settlement":
-      return { art: ACTION_CARD_ASSET_PATHS.settlement, kind: "task", label: "Pick a corner" };
+      return { art: ACTION_ICON_ASSET_PATHS.settlement, kind: "task", label: "Pick a corner" };
     case "setup_road":
-      return { art: ACTION_CARD_ASSET_PATHS.road, kind: "task", label: "Pick a path" };
+      return { art: ACTION_ICON_ASSET_PATHS.road, kind: "task", label: "Pick a path" };
     default:
       return { kind: "waiting" };
   }

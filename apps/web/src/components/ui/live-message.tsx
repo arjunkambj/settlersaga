@@ -15,7 +15,7 @@ export function LiveMessage({ className, message }: LiveMessageProps) {
     <p
       aria-live="polite"
       className={cn(
-        "rounded-xl bg-destructive/25 px-3 py-1.5 text-center text-sm font-semibold text-balance text-destructive-foreground empty:sr-only",
+        "rounded-xl bg-destructive/25 px-3 py-1.5 text-center text-sm font-semibold text-balance text-foreground empty:sr-only",
         className,
       )}
     >

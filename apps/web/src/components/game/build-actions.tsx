@@ -10,10 +10,7 @@ import { Icon } from "@iconify/react/offline";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 
-import {
-  ACTION_CARD_ASSET_PATHS,
-  DEVELOPMENT_CARD_BACK_ASSET_PATH,
-} from "@/constants/game/card-assets";
+import { ACTION_ICON_ASSET_PATHS } from "@/constants/game/card-assets";
 import type { BoardBuildMode } from "@/lib/game/board-canvas-model";
 import type { SendCommand } from "@/lib/game/command-errors";
 import {
@@ -21,12 +18,11 @@ import {
   getBuildTileStatus,
   getDevelopmentCardTileStatus,
   type ActionTileStatus,
-  type BuildPieceRule,
 } from "@/lib/game/dock-actions";
 import { formatInventory } from "@/lib/game/resources";
 
 import { ActionTile, TileArt, type ActionTileState } from "./action-tile";
-import { CostCards, ResourceIcons } from "./dock-resource";
+import { CostPips } from "./dock-resource";
 import { TradeCenter } from "./trade-center";
 import { useMediaQuery } from "./use-media-query";
 
@@ -38,31 +34,6 @@ const CALLOUT_DURATION_MS = 2_400;
 const PLACING_LABEL = "Pick a spot";
 /** How a tile's label says the game is paused. */
 const PAUSED_WORDS = "Game paused";
-
-/**
- * The three building cards, small, as the phone Build tile's art. A piece the player can build
- * now is lit and the others fade back, so what is within reach reads without opening the tray.
- */
-function PieceMarks({ marks }: { marks: readonly { ready: boolean; rule: BuildPieceRule }[] }) {
-  return (
-    <span className="game-build-marks">
-      {marks.map(({ ready, rule }) => (
-        <span className="game-build-mark" data-ready={ready || undefined} key={rule.piece}>
-          <Image
-            alt=""
-            className="game-build-mark-art"
-            draggable={false}
-            height={768}
-            loading="eager"
-            sizes="1.5rem"
-            src={ACTION_CARD_ASSET_PATHS[rule.piece]}
-            width={512}
-          />
-        </span>
-      ))}
-    </span>
-  );
-}
 
 /** "There's no open path…" after a colon: "Road: there's no open path…". */
 function lowerFirst(text: string): string {
@@ -98,11 +69,7 @@ function getTileView(
     case "ready":
       return { lockReason: null, state: { kind: "ready" }, words: say(own) };
     case "short":
-      return {
-        lockReason: status.reason,
-        state: { kind: "short", missing: status.missing },
-        words: say(own),
-      };
+      return { lockReason: status.reason, state: { kind: "short" }, words: say(own) };
     case "blocked":
       return {
         lockReason: status.reason,
@@ -153,9 +120,9 @@ function SetupSteps({ game }: { game: PlayerGameView }) {
                 alt=""
                 className="game-setup-step-art"
                 draggable={false}
-                height={768}
+                height={512}
                 sizes="2.5rem"
-                src={ACTION_CARD_ASSET_PATHS[step.piece]}
+                src={ACTION_ICON_ASSET_PATHS[step.piece]}
                 width={512}
               />
               <span className="game-setup-step-label">{step.label}</span>
@@ -247,9 +214,8 @@ export function BuildActions({
   const setup = isSetupPhase(game);
   // Something stops every tile at once: the whole row dims.
   const rowLocked = !setup && (lockReason !== undefined || isPaused);
-  // The price: resource icons in the dock row, mini cards (ghosted where missing) on phones.
-  const price = (cost: Readonly<ResourceInventory>) =>
-    dockRow ? <ResourceIcons cards={cost} /> : <CostCards cost={cost} have={me.resources} />;
+  // The price: one icon per card, lit where the player holds it and faint where it is missing.
+  const price = (cost: Readonly<ResourceInventory>) => <CostPips cost={cost} have={me.resources} />;
   const developmentCard = getTileView(
     lockReason,
     isPaused,
@@ -283,7 +249,7 @@ export function BuildActions({
       ariaLabel={`Dev card: ${developmentCard.words}. Costs ${formatInventory(
         DEVELOPMENT_CARD_COST,
       )}. ${game.developmentCardSupply} left in the deck`}
-      art={<TileArt src={DEVELOPMENT_CARD_BACK_ASSET_PATH} />}
+      art={<TileArt src={ACTION_ICON_ASSET_PATHS.developmentCard} />}
       cost={price(DEVELOPMENT_CARD_COST)}
       key="development-card"
       kind="development-card"
@@ -314,14 +280,7 @@ export function BuildActions({
               ? `. ${lockReason}`
               : ""
         }`}
-        art={
-          <PieceMarks
-            marks={pieceViews.map(({ rule, view }) => ({
-              ready: view.state.kind === "ready",
-              rule,
-            }))}
-          />
-        }
+        art={<TileArt src={ACTION_ICON_ASSET_PATHS.build} />}
         kind="build-menu"
         onClick={() => setTrayActionNumber(piecesOpen ? null : game.actionNumber)}
         pressed={buildMode !== null}
@@ -352,7 +311,7 @@ export function BuildActions({
           <ActionTile
             activeLabel={PLACING_LABEL}
             ariaLabel={`${rule.label}: ${words}. Costs ${formatInventory(cost)}. ${left} left`}
-            art={<TileArt src={ACTION_CARD_ASSET_PATHS[rule.piece]} />}
+            art={<TileArt src={ACTION_ICON_ASSET_PATHS[rule.piece]} />}
             cost={price(cost)}
             key={rule.piece}
             kind={rule.piece}

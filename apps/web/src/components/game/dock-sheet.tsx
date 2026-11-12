@@ -9,11 +9,13 @@ import { Button } from "@/components/ui/button";
 import { HandDockPortal } from "./hand-dock";
 
 /**
- * The panel every dock sheet (trade composer, trade offer, discard) uses: a clean title centered
- * between equal side slots, the body, and a footer whose buttons share the width equally. It
- * renders into the sheet slot above the dock, so the hand stays in view.
+ * The panel every dock sheet (trade composer, trade offer, discard) uses: a short head (the title,
+ * then Close at its end), the body, and a footer. It renders into the sheet slot just above the
+ * dock, so the hand and most of the board stay in view. A `blocking` sheet (discarding) is one
+ * the player must answer before anything else, and dims the board behind it; trading never does.
  */
 export function DockSheet({
+  blocking = false,
   children,
   footer,
   id,
@@ -22,6 +24,7 @@ export function DockSheet({
   title,
   titleId,
 }: {
+  blocking?: boolean;
   children: ReactNode;
   footer?: ReactNode;
   id: string;
@@ -35,6 +38,7 @@ export function DockSheet({
       <section
         aria-labelledby={titleId}
         className="game-dock-sheet motion-safe:animate-game-rise"
+        data-blocking={blocking || undefined}
         id={id}
         ref={sheetRef}
         tabIndex={-1}
@@ -48,7 +52,7 @@ export function DockSheet({
               aria-label="Close"
               className="game-dock-sheet-close"
               onClick={onClose}
-              size="game-md"
+              size="game-sm"
               variant="game-icon"
             >
               <Icon aria-hidden="true" icon={closeIcon} />

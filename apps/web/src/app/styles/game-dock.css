@@ -30,38 +30,27 @@
      --dock-tile-gap         between tiles
      --dock-tile-pad         a tile's side padding (md, lg)
      --dock-panel-pad        the build panel's padding
-     --dock-art-size         a tile's art (md, lg)
-     --dock-icon-size        a price's resource icons (md, lg)
-     --dock-need-icon-size   the missing cards' icons on the state line (md, lg)
 
    The victory point card's slot takes no room from Build & Trade: the hand
    makes it up itself, with a step smaller cards below 1440 and tighter gaps
-   below 1600, and the four playable kinds overlap beside it. Where the row
-   runs short (1280), the tiles lose their art. From xl up, on a tall
-   screen (from about 900px high) the row grows a little, up to 128px at
-   1000px, and the tiles fill it. Below xl the turn card shares the dock row,
-   so the tiles keep their state line first: they take a small art above the
-   name, and a tile narrower than its name (md) keeps the art and the state
-   and drops the name and the price (both are in the tooltip and the label).
+   below 1600, and the four playable kinds overlap beside it. Every tile is an
+   icon, a name and a price at every size (Build & trade, below).
    ========================================================================= */
 
 @media (width >= 48rem) {
   .game-shell {
     --turn-card-height: 5.75rem;
     --turn-row-height: 3rem;
-    --dock-row-height: calc(var(--turn-card-height) + var(--ui-space-2) + var(--turn-row-height));
+    --dock-row-height: calc(var(--turn-card-height) + var(--g-space-2) + var(--turn-row-height));
     /* md: 35px cards 4.5px apart, so the room's second slot fits beside the narrowest tiles. */
     --dock-hand-card-width: 2.1875rem;
-    --dock-hand-gap: 0.28125rem;
-    --dock-hand-pad: 0.375rem;
+    --dock-hand-gap: var(--g-space-1);
+    --dock-hand-pad: var(--g-space-2);
     --dock-dev-width: calc(2 * var(--dock-hand-card-width) + var(--dock-hand-gap));
     --dock-tile-max: 15rem;
-    --dock-tile-gap: 0.125rem;
-    --dock-tile-pad: 0.125rem;
-    --dock-panel-pad: 0.1875rem;
-    --dock-art-size: 2.75rem;
-    --dock-icon-size: 0.875rem;
-    --dock-need-icon-size: 0.875rem;
+    --dock-tile-gap: var(--g-space-0);
+    --dock-tile-pad: var(--g-space-0);
+    --dock-panel-pad: var(--g-space-1);
   }
 }
 
@@ -70,22 +59,20 @@
 @media (width >= 64rem) {
   .game-shell {
     --dock-hand-card-width: 2.375rem;
-    --dock-hand-gap: var(--ui-space-1);
+    --dock-hand-gap: var(--g-space-1);
     --dock-dev-width: calc(3 * var(--dock-hand-card-width) + 2 * var(--dock-hand-gap));
-    --dock-tile-gap: 0.1875rem;
-    --dock-tile-pad: 0.1875rem;
-    --dock-art-size: 2.5rem;
+    --dock-tile-gap: var(--g-space-0);
+    --dock-tile-pad: var(--g-space-1);
   }
 }
 
-/* xl up to 1440: the turn card leaves the dock, and the row is its own height: 112px, growing
-   with a tall screen from 900px high to 128px at 1000px. The hand cards are 42px and the gaps
-   small. */
+/* xl: the turn card leaves the dock for the rail's foot, and the row is its own height (112px).
+   The hand cards are 42px and the gaps small. */
 @media (width >= 80rem) {
   .game-shell {
     --turn-card-height: 5.5rem;
-    --turn-row-height: 3.25rem;
-    --dock-row-height: clamp(7rem, 7rem + (100dvh - 56.25rem) * 0.16, 8rem);
+    --turn-row-height: 3.5rem;
+    --dock-row-height: 7rem;
     --dock-hand-card-width: 2.625rem;
   }
 }
@@ -94,16 +81,16 @@
 @media (width >= 90rem) {
   .game-shell {
     --dock-hand-card-width: 2.875rem;
-    --dock-tile-gap: 0.3125rem;
-    --dock-panel-pad: var(--ui-space-1);
+    --dock-tile-gap: var(--g-space-1);
+    --dock-panel-pad: var(--g-space-1);
   }
 }
 
 /* 1600 and wider: full gaps in the hand. */
 @media (width >= 100rem) {
   .game-shell {
-    --dock-hand-gap: var(--ui-space-2);
-    --dock-hand-pad: var(--ui-space-2);
+    --dock-hand-gap: var(--g-space-2);
+    --dock-hand-pad: var(--g-space-2);
   }
 }
 
@@ -119,12 +106,9 @@
 .game-turn-clock,
 .game-build-callout,
 .game-hand-dev-popover {
-  border: var(--ui-line) solid var(--ui-hairline-game);
-  background: var(--ui-glass-game);
-  box-shadow:
-    inset 0 1px 0 var(--ui-panel-highlight),
-    var(--ui-shadow-panel);
-  color: var(--foreground);
+  border: 0;
+  background: var(--g-surface);
+  color: var(--g-text);
   -webkit-backdrop-filter: var(--ui-glass-blur-game);
   backdrop-filter: var(--ui-glass-blur-game);
 }
@@ -133,25 +117,24 @@
    ring, since it overlaps the card's edge. */
 .game-count-chip {
   position: absolute;
-  top: -0.375rem;
-  right: -0.375rem;
+  top: calc(-1 * var(--g-space-1));
+  right: calc(-1 * var(--g-space-1));
   z-index: 2;
   display: grid;
   min-width: 1.25rem;
   height: 1.25rem;
   place-items: center;
-  padding-inline: 0.3125rem;
+  padding-inline: var(--g-space-1);
   border: 0;
   border-radius: var(--ui-radius-pill);
-  background: var(--ui-royal);
-  box-shadow: 0 0 0 1.5px var(--game-outline);
-  color: var(--ui-ink-on-primary);
+  background: var(--g-raised);
+  box-shadow: 0 0 0 2px var(--g-surface);
+  color: var(--g-text);
   font-family: var(--font-sans);
-  font-size: 0.75rem;
-  font-weight: 800;
+  font-size: var(--g-font-xs);
+  font-weight: var(--g-weight-strong);
   font-variant-numeric: tabular-nums;
   line-height: 1;
-  text-shadow: none;
   pointer-events: none;
 }
 
@@ -166,7 +149,7 @@
   overflow: hidden;
   border: 2px solid var(--player-color);
   border-radius: 50%;
-  background: color-mix(in srgb, var(--player-color) 45%, var(--ui-glass-game-bottom-solid));
+  background: var(--g-raised);
 }
 
 .game-dock-portrait-art {
@@ -175,53 +158,15 @@
   object-fit: cover;
 }
 
-/* A price as one mini card per card it takes. Cards the player holds are in full color; the
-   ones still missing are ghosted: faint, inside a dashed outline. */
-.game-cost-cards {
-  display: flex;
-  flex-wrap: nowrap;
-  align-items: center;
-  justify-content: center;
-  gap: 0.125rem;
-}
-
-.game-cost-card {
-  position: relative;
-  display: block;
-  flex: none;
-  width: var(--cost-card-width, 1rem);
-  aspect-ratio: 2 / 3;
-  overflow: hidden;
-  border-radius: 0.1875rem;
-}
-
-.game-cost-card-art {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.game-cost-card[data-missing] .game-cost-card-art {
-  opacity: 0.3;
-}
-
-.game-cost-card[data-missing]::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border: 1px dashed var(--ui-text-muted);
-  border-radius: inherit;
-}
-
 /* A row of small resource cards with counts (one side of a trade). */
 .game-resource-row {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 0.625rem;
+  gap: var(--g-space-2);
   min-height: 3rem;
   margin: 0;
-  padding: 0.375rem 0.375rem 0;
+  padding: var(--g-space-2) var(--g-space-2) 0;
   list-style: none;
 }
 
@@ -235,28 +180,28 @@
   width: 100%;
   height: 100%;
   border-radius: 0.375rem;
-  box-shadow: var(--ui-shadow-control);
   object-fit: cover;
 }
 
 .game-resource-thumb[data-short] .game-resource-thumb-art {
-  outline: 2px solid var(--ui-missing);
+  outline: 2px solid var(--g-muted);
   outline-offset: 1px;
 }
 
 .game-resource-thumb[data-short] .game-count-chip {
-  background: var(--ui-danger-bottom);
-  color: var(--ui-ink-on-primary);
+  background: var(--g-accent);
+  color: var(--g-surface);
 }
 
 /* Five cards to pick from; the minus button hangs under a picked card. */
 .game-resource-picker {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 3rem));
-  justify-content: center;
-  gap: var(--ui-space-2);
+  align-items: start;
+  justify-content: start;
+  gap: var(--g-space-2);
   margin: 0;
-  padding: 0.375rem 0 0.75rem;
+  padding: var(--g-space-2) var(--g-space-2) 0 var(--g-space-2);
   list-style: none;
 }
 
@@ -264,6 +209,7 @@
   position: relative;
   display: grid;
   justify-items: center;
+  gap: var(--g-space-0);
 }
 
 .game-picker-card {
@@ -274,7 +220,6 @@
   border: 0;
   border-radius: var(--ui-radius-small);
   background: transparent;
-  box-shadow: var(--ui-shadow-control);
   cursor: pointer;
   transition:
     box-shadow 150ms ease-out,
@@ -290,41 +235,41 @@
 
 /* The picks on a card: a sky chip with navy ink (gold stays for the main actions). */
 .game-picker-card .game-count-chip {
-  background: var(--ui-pick);
-  color: var(--ui-ink-on-pick);
+  background: var(--g-text);
+  color: var(--g-surface);
 }
 
 /* The hand count, when the picker shows it: the same royal chip as the hand. */
 .game-picker-card .game-count-chip[data-tone="held"] {
-  background: var(--ui-royal);
-  color: var(--ui-ink-on-primary);
+  background: var(--g-raised);
+  color: var(--g-text);
 }
 
 /* Picks, when the corner shows the hand count: a sky chip just inside the lower edge. */
 .game-picker-picked {
   position: absolute;
-  bottom: 0.25rem;
+  bottom: var(--g-space-1);
   left: 50%;
   z-index: 2;
   display: grid;
   min-width: 1.375rem;
   height: 1.375rem;
   place-items: center;
-  padding-inline: 0.3125rem;
+  padding-inline: var(--g-space-1);
   border-radius: var(--ui-radius-pill);
-  background: var(--ui-pick);
-  box-shadow: 0 0 0 1.5px var(--game-outline);
-  color: var(--ui-ink-on-pick);
+  background: var(--g-text);
+  box-shadow: 0 0 0 2px var(--g-surface);
+  color: var(--g-surface);
   font-family: var(--font-sans);
-  font-size: 0.8125rem;
-  font-weight: 800;
+  font-size: var(--g-font-xs);
+  font-weight: var(--g-weight-strong);
   font-variant-numeric: tabular-nums;
   line-height: 1;
   translate: -50% 0;
 }
 
 .game-picker-card[data-picked] {
-  outline: 2px solid var(--ui-selected-ring);
+  outline: 2px solid var(--g-text);
   outline-offset: 2px;
 }
 
@@ -338,25 +283,26 @@
 }
 
 .game-picker-card:focus-visible {
-  outline: 2px solid var(--ui-focus-ring);
+  outline: 2px solid var(--g-text);
   outline-offset: 2px;
-  box-shadow: 0 0 0 2px var(--ui-focus-offset);
+  box-shadow: 0 0 0 2px var(--g-surface);
 }
 
-/* Sizes the kit's round icon button for the picker; the hit area reaches 44px. */
+/* Takes one pick back: a small round button on the card's top-left corner (the count sits on the
+   right one). The hit area reaches 44px. */
 .game-picker-minus {
   position: absolute;
-  bottom: -0.875rem;
-  left: 50%;
+  top: calc(-1 * var(--g-space-2));
+  left: calc(-1 * var(--g-space-2));
   z-index: 3;
-  width: 1.75rem;
-  height: 1.75rem;
-  translate: -50% 0;
+  width: 1.5rem;
+  height: 1.5rem;
+  box-shadow: 0 0 0 2px var(--g-surface);
 }
 
 .game-picker-minus::before {
   position: absolute;
-  inset: -0.5rem;
+  inset: calc(-1 * var(--g-space-2));
   content: "";
 }
 
@@ -371,7 +317,7 @@
   width: 100%;
   min-width: 0;
   height: fit-content;
-  padding: 0.25rem;
+  padding: var(--g-space-1);
   border-radius: var(--ui-radius-hud);
 }
 
@@ -389,14 +335,14 @@
   justify-content: flex-start;
   /* While the row scrolls, the hand widens the gap (--hand-gap) so the cards in view fill it
      edge to edge and the last one is never cut in half. */
-  gap: var(--hand-gap, var(--ui-space-2));
+  gap: var(--hand-gap, var(--g-space-2));
   margin: 0;
   /* Room for the count chips above the cards. */
-  padding: 0.625rem var(--ui-space-2) 0.25rem;
+  padding: var(--g-space-3) var(--g-space-2) var(--g-space-1);
   overflow-x: auto;
   list-style: none;
   scroll-behavior: smooth;
-  scroll-padding-inline: var(--ui-space-2);
+  scroll-padding-inline: var(--g-space-2);
   scroll-snap-type: x proximity;
   scrollbar-width: none;
 }
@@ -407,37 +353,18 @@
 
 .game-hand-cards:focus-visible {
   border-radius: var(--ui-radius-control);
-  outline: 2px solid var(--ui-focus-ring);
+  outline: 2px solid var(--g-text);
   outline-offset: -2px;
-}
-
-/* Fade whichever end still has cards scrolled out of view. */
-.game-hand-cards[data-more-after] {
-  mask-image: linear-gradient(to right, black calc(100% - 1rem), transparent);
-}
-
-.game-hand-cards[data-more-before] {
-  mask-image: linear-gradient(to left, black calc(100% - 1rem), transparent);
-}
-
-.game-hand-cards[data-more-before][data-more-after] {
-  mask-image: linear-gradient(
-    to right,
-    transparent,
-    black 1rem,
-    black calc(100% - 1rem),
-    transparent
-  );
 }
 
 /* The scroll arrows get a gutter of their own beside the card row, so they never sit on a
    card. */
 .game-hand-shelf:has(> .game-hand-cards[data-more-after]) {
-  padding-inline-end: 2.875rem;
+  padding-inline-end: calc(2.5rem + var(--g-space-1));
 }
 
 .game-hand-shelf:has(> .game-hand-cards[data-more-before]) {
-  padding-inline-start: 2.875rem;
+  padding-inline-start: calc(2.5rem + var(--g-space-1));
 }
 
 .game-hand-card {
@@ -450,7 +377,7 @@
   flex: none;
   justify-items: center;
   width: var(--hand-card-width);
-  gap: 0.1875rem;
+  gap: var(--g-space-0);
   scroll-snap-align: start;
 }
 
@@ -459,8 +386,8 @@
   flex: none;
   align-self: stretch;
   width: 1px;
-  margin-block: 0 1.25rem;
-  background: var(--ui-divider);
+  margin-block: 0 var(--g-space-6);
+  background: var(--g-raised);
 }
 
 .game-hand-card-face {
@@ -469,7 +396,6 @@
   aspect-ratio: 2 / 3;
   overflow: hidden;
   border-radius: var(--ui-radius-small);
-  box-shadow: var(--ui-shadow-control);
   transition:
     box-shadow 150ms ease-out,
     opacity 150ms ease-out;
@@ -483,15 +409,13 @@
 
 /* The name under the card: 13px bold. It may reach into the gaps beside a narrow card. */
 .game-hand-card-label {
-  max-width: calc(100% + var(--ui-space-2));
+  max-width: calc(100% + var(--g-space-2));
   overflow: visible;
-  color: var(--foreground);
+  color: var(--g-text);
   font-family: var(--font-sans);
-  font-size: 0.8125rem;
-  font-weight: 700;
-  letter-spacing: 0;
-  line-height: 1rem;
-  text-shadow: none;
+  font-size: var(--g-font-xs);
+  font-weight: var(--g-weight-strong);
+  line-height: var(--g-leading-xs);
   white-space: nowrap;
 }
 
@@ -499,8 +423,7 @@
    clear of each other. */
 .game-hand-card[data-development] .game-hand-card-label {
   max-width: none;
-  font-size: 0.75rem;
-  letter-spacing: -0.02em;
+  font-size: var(--g-font-xs);
 }
 
 /* None of this card: it dims and keeps its color. */
@@ -509,16 +432,16 @@
 }
 
 .game-hand-card[data-empty] .game-count-chip {
-  background: var(--ui-locked);
-  color: var(--ui-ink-on-locked);
+  background: var(--g-raised);
+  color: var(--g-muted);
 }
 
 .game-hand-card[data-empty] .game-hand-card-label {
-  color: var(--ui-text-muted);
+  color: var(--g-muted);
 }
 
 .game-hand-card[data-selected] .game-hand-card-face {
-  outline: 2px solid var(--ui-selected-ring);
+  outline: 2px solid var(--g-text);
   outline-offset: 2px;
 }
 
@@ -529,9 +452,7 @@
 /* The development cards gathered into one stack: the card back with a second card peeking
    behind it. */
 .game-hand-card[data-stack] .game-hand-card-face {
-  box-shadow:
-    3px -3px 0 -1px var(--ui-locked),
-    var(--ui-shadow-control);
+  box-shadow: 3px -3px 0 -1px var(--g-raised);
 }
 
 /* The victory point cards, as one card: the trophy art, a gold star where the other cards keep
@@ -539,8 +460,8 @@
    so the card has no Play pill and nothing to press. */
 .game-hand-card[data-victory] .game-count-chip {
   padding: 0;
-  background: linear-gradient(var(--ui-gold-top), var(--ui-gold-bottom));
-  color: var(--ui-ink-on-gold);
+  background: var(--g-accent);
+  color: var(--g-surface);
 }
 
 .game-hand-vp-star {
@@ -550,7 +471,7 @@
 
 /* A little more room between the number and "VP", which otherwise run together at this size. */
 .game-hand-card[data-victory] .game-hand-card-label {
-  color: var(--ui-gold-top);
+  color: var(--g-accent);
   word-spacing: 0.125em;
 }
 
@@ -564,22 +485,22 @@
    the label. */
 .game-hand-picked {
   position: absolute;
-  bottom: 1.25rem;
+  bottom: var(--g-space-4);
   left: 50%;
   z-index: 2;
   display: grid;
   min-width: 1.25rem;
   height: 1.25rem;
   place-items: center;
-  padding-inline: 0.3125rem;
+  padding-inline: var(--g-space-1);
   border: 0;
   border-radius: var(--ui-radius-pill);
-  background: var(--ui-pick);
-  box-shadow: 0 0 0 1.5px var(--game-outline);
-  color: var(--ui-ink-on-pick);
+  background: var(--g-text);
+  box-shadow: 0 0 0 2px var(--g-surface);
+  color: var(--g-surface);
   font-family: var(--font-sans);
-  font-size: 0.8125rem;
-  font-weight: 800;
+  font-size: var(--g-font-xs);
+  font-weight: var(--g-weight-strong);
   font-variant-numeric: tabular-nums;
   line-height: 1;
   translate: -50% 0;
@@ -602,30 +523,30 @@
 }
 
 .game-hand-card-button:focus-visible {
-  outline: 2px solid var(--ui-focus-ring);
+  outline: 2px solid var(--g-text);
   outline-offset: 2px;
-  box-shadow: 0 0 0 2px var(--ui-focus-offset);
+  box-shadow: 0 0 0 2px var(--g-surface);
 }
 
 /* "Play" on a playable development card: a small gold pill on the lower edge of the card face,
    so the card's name keeps the label slot under it. */
 .game-hand-play {
   position: absolute;
-  bottom: calc(1rem + 0.1875rem + 0.25rem);
+  bottom: calc(1rem + var(--g-space-0) + var(--g-space-1));
   left: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   height: 1.125rem;
-  padding-inline: 0.4375rem;
+  padding-inline: var(--g-space-2);
   border: 0;
   border-radius: var(--ui-radius-pill);
-  background: linear-gradient(var(--ui-gold-top), var(--ui-gold-bottom));
-  box-shadow: 0 0 0 1.5px var(--game-outline);
-  color: var(--ui-ink-on-gold);
+  background: var(--g-accent);
+  box-shadow: 0 0 0 2px var(--g-surface);
+  color: var(--g-surface);
   font-family: var(--font-sans);
-  font-size: 0.75rem;
-  font-weight: 800;
+  font-size: var(--g-font-xs);
+  font-weight: var(--g-weight-strong);
   line-height: 1;
   translate: -50% 0;
 }
@@ -634,10 +555,10 @@
 .game-hand-dev-popover {
   position: absolute;
   inset-inline-end: 0;
-  bottom: calc(100% + 0.75rem);
+  bottom: calc(100% + var(--g-space-3));
   z-index: 30;
   max-width: calc(100vw - 2rem);
-  padding: 0.25rem 0.5rem 0.375rem;
+  padding: var(--g-space-1) var(--g-space-2) var(--g-space-2);
   border-radius: var(--ui-radius-hud);
 }
 
@@ -645,11 +566,31 @@
   display: none;
 }
 
+/* A solid back under the panel colour, for the same reason as the phone build tray: the turn
+   card under it would show through the glass. */
+.game-hand-dev-popover {
+  background: var(--g-raised);
+}
+
+.game-hand-dev-popover::before {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--g-surface);
+  content: "";
+}
+
+/* The open tray reaches up over the turn card and clock, so the hand steps in front of them. */
+.game-hand:has(.game-hand-dev-popover:not([hidden])) {
+  z-index: 1;
+}
+
 .game-hand-dev-list {
   display: flex;
-  gap: var(--ui-space-3);
+  gap: var(--g-space-3);
   margin: 0;
-  padding: 0.625rem 0.25rem 0;
+  padding: var(--g-space-3) var(--g-space-1) 0;
   overflow-x: auto;
   list-style: none;
   scrollbar-width: none;
@@ -658,7 +599,7 @@
 /* Sizes the kit's round icon button for the ends of the card row. */
 .game-hand-scroll {
   position: absolute;
-  top: calc(0.625rem + (var(--hand-card-width) * 0.75) - 1.25rem);
+  top: calc(var(--g-space-2) + (var(--hand-card-width) * 0.75) - 1.25rem);
   z-index: 4;
 }
 
@@ -673,28 +614,28 @@
 /* How many cards lie past the arrow: a quiet chip, gold when one of them can be played now. */
 .game-hand-scroll-count {
   position: absolute;
-  top: -0.5rem;
-  right: -0.5rem;
+  top: calc(-1 * var(--g-space-2));
+  right: calc(-1 * var(--g-space-2));
   display: grid;
   min-width: 1.375rem;
   height: 1.25rem;
   place-items: center;
-  padding-inline: 0.3125rem;
+  padding-inline: var(--g-space-1);
   border-radius: var(--ui-radius-pill);
-  background: var(--ui-locked);
-  box-shadow: 0 0 0 1.5px var(--game-outline);
-  color: var(--ui-ink-on-locked);
+  background: var(--g-raised);
+  box-shadow: 0 0 0 2px var(--g-surface);
+  color: var(--g-muted);
   font-family: var(--font-sans);
-  font-size: 0.75rem;
-  font-weight: 800;
+  font-size: var(--g-font-xs);
+  font-weight: var(--g-weight-strong);
   font-variant-numeric: tabular-nums;
   line-height: 1;
   pointer-events: none;
 }
 
 .game-hand-scroll-count[data-playable] {
-  background: var(--ui-gold-top);
-  color: var(--ui-ink-on-gold);
+  background: var(--g-accent);
+  color: var(--g-surface);
 }
 
 /* A development card too far under the next one for the word shows the pill's play mark alone
@@ -771,7 +712,7 @@
   }
 
   .game-hand-fan[data-overlap] > .game-hand-card:not(:first-child) .game-hand-play {
-    right: 0.125rem;
+    right: var(--g-space-0);
     left: auto;
     width: 1.125rem;
     padding: 0;
@@ -798,7 +739,7 @@
     display: grid;
     grid-template-rows: auto 1rem;
     justify-items: start;
-    gap: 0.1875rem;
+    gap: var(--g-space-0);
   }
 
   .game-hand-dev-empty {
@@ -807,7 +748,7 @@
     aspect-ratio: 2 / 3;
     overflow: hidden;
     border-radius: var(--ui-radius-small);
-    outline: 1.5px dashed var(--ui-text-muted);
+    outline: 1.5px dashed var(--g-muted);
     outline-offset: -1.5px;
   }
 
@@ -817,7 +758,7 @@
 
   .game-hand-dev-empty-label {
     max-width: none;
-    color: var(--ui-text-muted);
+    color: var(--g-muted);
   }
 }
 
@@ -825,7 +766,7 @@
    corner chip. */
 @media (48rem <= width < 64rem) {
   .game-hand .game-hand-cards {
-    padding-inline-start: 0.25rem;
+    padding-inline-start: var(--g-space-1);
   }
 }
 
@@ -833,8 +774,8 @@
    the development cards' names) to stay clear of each other. */
 @media (48rem <= width < 80rem) {
   .game-hand .game-hand-card-label {
-    font-size: 0.75rem;
-    letter-spacing: -0.02em;
+    font-size: var(--g-font-xs);
+    font-weight: var(--g-weight);
   }
 }
 
@@ -870,7 +811,7 @@
 /* A zero-width line through the card's center (set inline), as tall as its face. */
 .resource-flight-anchor {
   position: absolute;
-  top: 0.625rem;
+  top: var(--g-space-2);
   width: 0;
   height: calc(var(--hand-card-width) * 1.5);
 }
@@ -913,29 +854,28 @@
 /* "+2" or "−1" on a flying card: a count badge, green for a gain and red for a spend. */
 .resource-flight-badge {
   position: absolute;
-  top: -0.375rem;
-  right: -0.375rem;
+  top: calc(-1 * var(--g-space-1));
+  right: calc(-1 * var(--g-space-1));
   display: grid;
   min-width: 1.25rem;
   height: 1.25rem;
   place-items: center;
-  padding-inline: 0.3125rem;
+  padding-inline: var(--g-space-1);
   border: 0;
   border-radius: var(--ui-radius-pill);
-  background: var(--ui-ready);
-  box-shadow: 0 0 0 1.5px var(--game-outline);
-  color: var(--ui-ink-on-ready);
+  background: var(--g-text);
+  box-shadow: 0 0 0 2px var(--g-surface);
+  color: var(--g-surface);
   font-family: var(--font-sans);
-  font-size: 0.8125rem;
-  font-weight: 800;
+  font-size: var(--g-font-xs);
+  font-weight: var(--g-weight-strong);
   font-variant-numeric: tabular-nums;
   line-height: 1;
-  text-shadow: none;
 }
 
 .resource-flight--spend .resource-flight-badge {
-  background: var(--ui-danger-bottom);
-  color: var(--ui-ink-on-primary);
+  background: var(--g-accent);
+  color: var(--g-surface);
 }
 
 @keyframes receive-resource-card {
@@ -988,8 +928,8 @@
   align-items: center;
   justify-content: center;
   min-width: 0;
-  gap: var(--ui-space-2);
-  padding: 0.25rem 0.875rem 0.25rem 0.5rem;
+  gap: var(--g-space-2);
+  padding: var(--g-space-1) var(--g-space-4) var(--g-space-1) var(--g-space-2);
   border-radius: var(--ui-radius-pill);
 }
 
@@ -1026,11 +966,11 @@
 }
 
 .game-clock-ring-track {
-  stroke: var(--ui-divider);
+  stroke: var(--g-raised);
 }
 
 .game-clock-ring-fill {
-  stroke: var(--ui-active-rim);
+  stroke: var(--g-text);
   stroke-linecap: round;
   transition: stroke-dasharray 250ms linear;
 }
@@ -1044,32 +984,31 @@
 .game-turn-clock-time {
   min-inline-size: 2.5em;
   font-family: var(--font-sans);
-  font-size: 1.125rem;
+  font-size: var(--g-font-md);
   font-variant-numeric: tabular-nums;
-  font-weight: 800;
+  font-weight: var(--g-weight-strong);
   line-height: 1;
   text-align: center;
-  text-shadow: none;
 }
 
+/* Nearly out of time: the alert colour, navy ink, a slow pulse. */
 .game-turn-clock[data-state="urgent"] {
-  border-color: transparent;
-  background: var(--ui-danger-top);
-  color: var(--ui-ink-on-primary);
+  background: var(--g-accent);
+  color: var(--g-surface);
   animation: clock-pulse 1s ease-in-out infinite;
 }
 
 .game-turn-clock[data-state="urgent"] .game-clock-ring-track {
-  stroke: color-mix(in srgb, var(--ui-ink-on-primary) 30%, transparent);
+  stroke: transparent;
 }
 
 .game-turn-clock[data-state="urgent"] .game-clock-ring-fill {
-  stroke: var(--ui-ink-on-primary);
+  stroke: var(--g-surface);
 }
 
 .game-turn-clock[data-state="paused"] .game-clock-ring-fill,
 .game-turn-clock[data-state="bot"] .game-clock-ring-fill {
-  stroke: var(--ui-text-muted);
+  stroke: var(--g-muted);
 }
 
 @keyframes clock-spin {
@@ -1080,7 +1019,7 @@
 
 @keyframes clock-pulse {
   50% {
-    background: var(--ui-danger-bottom);
+    opacity: 0.75;
   }
 }
 
@@ -1094,7 +1033,7 @@
   flex-direction: column;
   align-items: stretch;
   min-width: 0;
-  padding: var(--ui-space-2);
+  padding: var(--g-space-2);
   border-radius: var(--ui-radius-hud);
 }
 
@@ -1102,7 +1041,7 @@
   display: flex;
   flex-wrap: nowrap;
   align-items: stretch;
-  gap: var(--ui-space-1);
+  gap: var(--g-space-1);
   padding: 0;
 }
 
@@ -1113,10 +1052,10 @@
 
 .game-build-setup {
   position: absolute;
-  inset: var(--ui-space-2);
+  inset: var(--g-space-2);
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
-  gap: var(--ui-space-2);
+  gap: var(--g-space-2);
   margin: 0;
 }
 
@@ -1124,29 +1063,29 @@
   display: flex;
   align-items: baseline;
   min-width: 0;
-  gap: var(--ui-space-2);
+  gap: var(--g-space-2);
   margin: 0;
-  padding-inline: var(--ui-space-1);
+  padding-inline: var(--g-space-1);
   overflow: hidden;
   white-space: nowrap;
 }
 
 .game-build-setup-lead > strong {
   flex: none;
-  color: var(--foreground);
+  color: var(--g-text);
   font-family: var(--font-sans);
-  font-size: 0.9375rem;
-  font-weight: 800;
-  line-height: 1.2;
+  font-size: var(--g-font-sm);
+  font-weight: var(--g-weight-strong);
+  line-height: var(--g-leading-sm);
 }
 
 .game-build-setup-lead > span {
   min-width: 0;
   overflow: hidden;
-  color: var(--ui-text-muted);
-  font-size: 0.8125rem;
-  font-weight: 600;
-  line-height: 1.2;
+  color: var(--g-muted);
+  font-size: var(--g-font-xs);
+  font-weight: var(--g-weight);
+  line-height: var(--g-leading-xs);
   text-overflow: ellipsis;
 }
 
@@ -1155,7 +1094,7 @@
 .game-setup-steps {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--ui-space-2);
+  gap: var(--g-space-2);
   min-height: 0;
   margin: 0;
   padding: 0;
@@ -1166,22 +1105,22 @@
   display: flex;
   align-items: center;
   min-width: 0;
-  gap: var(--ui-space-2);
-  padding: var(--ui-space-1) var(--ui-space-2);
-  border: var(--ui-line) solid var(--ui-well-border);
+  gap: var(--g-space-2);
+  padding: var(--g-space-1) var(--g-space-2);
+  border: var(--ui-line) solid var(--g-raised);
   border-radius: var(--ui-radius-control);
-  background: var(--ui-well);
-  color: var(--ui-text-muted);
+  background: var(--g-raised);
+  color: var(--g-muted);
 }
 
 .game-setup-step[data-step="now"] {
-  border-color: var(--ui-active-rim);
-  box-shadow: inset 0 0 0 1px var(--ui-active-rim);
-  color: var(--foreground);
+  border-color: var(--g-text);
+  box-shadow: inset 0 0 0 1px var(--g-text);
+  color: var(--g-text);
 }
 
 .game-setup-step[data-step="done"] {
-  color: var(--foreground);
+  color: var(--g-text);
 }
 
 .game-setup-step-number {
@@ -1191,22 +1130,22 @@
   height: 1.375rem;
   place-items: center;
   border-radius: 50%;
-  background: var(--ui-tag-quiet);
-  color: var(--foreground);
-  font-size: 0.75rem;
-  font-weight: 800;
+  background: var(--g-raised);
+  color: var(--g-text);
+  font-size: var(--g-font-xs);
+  font-weight: var(--g-weight-strong);
   font-variant-numeric: tabular-nums;
   line-height: 1;
 }
 
 .game-setup-step[data-step="now"] .game-setup-step-number {
-  background: var(--ui-royal);
-  color: var(--ui-ink-on-primary);
+  background: var(--g-raised);
+  color: var(--g-text);
 }
 
 .game-setup-step[data-step="done"] .game-setup-step-number {
   background: transparent;
-  color: var(--ui-ready);
+  color: var(--g-text);
 }
 
 .game-setup-step-number svg {
@@ -1216,7 +1155,7 @@
 
 .game-setup-step-art {
   flex: none;
-  width: auto;
+  width: 1.75rem;
   height: 1.75rem;
   object-fit: contain;
 }
@@ -1228,9 +1167,9 @@
 .game-setup-step-label {
   min-width: 0;
   overflow: hidden;
-  font-size: 0.875rem;
-  font-weight: 700;
-  line-height: 1.2;
+  font-size: var(--g-font-sm);
+  font-weight: var(--g-weight-strong);
+  line-height: var(--g-leading-sm);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -1238,134 +1177,88 @@
 /* Why the building tiles are locked, at the top of the phone Build tray. */
 .game-build-tray-note {
   margin: 0;
-  font-size: 0.875rem;
-  font-weight: 700;
+  font-size: var(--g-font-sm);
+  font-weight: var(--g-weight-strong);
   text-align: center;
 }
 
 /* Why a pressed tile is locked, floating just above the panel for a moment. */
 .game-build-callout {
   position: absolute;
-  bottom: calc(100% + 0.625rem);
+  bottom: calc(100% + var(--g-space-2));
   left: 50%;
   z-index: 30;
   width: max-content;
   max-width: 16rem;
   margin: 0;
-  padding: var(--ui-space-2) 0.875rem;
+  padding: var(--g-space-2) var(--g-space-4);
   border-radius: var(--ui-radius-control);
-  font-size: 0.875rem;
-  font-weight: 700;
-  line-height: 1.3;
+  font-size: var(--g-font-sm);
+  font-weight: var(--g-weight-strong);
+  line-height: var(--g-leading-sm);
   text-align: center;
   translate: -50% 0;
 }
 
-/* Build and trade tiles: the whole tile is the button, and all five are built the same way.
-   On phones a tile is a centered stack: a fixed art slot (the piece or the card itself, on
-   nothing), the name (14px, 700), the price as mini cards (ghosted where missing) and one short
-   optional line. From md up it reads as short lines instead (below): the art and the name, the
-   price as resource icons, then its state.
+/* Build and trade tiles: the whole tile is the button, and all five are built the same way, at
+   every size: the piece or the action as one bold icon, its name, then its price as one resource
+   icon per card. A card the player holds is lit and one still missing is faint, so the price and
+   what is short are the same line.
 
    How a tile reads, so what can be done shows at a glance:
-   - ready (usable now): the tile is lit, brighter glass on a 1.5px green hairline, and says
-     "✓ Ready" (on phones, a small green check on the art's corner);
-   - short (can't pay yet): the plain well; it says "Need" with only the missing cards;
-   - locked (no spot, none left, deck empty): a lock and one short muted line;
-   - quiet: the plain well and nothing else;
-   - active (the build mode that is on): a 2px sky rim and "Pick a spot".
-   Nothing moves on hover: the face brightens, and a press settles it 1px. The white ring is for
-   keyboard focus only. */
+   - ready (usable now): the tile sits on the raised face, with full-color art and a white name;
+   - short (can't pay yet): no face, faded art, a muted name; the faint icons say what is missing;
+   - locked (no spot, none left, deck empty): the same, with a lock and one short line in the
+     price's place;
+   - quiet (not your turn, roll first, paused): no face, faded art, a muted name;
+   - active (the build mode that is on): the raised face in a 2px white ring, and "Pick a spot".
+   Nothing moves on hover: a ready tile gains a thin line, and a press settles it 1px. */
 .game-action-tile {
-  --tile-art-height: var(--action-tile-art-height, 2.5rem);
-  --tile-cost-height: calc(var(--cost-card-width, 1rem) * 1.5);
-  --tile-note-height: 0.8125rem;
+  --tile-art-size: 2.5rem;
 
   position: relative;
   display: grid;
   flex: none;
   grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: var(--tile-art-height) auto var(--tile-cost-height) var(--tile-note-height);
+  grid-template-rows: var(--tile-art-size) var(--g-leading-sm) var(--g-leading-sm);
   grid-template-areas:
     "art"
     "label"
-    "cost"
-    "note";
+    "line";
   align-content: center;
   justify-items: center;
   align-items: center;
   width: var(--action-tile-width);
   min-width: 0;
-  gap: 0.125rem;
-  padding: 0.25rem;
-  border: var(--ui-line) solid var(--ui-well-border);
+  gap: var(--g-space-1);
+  padding: var(--g-space-2) var(--g-space-1);
+  border: 0;
   border-radius: var(--ui-radius-control);
-  background: var(--ui-well);
-  box-shadow: none;
-  color: var(--foreground);
+  background: transparent;
+  color: var(--g-muted);
   font: inherit;
   cursor: pointer;
   user-select: none;
   transition:
     translate 90ms ease-out,
-    border-color 120ms ease-out,
     background-color 150ms,
     box-shadow 150ms;
 }
 
-/* The art slot: the tile's card, whole, at a fixed height. Badges hang on its top corner. */
 .game-action-tile-art {
   position: relative;
   display: block;
   grid-area: art;
-  width: calc(var(--tile-art-height) * 2 / 3);
-  height: var(--tile-art-height);
+  width: var(--tile-art-size);
+  height: var(--tile-art-size);
   min-height: 0;
 }
 
 .game-action-art-image {
   width: 100%;
   height: 100%;
-  border-radius: 0.25rem;
-  object-fit: cover;
-}
-
-/* The phone Build tile's art is three pieces side by side. */
-.game-action-tile[data-action-kind="build-menu"] .game-action-tile-art {
-  width: 100%;
-}
-
-.game-action-badge {
-  position: absolute;
-  top: -0.25rem;
-  right: -0.4375rem;
-  display: grid;
-  width: 1rem;
-  height: 1rem;
-  place-items: center;
-  border-radius: 50%;
-}
-
-.game-action-badge svg {
-  width: 100%;
-  height: 100%;
-}
-
-/* A green check: the icon's check is cut out, so the navy under it shows through. */
-.game-action-badge[data-tone="ready"] {
-  background: radial-gradient(circle, var(--ui-ink-on-ready) 60%, transparent 62%);
-  color: var(--ui-ready);
-}
-
-.game-action-badge[data-tone="locked"] {
-  background: var(--ui-locked);
-  box-shadow: 0 0 0 1.5px var(--game-outline);
-  color: var(--ui-ink-on-locked);
-}
-
-.game-action-badge[data-tone="locked"] svg {
-  width: 0.625rem;
-  height: 0.625rem;
+  object-fit: contain;
+  transition: opacity 150ms;
 }
 
 .game-action-label {
@@ -1373,129 +1266,94 @@
   max-width: 100%;
   overflow: hidden;
   font-family: var(--font-sans);
-  font-size: 0.875rem;
-  font-weight: 700;
-  letter-spacing: 0;
-  line-height: 1rem;
+  font-size: var(--g-font-sm);
+  font-weight: var(--g-weight-strong);
+  line-height: var(--g-leading-sm);
   text-overflow: ellipsis;
-  text-shadow: none;
   white-space: nowrap;
 }
 
-.game-action-tile-cost {
+/* The third line: the price, a short caption (Trade's "Bank or crew"), why the tile is locked, or
+   what to do while its build mode is on. */
+.game-action-line {
   display: flex;
-  grid-area: cost;
+  grid-area: line;
   align-items: center;
   justify-content: center;
-  width: 100%;
-  min-width: 0;
-  height: 100%;
-}
-
-/* A short quiet line in the price's place on a tile without one (Trade's "Bank or crew"). */
-.game-action-caption {
-  color: var(--ui-text-muted);
-  font-size: 0.75rem;
-  font-weight: 700;
-  line-height: 1rem;
-  white-space: nowrap;
-}
-
-/* The phones' one short line: a tile's own lock ("No spot") or, while placing, "Pick a spot". */
-.game-action-note {
-  grid-area: note;
-  max-width: 100%;
-  overflow: hidden;
-  color: var(--ui-text-muted);
-  font-size: 0.75rem;
-  font-weight: 700;
-  line-height: var(--tile-note-height);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* The dock row's state line (md up): "✓ Ready" in green, "Need" and the missing cards in amber,
-   a lock and the short reason muted, or "Pick a spot" in sky. It wraps rather than cut a word. */
-.game-action-status {
-  display: none;
-  grid-area: status;
-  flex-wrap: wrap;
-  align-items: center;
   min-width: 0;
   max-width: 100%;
-  gap: 0.125rem 0.25rem;
+  height: var(--g-leading-sm);
+  gap: var(--g-space-1);
+  color: var(--g-muted);
   font-family: var(--font-sans);
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0;
-  line-height: 1rem;
-  text-shadow: none;
+  font-size: var(--g-font-xs);
+  font-weight: var(--g-weight);
+  line-height: var(--g-leading-xs);
+  white-space: nowrap;
 }
 
-.game-action-status[data-tone="ready"] {
-  color: var(--ui-ready-text);
+.game-action-line[data-tone="active"] {
+  color: var(--g-text);
+  font-weight: var(--g-weight-strong);
 }
 
-.game-action-status[data-tone="need"] {
-  color: var(--ui-need);
-}
-
-.game-action-status[data-tone="locked"] {
-  color: var(--ui-text-muted);
-}
-
-.game-action-status[data-tone="active"] {
-  color: var(--ui-active-rim);
-}
-
-.game-action-status-icon {
+.game-action-line-icon {
   flex: none;
-  width: 0.875rem;
-  height: 0.875rem;
+  width: 0.75rem;
+  height: 0.75rem;
 }
 
-/* The missing cards, a size under the price's icons. */
-.game-action-status .game-resource-icons {
-  --resource-icon-size: var(--dock-need-icon-size, 0.875rem);
+.game-action-line-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.game-action-tile:is([data-state="quiet"], [data-state="short"], [data-state="locked"])
-  .game-action-label {
-  color: var(--ui-text-soft);
+/* A price: one resource icon per card. The ones the player still lacks are faint. The icons give
+   way together when the tile is narrow, so a city's five always share one line. */
+.game-cost-pips {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  max-width: 100%;
+  gap: var(--g-space-0);
 }
 
-.game-action-tile[data-state="locked"] .game-action-art-image {
-  opacity: 0.6;
+.game-cost-pip {
+  flex: 0 1 1.25rem;
+  width: 1.25rem;
+  min-width: 0;
+  height: auto;
+  aspect-ratio: 1;
+  object-fit: contain;
 }
 
-/* Ready: lit. Brighter glass on a 1.5px green hairline. */
+.game-cost-pip[data-missing] {
+  opacity: 0.3;
+}
+
+/* Anything that can't be used now: the art steps back with the name. */
+.game-action-tile:not([data-state="ready"], [data-state="active"]) .game-action-art-image {
+  opacity: 0.45;
+}
+
+/* Ready: the raised face and a white name. */
 .game-action-tile[data-state="ready"] {
-  border-color: var(--ui-ready);
-  background: linear-gradient(var(--ui-glass-hover), var(--ui-glass-hover)), var(--ui-well);
-  box-shadow: inset 0 0 0 0.5px var(--ui-ready);
+  background: var(--g-raised);
+  color: var(--g-text);
 }
 
-/* Chosen (the build mode that is on): a 1.5px sky hairline, and the line says what to do. */
+/* Chosen (the build mode that is on): the raised face in a 2px white ring. */
 .game-action-tile[data-state="active"] {
-  border-color: var(--ui-active-rim);
-  background: linear-gradient(var(--ui-glass-hover), var(--ui-glass-hover)), var(--ui-well);
-  box-shadow: inset 0 0 0 0.5px var(--ui-active-rim);
+  background: var(--g-raised);
+  box-shadow: inset 0 0 0 2px var(--g-text);
+  color: var(--g-text);
 }
 
-.game-action-tile[data-state="active"] .game-action-note {
-  color: var(--ui-active-rim);
-}
-
-/* Hover brightens the face; the edge keeps its color. */
 @media (hover: hover) {
-  .game-action-tile:hover {
-    background: linear-gradient(var(--ui-glass-hover), var(--ui-glass-hover)), var(--ui-well);
-  }
-
-  .game-action-tile:is([data-state="ready"], [data-state="active"]):hover {
-    background:
-      linear-gradient(var(--ui-glass-hover), var(--ui-glass-hover)),
-      linear-gradient(var(--ui-glass-hover), var(--ui-glass-hover)), var(--ui-well);
+  .game-action-tile[data-state="ready"]:hover {
+    box-shadow: inset 0 0 0 1px var(--g-muted);
   }
 }
 
@@ -1504,128 +1362,48 @@
 }
 
 .game-action-tile:focus-visible {
-  outline: 2px solid var(--ui-focus-ring);
+  outline: 2px solid var(--g-text);
   outline-offset: 2px;
-  box-shadow: 0 0 0 2px var(--ui-focus-offset);
 }
 
 .game-action-tile[aria-disabled="true"] {
   cursor: not-allowed;
 }
 
-/* Cards as small resource icons: a price, or the cards still missing. A count follows an icon
-   that stands for more than one ("×2"). */
-.game-resource-icons {
-  --resource-icon-size: 1.25rem;
-
-  display: inline-flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.125rem;
-}
-
-.game-resource-icon {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  gap: 1px;
-}
-
-/* A little more room after a count, so "×2" reads with its own icon. */
-.game-resource-icon:has(.game-resource-icon-count) + .game-resource-icon {
-  margin-inline-start: 0.125rem;
-}
-
-.game-resource-icon-art {
-  display: block;
-  width: var(--resource-icon-size);
-  height: var(--resource-icon-size);
-  object-fit: contain;
-}
-
-.game-resource-icon-count {
-  font-family: var(--font-sans);
-  font-size: 0.75rem;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  line-height: 1;
-}
-
-/* The phone Build tile's art: road, settlement and city side by side. One the player can build
-   now is lit; the others fade back. */
-.game-build-marks {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 100%;
-  gap: 0.125rem;
-}
-
-.game-build-mark {
-  display: block;
-  flex: none;
-  width: 1.1875rem;
-  aspect-ratio: 2 / 3;
-  overflow: hidden;
-  border-radius: 0.1875rem;
-  opacity: 0.45;
-}
-
-.game-build-mark[data-ready] {
-  opacity: 1;
-}
-
-.game-build-mark-art {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-/* Phones: the Trade caption has no room in the narrow action bar. A tile without a price (Trade,
-   Build) keeps the art and the name, centered in the tile like the others' art, name and
-   price. Something that stops the whole panel (not your turn, roll first, paused) puts nothing
-   on the tiles: the art and the prices dim evenly, the names keep their contrast, and each tile
-   keeps its rows, so the action bar (and the hand and turn card above it) never shifts. */
+/* Phones: the action bar is one short row of three tiles (Trade, Dev card, Build), each its art
+   over its name. The lit face says which can be used now; prices and reasons are in the tray, the
+   tooltip and the line a locked tile shows when pressed. The tray above the bar keeps the full
+   tile. */
 @media (width < 48rem) {
-  .game-action-caption {
-    display: none;
+  .game-build-panel {
+    padding: var(--g-space-1);
   }
 
-  .game-action-tile:not([data-priced]) {
-    grid-template-rows: var(--tile-art-height) auto var(--tile-note-height);
+  .game-build-actions {
+    flex: 1;
+    min-height: 0;
+  }
+
+  .game-build-actions .game-action-tile:not(.game-build-pieces *) {
+    --tile-art-size: 1.75rem;
+
+    flex: 1 1 0;
+    grid-template-rows: var(--tile-art-size) var(--g-leading-xs);
     grid-template-areas:
       "art"
-      "label"
-      "note";
+      "label";
+    width: auto;
+    gap: var(--g-space-0);
+    padding: var(--g-space-1);
   }
 
-  .game-action-tile:not([data-priced]) > .game-action-tile-cost {
+  .game-build-actions .game-action-tile:not(.game-build-pieces *) > .game-action-line {
     display: none;
   }
 
-  .game-build-pieces {
-    --cost-card-width: 0.9375rem;
-  }
-
-  .game-build-panel[data-locked] .game-action-tile {
-    border-color: var(--ui-well-border);
-    background: var(--ui-well);
-    box-shadow: none;
-  }
-
-  .game-build-panel[data-locked]
-    .game-action-tile
-    :is(.game-action-tile-art, .game-action-tile-cost) {
-    opacity: 0.6;
-  }
-
-  .game-build-panel[data-locked] .game-action-tile .game-action-label {
-    color: var(--ui-text-muted);
-  }
-
-  .game-build-panel[data-locked] .game-action-tile :is(.game-action-note, .game-action-badge) {
-    visibility: hidden;
+  .game-build-actions .game-action-tile:not(.game-build-pieces *) .game-action-label {
+    font-size: var(--g-font-xs);
+    line-height: var(--g-leading-xs);
   }
 }
 
@@ -1633,11 +1411,8 @@
    (md, lg) or the rail (xl), as tall as the row, so no sea is left in the dock. Its five tiles
    share the panel's width equally, in the order Road, Settlement, City, Dev card, Trade, up to
    --dock-tile-max each; past that the five sit centered in the panel. The steal chooser stands in
-   at the same size. A tile reads as short lines from its top-left corner: the art and the name,
-   the price as resource icons, then the state. Each line keeps its height on every tile, so the
-   lines match across the row. The tile row is a size container (dock-tiles): each tile sizes its
-   content from its own width and, from xl up, the row's height (below). The selectors carry the
-   panel so they beat the phone action bar's tile rules. */
+   at the same size. The selectors carry the panel so they beat the phone action bar's tile
+   rules. */
 @media (width >= 48rem) {
   .game-build-panel,
   .game-steal-chooser {
@@ -1660,263 +1435,43 @@
     gap: var(--dock-tile-gap);
   }
 
-  /* Where a long state could wrap, the state line keeps room for a second line (a third on the
-     narrowest tiles), so a state that wraps never moves the other lines; the block is centered in
-     the tile. */
   .game-build-panel .game-build-actions .game-action-tile {
-    --tile-art-height: var(--dock-art-size);
-    --tile-status-height: 2rem;
-
-    grid-template-columns: auto minmax(0, 1fr);
-    grid-template-rows: var(--tile-art-height) var(--dock-icon-size) var(--tile-status-height);
-    grid-template-areas:
-      "art label"
-      "cost cost"
-      "status status";
-    align-content: center;
-    justify-items: start;
     flex: 1 1 0;
     width: auto;
     max-width: var(--dock-tile-max);
     height: 100%;
     min-height: 0;
-    gap: var(--ui-space-1);
-    padding: 0.3125rem var(--dock-tile-pad);
-    text-align: start;
-  }
-
-  .game-build-panel .game-action-status {
-    align-self: start;
-  }
-
-  /* The check or the lock keeps beside its words (a long note wraps its own words); only "Need"
-     sends its icons to a second line. */
-  .game-build-panel .game-action-status:not([data-tone="need"]) {
-    flex-wrap: nowrap;
-  }
-
-  .game-build-panel .game-action-status-text {
-    min-width: 0;
-  }
-
-  .game-build-panel .game-action-tile-cost {
-    justify-content: flex-start;
-    height: auto;
-  }
-
-  .game-build-panel .game-action-tile-cost .game-resource-icons {
-    --resource-icon-size: var(--dock-icon-size);
-
-    flex-wrap: nowrap;
-  }
-
-  .game-build-panel .game-action-tile-cost .game-resource-icon-count {
-    color: var(--ui-text-soft);
-  }
-
-  .game-build-panel :is(.game-action-note, .game-action-badge) {
-    display: none;
-  }
-
-  .game-build-panel .game-action-status {
-    display: flex;
-  }
-
-  /* Something stops the whole panel (not your turn, roll first, paused): the tiles carry nothing
-     of their own, and the whole row dims evenly. The turn card says what to do. */
-  .game-build-panel[data-locked] .game-build-actions {
-    opacity: 0.55;
   }
 }
 
-/* md and lg: the turn card shares the dock row, so the row is tall and the tiles are narrow (44px
-   at 768 up to 129px at 1279). A tile reads as a small art above the name (13px, a touch
-   tighter), then the price and the state, and grows with its width by --tile-grow (0 to 12px,
-   from an 82px tile to a 112px one): the name to 14px, the price's icons from 14 to 20px, and
-   the state line from 12 to 14px with its icons from 14 to 18px. Trade's "Bank or crew" shows
-   once it fits. */
+/* md and lg: the turn card shares the dock row, so the row is tall and the tiles are narrow: a
+   larger icon, and a name that steps down to 12px. A tile narrower than its name (md) keeps its
+   icon and its price; the name is in the tooltip and the label. */
 @media (48rem <= width < 80rem) {
   .game-build-panel .game-build-actions .game-action-tile {
-    /* The tile's width: a fifth of the row less the gaps. */
-    --tile-width: min(var(--dock-tile-max), (100cqi - 4 * var(--dock-tile-gap)) / 5);
-    --tile-grow: clamp(0px, (var(--tile-width) - 5.125rem) * 0.4, 0.75rem);
-    --tile-icon-size: calc(var(--dock-icon-size) + var(--tile-grow) / 2);
-    --tile-status-icon: calc(0.875rem + var(--tile-grow) / 3);
-    --tile-status-line: calc(1rem + var(--tile-grow) / 6);
-    --tile-status-height: calc(var(--tile-status-line) * 2);
-
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: var(--tile-art-height) 1rem var(--tile-icon-size) var(--tile-status-height);
-    grid-template-areas:
-      "art"
-      "label"
-      "cost"
-      "status";
-    padding-inline: calc(var(--dock-tile-pad) + var(--tile-grow) / 4);
+    --tile-art-size: 3rem;
   }
 
   .game-build-panel .game-action-label {
-    font-size: calc(0.8125rem + var(--tile-grow) / 12);
-    letter-spacing: -0.01em;
+    font-size: var(--g-font-xs);
   }
 
-  .game-build-panel .game-action-tile-cost .game-resource-icons {
-    --resource-icon-size: var(--tile-icon-size);
-  }
-
-  .game-build-panel .game-resource-icon-count {
-    font-size: calc(0.75rem + var(--tile-grow) / 12);
-  }
-
-  .game-build-panel .game-action-status {
-    font-size: calc(0.75rem + var(--tile-grow) / 6);
-    line-height: var(--tile-status-line);
-  }
-
-  .game-build-panel .game-action-status-icon {
-    width: var(--tile-status-icon);
-    height: var(--tile-status-icon);
-  }
-
-  .game-build-panel .game-action-status .game-resource-icons {
-    --resource-icon-size: calc(var(--dock-need-icon-size) + var(--tile-grow) / 3);
-  }
-
-  .game-build-panel .game-action-caption {
-    display: none;
-  }
-
-  @container dock-tiles (width >= 29rem) {
-    .game-build-panel .game-action-caption {
-      display: inline;
-    }
-  }
-
-  /* A tile narrower than its name (under 80px: md below about 955) keeps its art and its state,
-     centered; the check or the lock sits on the art, and a state too long for the tile takes two
-     lines. The name and the price are in its tooltip and label. */
-  @container dock-tiles (width < 25.5rem) {
+  @container dock-tiles (width < 22rem) {
     .game-build-panel .game-build-actions .game-action-tile {
-      --tile-status-height: 3rem;
+      --tile-art-size: 2.5rem;
 
-      grid-template-rows: var(--tile-art-height) var(--tile-status-height);
+      grid-template-rows: var(--tile-art-size) var(--g-leading-sm);
       grid-template-areas:
         "art"
-        "status";
-      justify-items: center;
-      padding-block: var(--ui-space-2);
-      text-align: center;
+        "line";
     }
 
-    .game-build-panel :is(.game-action-label, .game-action-tile-cost, .game-action-status-icon) {
+    .game-build-panel .game-action-label {
       display: none;
     }
 
-    .game-build-panel .game-action-badge {
-      display: grid;
-    }
-
-    .game-build-panel .game-action-status {
-      justify-content: center;
-    }
-  }
-}
-
-/* xl: everything in a tile grows with it, by one measure (--tile-grow, 0 to 20px): the art from
-   28 to 48px, the name from 14 to 17px, the price's icons from 20 to 28px with their counts from
-   13 to 15px, and the state line from 14 to 16px with its icons from 18 to 22px. The tile's width
-   bounds the growth so the longest state line ("Need" and four icons) stays on one line, and its
-   height so the three lines fit with 5px of padding; a 164px tile on a 118px row (from about 1720
-   on a tall screen) holds the largest sizes. The tile's padding grows with it, so the content
-   keeps to the tile's top-left corner at every size. */
-@media (width >= 80rem) {
-  .game-build-panel .game-build-actions .game-action-tile {
-    /* The tile's width: a fifth of the row less the gaps, up to --dock-tile-max. */
-    --tile-width: min(var(--dock-tile-max), (100cqi - 4 * var(--dock-tile-gap)) / 5);
-    --tile-grow: clamp(
-      0px,
-      min((var(--tile-width) - 8rem) * 0.55, (100cqb - 5.375rem) * 0.625),
-      1.25rem
-    );
-    --tile-art-height: calc(1.75rem + var(--tile-grow));
-    --tile-name-size: calc(0.875rem + var(--tile-grow) * 0.15);
-    --tile-icon-size: calc(1.25rem + var(--tile-grow) * 0.4);
-    --tile-count-size: calc(0.8125rem + var(--tile-grow) * 0.1);
-    --tile-caption-size: calc(0.75rem + var(--tile-grow) * 0.1);
-    --tile-status-size: calc(0.875rem + var(--tile-grow) * 0.1);
-    --tile-status-icon: calc(1.125rem + var(--tile-grow) * 0.2);
-    --tile-status-height: var(--tile-status-icon);
-
-    grid-template-rows: var(--tile-art-height) var(--tile-icon-size) var(--tile-status-height);
-    gap: var(--ui-space-1) calc(0.3125rem + var(--tile-grow) * 0.15);
-    padding: 0.3125rem calc(0.1875rem + var(--tile-grow) * 0.35);
-  }
-
-  .game-build-panel .game-action-label {
-    font-size: var(--tile-name-size);
-    line-height: 1.25;
-  }
-
-  .game-build-panel .game-action-tile-cost .game-resource-icons {
-    --resource-icon-size: var(--tile-icon-size);
-  }
-
-  .game-build-panel .game-resource-icon-count {
-    font-size: var(--tile-count-size);
-  }
-
-  .game-build-panel .game-action-caption {
-    font-size: var(--tile-caption-size);
-    line-height: var(--tile-icon-size);
-  }
-
-  /* One line as tall as its icons, so a state that wraps takes exactly a second one. */
-  .game-build-panel .game-action-status {
-    row-gap: 0;
-    font-size: var(--tile-status-size);
-    line-height: var(--tile-status-icon);
-  }
-
-  .game-build-panel .game-action-status-icon {
-    width: var(--tile-status-icon);
-    height: var(--tile-status-icon);
-  }
-
-  .game-build-panel .game-action-status .game-resource-icons {
-    --resource-icon-size: var(--tile-status-icon);
-  }
-
-  /* A tile too narrow for the longest state line on one line (below about 1536): the content
-     keeps its least size, and the state line keeps room for a second line, so a long one wraps
-     without moving the other lines. A one-line state sits in the middle of that room, so the
-     three lines spread evenly over the tile and match across the row. */
-  @container dock-tiles (width < 41.25rem) {
-    .game-build-panel .game-build-actions .game-action-tile {
-      --tile-grow: 0px;
-      --tile-status-height: calc(var(--tile-status-icon) * 2);
-
-      padding-block: var(--ui-space-1);
-    }
-
-    .game-build-panel .game-action-status {
-      align-self: center;
-    }
-  }
-
-  /* Narrower still (below about 1390): the name heads the tile on its own (the art gives way),
-     then the price and the state. */
-  @container dock-tiles (width < 35.75rem) {
-    .game-build-panel .game-build-actions .game-action-tile {
-      grid-template-columns: minmax(0, 1fr);
-      grid-template-rows: 1.125rem var(--tile-icon-size) var(--tile-status-height);
-      grid-template-areas:
-        "label"
-        "cost"
-        "status";
-    }
-
-    .game-build-panel .game-action-tile-art {
-      display: none;
+    .game-build-panel .game-cost-pips {
+      gap: 0;
     }
   }
 }
@@ -1926,9 +1481,9 @@
    them, centered in the panel. */
 @media (width >= 48rem) {
   .game-build-setup {
-    inset: var(--dock-panel-pad)
-      max(var(--dock-panel-pad), (100% - 5 * var(--dock-tile-max) - 4 * var(--dock-tile-gap)) / 2);
-    gap: 0.3125rem;
+    inset: var(--g-space-2)
+      max(var(--g-space-2), (100% - 5 * var(--dock-tile-max) - 4 * var(--dock-tile-gap)) / 2);
+    gap: var(--g-space-2);
   }
 
   .game-setup-steps {
@@ -1946,17 +1501,14 @@
     align-content: center;
     justify-content: center;
     justify-items: center;
-    gap: 0.25rem 0.3125rem;
-    padding: 0.25rem;
+    gap: var(--g-space-1) var(--g-space-1);
+    padding: var(--g-space-1);
   }
 
-  /* A square crop of the card art, like the tiles' art slot. */
   .game-setup-step-art {
     grid-area: art;
-    width: 1.75rem;
-    height: 1.75rem;
-    border-radius: var(--ui-radius-small);
-    object-fit: cover;
+    width: 2rem;
+    height: 2rem;
   }
 
   .game-setup-step-number {
@@ -1990,14 +1542,14 @@
 
   .game-setup-step-number {
     position: absolute;
-    top: 0.25rem;
-    left: 0.25rem;
+    top: var(--g-space-1);
+    left: var(--g-space-1);
   }
 
   .game-setup-step-label {
     justify-self: center;
     max-width: 100%;
-    font-size: 0.75rem;
+    font-size: var(--g-font-xs);
   }
 }
 
@@ -2012,8 +1564,8 @@
   .game-setup-step {
     display: flex;
     justify-content: flex-start;
-    gap: 0.375rem;
-    padding: 0 0.375rem;
+    gap: var(--g-space-1);
+    padding: 0 var(--g-space-2);
   }
 
   .game-setup-step-number {
@@ -2025,50 +1577,7 @@
   }
 
   .game-setup-step-label {
-    font-size: 0.8125rem;
-  }
-}
-
-/* xl: the opening round grows with a tall row, like the tiles under it. The steps' content grows
-   by --setup-grow (0 to 12px), bounded by the row's height and by each step's width so a name
-   stays whole: the art from 28 to 40px, the numbers from 22 to 24px, the names from 14 to 16px
-   and the lead a step larger. */
-@media (width >= 80rem) {
-  .game-build-setup {
-    --setup-grow: clamp(
-      0px,
-      min((100cqb - 6.375rem) * 0.75, ((100cqi - 1.5rem) / 4 - 7.25rem) * 0.9),
-      0.75rem
-    );
-
-    container: dock-setup / size;
-  }
-
-  .game-build-setup-lead > strong {
-    font-size: calc(0.9375rem + var(--setup-grow) / 12);
-  }
-
-  .game-build-setup-lead > span {
-    font-size: calc(0.8125rem + var(--setup-grow) / 12);
-  }
-
-  .game-setup-step-art {
-    width: calc(1.75rem + var(--setup-grow));
-    height: calc(1.75rem + var(--setup-grow));
-  }
-
-  .game-setup-step-number,
-  .game-setup-step-number svg {
-    width: calc(1.375rem + var(--setup-grow) / 6);
-    height: calc(1.375rem + var(--setup-grow) / 6);
-  }
-
-  .game-setup-step-number {
-    font-size: calc(0.75rem + var(--setup-grow) / 12);
-  }
-
-  .game-setup-step-label {
-    font-size: calc(0.875rem + var(--setup-grow) / 6);
+    font-size: var(--g-font-xs);
   }
 }
 
@@ -2084,8 +1593,8 @@
   justify-content: safe center;
   min-width: 0;
   max-width: 100%;
-  gap: var(--ui-space-2);
-  padding: var(--ui-space-2);
+  gap: var(--g-space-2);
+  padding: var(--g-space-2);
   overflow-x: auto;
   border-radius: var(--ui-radius-hud);
 }
@@ -2097,12 +1606,12 @@
   justify-items: center;
   min-width: 4.25rem;
   max-width: 8rem;
-  gap: 0.375rem;
-  padding: 0.375rem;
-  border: var(--ui-line) solid var(--ui-hairline-game);
+  gap: var(--g-space-1);
+  padding: var(--g-space-2);
+  border: 0;
   border-radius: var(--ui-radius-control);
-  background: linear-gradient(var(--ui-glass-hover), var(--ui-glass-hover)), var(--ui-well);
-  color: var(--foreground);
+  background: var(--g-raised);
+  color: var(--g-text);
   cursor: pointer;
   transition:
     translate 90ms ease-out,
@@ -2111,7 +1620,7 @@
 
 @media (hover: hover) {
   .game-steal-plaque:hover:not(:disabled) {
-    border-color: var(--ui-hairline-light);
+    box-shadow: inset 0 0 0 1px var(--g-muted);
   }
 }
 
@@ -2120,9 +1629,9 @@
 }
 
 .game-steal-plaque:focus-visible {
-  outline: 2px solid var(--ui-focus-ring);
+  outline: 2px solid var(--g-text);
   outline-offset: 2px;
-  box-shadow: 0 0 0 2px var(--ui-focus-offset);
+  box-shadow: 0 0 0 2px var(--g-surface);
 }
 
 .game-steal-plaque:disabled {
@@ -2141,21 +1650,21 @@
 /* The victim's card count, on the portrait's corner. */
 .game-steal-cards {
   position: absolute;
-  right: -0.75rem;
-  bottom: -0.25rem;
+  right: calc(-1 * var(--g-space-3));
+  bottom: calc(-1 * var(--g-space-1));
   display: inline-flex;
   align-items: center;
-  gap: 0.1875rem;
+  gap: var(--g-space-0);
   height: 1.375rem;
-  padding-inline: 0.25rem 0.375rem;
+  padding-inline: var(--g-space-1) var(--g-space-2);
   border: 0;
   border-radius: var(--ui-radius-pill);
-  background: var(--ui-locked);
-  box-shadow: 0 0 0 1.5px var(--game-outline);
-  color: var(--foreground);
+  background: var(--g-raised);
+  box-shadow: 0 0 0 2px var(--g-surface);
+  color: var(--g-text);
   font-family: var(--font-sans);
-  font-size: 0.8125rem;
-  font-weight: 800;
+  font-size: var(--g-font-xs);
+  font-weight: var(--g-weight-strong);
   font-variant-numeric: tabular-nums;
   line-height: 1;
 }
@@ -2171,11 +1680,10 @@
   max-width: 100%;
   overflow: hidden;
   font-family: var(--font-sans);
-  font-size: 0.875rem;
-  font-weight: 700;
-  line-height: 1.2;
+  font-size: var(--g-font-sm);
+  font-weight: var(--g-weight-strong);
+  line-height: var(--g-leading-sm);
   text-overflow: ellipsis;
-  text-shadow: none;
   white-space: nowrap;
 }
 
@@ -2197,20 +1705,19 @@
   height: 100%;
   min-width: 7.5rem;
   min-height: 3.25rem;
-  padding: 0.375rem var(--ui-space-3);
+  padding: var(--g-space-2) var(--g-space-3);
   container-type: size;
-  font-size: 1.125rem;
-  font-weight: 800;
-  line-height: 1.1;
+  font-size: var(--g-font-lg);
+  font-weight: var(--g-weight-strong);
+  line-height: var(--g-leading-lg);
 }
 
 /* Paused: the button keeps its place and its words but steps back to a quiet slate pill, like
    the status pill during the opening round. Pressing it says the game is paused. */
 .game-turn-control .game-turn-button.game-button-gold[data-paused] {
-  --btn-face: var(--ui-locked);
-  --btn-ink: var(--ui-ink-on-locked);
+  --btn-face: var(--g-raised);
+  --btn-ink: var(--g-muted);
   --btn-highlight: transparent;
-  --btn-drop: 0 0 #0000;
 
   cursor: not-allowed;
 }
@@ -2222,8 +1729,8 @@
 /* Below xl the slot is narrow, so the label and its icon run a step smaller. */
 @media (width < 80rem) {
   .game-turn-button {
-    padding-inline: var(--ui-space-2);
-    font-size: 1rem;
+    padding-inline: var(--g-space-2);
+    font-size: var(--g-font-md);
   }
 
   .game-turn-button-icon {
@@ -2239,14 +1746,14 @@
   justify-content: center;
   width: 100%;
   height: 100%;
-  gap: var(--ui-space-1) var(--ui-space-2);
+  gap: var(--g-space-1) var(--g-space-2);
   text-align: center;
 }
 
 .game-roll-dice {
   display: inline-flex;
   flex: none;
-  gap: var(--ui-space-1);
+  gap: var(--g-space-1);
 }
 
 .game-roll-dice .die-face {
@@ -2274,7 +1781,7 @@
 .game-turn-control[data-kind] {
   min-width: 7.5rem;
   min-height: 3.25rem;
-  padding: var(--ui-space-2) var(--ui-space-3);
+  padding: var(--g-space-2) var(--g-space-3);
   /* A panel when it fills a tall slot (discarding on a phone); a pill beside the clock
      (game-layout.css). */
   border-radius: var(--ui-radius-hud);
@@ -2292,25 +1799,23 @@
 .game-turn-task {
   min-width: 0;
   overflow: hidden;
-  color: var(--foreground);
+  color: var(--g-text);
   font-family: var(--font-sans);
-  font-size: 0.9375rem;
-  font-weight: 700;
-  letter-spacing: 0;
-  line-height: 1.2;
+  font-size: var(--g-font-sm);
+  font-weight: var(--g-weight-strong);
+  line-height: var(--g-leading-sm);
   text-overflow: ellipsis;
-  text-shadow: none;
   white-space: nowrap;
 }
 
 .game-turn-control[data-kind="waiting"] .game-turn-task {
-  color: var(--ui-text-muted);
+  color: var(--g-muted);
 }
 
 /* The narrow phone and md columns: a step smaller, so the line stays whole. */
 @container (width < 9rem) {
   .game-turn-task {
-    font-size: 0.875rem;
+    font-size: var(--g-font-sm);
   }
 }
 
@@ -2348,183 +1853,286 @@
    Dock sheets (DockSheet): trade composer, trade offer, discard
    ----------------------------------------------------------------------- */
 
-/* Dialog glass, since a sheet sits over the board. Focused by script when it opens; the
-   transparent outline still shows in forced colors. */
+/* A sheet is a short strip just above the dock: a head (the title, then Close), the body and a
+   footer. Trading keeps it as small as its cards so the board stays in view. Focused by script
+   when it opens; the transparent outline still shows in forced colors. */
 .game-dock-sheet {
   display: grid;
-  gap: var(--ui-space-2);
+  gap: var(--g-space-2);
   min-width: 0;
-  padding: var(--ui-space-4);
-  border: var(--ui-line) solid var(--ui-hairline-game);
-  border-radius: var(--ui-radius-panel);
-  background: var(--ui-glass-dialog);
-  box-shadow:
-    inset 0 1px 0 var(--ui-panel-highlight),
-    var(--ui-shadow-panel);
-  color: var(--foreground);
+  padding: var(--g-space-3) var(--g-space-4) var(--g-space-4);
+  border: var(--ui-line) solid var(--g-raised);
+  border-radius: var(--ui-radius-hud);
+  background: var(--g-surface);
+  color: var(--g-text);
   outline: 2px solid transparent;
   -webkit-backdrop-filter: var(--ui-glass-blur-game);
   backdrop-filter: var(--ui-glass-blur-game);
 }
 
-/* Equal side slots keep the title centered whether or not there is a close button. */
 .game-dock-sheet-head {
-  display: grid;
-  grid-template-columns: 2.5rem minmax(0, 1fr) 2.5rem;
+  display: flex;
   align-items: center;
-  gap: var(--ui-space-2);
-  padding-bottom: var(--ui-space-3);
-  border-bottom: 1px solid var(--ui-divider);
+  justify-content: space-between;
+  min-height: 2.25rem;
+  gap: var(--g-space-2);
 }
 
 .game-dock-sheet-head > .game-heading {
-  grid-column: 2;
-  justify-self: center;
   margin: 0;
-  font-size: 1.25rem;
+  font-size: var(--g-font-md);
+  line-height: var(--g-leading-md);
+  text-align: start;
 }
 
-.game-dock-sheet-close {
-  grid-column: 3;
-}
-
+/* The buttons share the footer's width; a group before them (who to ask) keeps its own. */
 .game-dock-sheet-foot {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 8.5rem), 1fr));
-  gap: var(--ui-space-2);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--g-space-2);
 }
 
 .game-dock-sheet-foot > * {
+  flex: 1 1 8rem;
   min-width: 0;
 }
 
 /* A sheet's main button while it waits for picks (Discard 4 cards): the kit's slate face, with
    full white ink so its label stays easy to read beside the live buttons. */
 .game-dock-sheet :is(.game-button, .game-button-gold, .game-button-secondary):disabled {
-  --btn-ink: var(--foreground);
+  --btn-ink: var(--g-text);
 }
 
 .game-dock-status {
   min-height: 1.25rem;
   margin: 0;
-  color: var(--ui-text-soft);
-  font-size: 0.9375rem;
-  font-weight: 600;
-  line-height: 1.3;
+  color: var(--g-text);
+  font-size: var(--g-font-sm);
+  font-weight: var(--g-weight);
+  line-height: var(--g-leading-sm);
   text-align: center;
-  text-shadow: none;
   text-wrap: balance;
 }
 
 .game-dock-status[data-tone="ready"] {
-  color: var(--ui-ready-text);
-  font-weight: 700;
+  color: var(--g-text);
+  font-weight: var(--g-weight-strong);
 }
 
 .game-dock-status[data-tone="error"] {
-  color: var(--ui-missing);
-  font-weight: 700;
+  color: var(--g-muted);
+  font-weight: var(--g-weight-strong);
 }
 
 /* A well that holds cards. */
-.game-trade-well,
-.game-trade-grid {
+.game-trade-well {
   min-width: 0;
-  border: var(--ui-line) solid var(--ui-well-border);
+  border: var(--ui-line) solid var(--g-raised);
   border-radius: var(--ui-radius-control);
-  background: var(--ui-well);
+  background: var(--g-raised);
 }
 
 .game-trade-well {
   display: grid;
   align-content: start;
   justify-items: center;
-  gap: var(--ui-space-1);
-  padding: var(--ui-space-2);
+  gap: var(--g-space-1);
+  padding: var(--g-space-2);
 }
 
-/* The composer: label column, then the picker (or the recipients) in each row. */
-.game-trade-grid {
+/* The composer reads as one sentence, left to right: the cards you give, an arrow, the cards you
+   get. Each side is its label over a tray of what is on it so far. You give by tapping cards in
+   your hand, right under the sheet; under "You get" are five small cards to ask for. On a phone
+   the two sides stack. */
+.game-trade-composer {
   display: grid;
-  grid-template-columns: auto minmax(0, max-content);
-  align-items: center;
-  justify-content: center;
-  gap: var(--ui-space-1) var(--ui-space-3);
-  padding: var(--ui-space-2) var(--ui-space-3);
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: start;
+  gap: var(--g-space-3);
 }
 
-.game-trade-row-label,
+/* The arrow stands level with the middle of the trays, under the labels' line. */
+.game-trade-composer > .game-trade-arrow {
+  margin-top: 2rem;
+}
+
+.game-trade-side {
+  display: grid;
+  min-width: 0;
+  gap: var(--g-space-1);
+}
+
+.game-trade-side-label,
 .game-trade-well-label {
   margin: 0;
-  color: var(--ui-text-soft);
+  color: var(--g-muted);
   font-family: var(--font-sans);
-  font-size: 0.75rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  line-height: 1.2;
-  text-shadow: none;
-  text-transform: uppercase;
+  font-size: var(--g-font-xs);
+  font-weight: var(--g-weight-strong);
+  line-height: var(--g-leading-xs);
 }
 
-.game-trade-row-label {
-  max-width: 4.5rem;
-}
-
-.game-trade-recipients {
+/* What is on one side so far: a raised well as tall as its cards whether or not it holds any. */
+.game-trade-tray {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: var(--ui-space-2);
-  padding-block: var(--ui-space-1);
+  align-items: center;
+  min-height: 4rem;
+  gap: var(--g-space-3);
+  margin: 0;
+  padding: var(--g-space-2) var(--g-space-3);
+  border-radius: var(--ui-radius-control);
+  background: var(--g-raised);
+  list-style: none;
+}
+
+.game-trade-tray-empty {
+  color: var(--g-muted);
+  font-size: var(--g-font-sm);
+  font-weight: var(--g-weight);
+  line-height: var(--g-leading-sm);
+}
+
+.game-trade-tray-card,
+.game-trade-palette-card {
+  position: relative;
+  display: block;
+  padding: 0;
+  border: 0;
+  border-radius: var(--ui-radius-small);
+  background: transparent;
+  cursor: pointer;
+}
+
+.game-trade-tray-card {
+  width: 2.25rem;
+}
+
+.game-trade-tray-art {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 2 / 3;
+  border-radius: 0.25rem;
+  object-fit: cover;
+}
+
+.game-trade-tray-card .game-count-chip {
+  background: var(--g-text);
+  color: var(--g-surface);
+}
+
+/* The cards to ask for: five small cards in a row under the tray. */
+.game-trade-palette {
+  display: flex;
+  align-items: center;
+  gap: var(--g-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.game-trade-palette-card {
+  width: 1.75rem;
+}
+
+.game-trade-palette-card:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+:is(.game-trade-tray-card, .game-trade-palette-card):focus-visible {
+  outline: 2px solid var(--g-text);
+  outline-offset: 2px;
+}
+
+/* What the bank asks, under the give tray: level with the cards to ask for on the other side. */
+.game-trade-rate {
+  display: flex;
+  align-items: center;
+  min-height: 2.625rem;
+  margin: 0;
+  color: var(--g-muted);
+  font-size: var(--g-font-xs);
+  font-weight: var(--g-weight);
+  line-height: var(--g-leading-xs);
+}
+
+/* Phones: the two sides stay side by side, with smaller cards and no arrow between them. */
+@media (width < 34rem) {
+  .game-trade-composer {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: var(--g-space-2);
+  }
+
+  .game-trade-composer > .game-trade-arrow {
+    display: none;
+  }
+
+  .game-trade-tray {
+    min-height: 3.5rem;
+    gap: var(--g-space-2);
+    padding: var(--g-space-2);
+  }
+
+  .game-trade-tray-empty {
+    font-size: var(--g-font-xs);
+    line-height: var(--g-leading-xs);
+  }
+
+  .game-trade-tray-card {
+    width: 1.75rem;
+  }
+
+  .game-trade-palette {
+    gap: var(--g-space-1);
+  }
+
+  .game-trade-palette-card {
+    width: 1.5rem;
+  }
+
+  .game-trade-rate {
+    min-height: 2.25rem;
+  }
+}
+
+/* Who gets the offer: their portraits in a row after "Ask". Everyone is asked to start with; a
+   tap leaves someone out. */
+.game-trade-ask {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--g-space-2);
 }
 
 .game-trade-recipient {
   display: grid;
-  justify-items: center;
-  width: 3.5rem;
-  gap: var(--ui-space-1);
   padding: 0;
   border: 0;
+  border-radius: 50%;
   background: transparent;
-  color: var(--foreground);
   cursor: pointer;
 }
 
 .game-trade-recipient > .game-dock-portrait {
-  --portrait-size: 2.25rem;
+  --portrait-size: 2rem;
 
   transition: opacity 150ms ease-out;
 }
 
 .game-trade-recipient[aria-pressed="true"] > .game-dock-portrait {
-  outline: 2px solid var(--ui-selected-ring);
+  outline: 2px solid var(--g-text);
   outline-offset: 2px;
 }
 
 .game-trade-recipient[aria-pressed="false"] > .game-dock-portrait {
-  opacity: 0.5;
-}
-
-.game-trade-recipient[aria-pressed="false"] .game-trade-recipient-name {
-  color: var(--ui-text-muted);
+  opacity: 0.4;
 }
 
 .game-trade-recipient:focus-visible {
-  border-radius: var(--ui-radius-small);
-  outline: 2px solid var(--ui-focus-ring);
-  outline-offset: 2px;
-}
-
-.game-trade-recipient-name {
-  max-width: 100%;
-  overflow: hidden;
-  font-family: var(--font-sans);
-  font-size: 0.75rem;
-  font-weight: 700;
-  line-height: 1.2;
-  text-overflow: ellipsis;
-  text-shadow: none;
-  white-space: nowrap;
+  outline: 2px solid var(--g-text);
+  outline-offset: 4px;
 }
 
 /* Who is trading, with their portrait, under the title. */
@@ -2532,12 +2140,12 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--ui-space-2);
+  gap: var(--g-space-2);
   margin: 0;
-  color: var(--ui-text-soft);
-  font-size: 0.9375rem;
-  font-weight: 600;
-  line-height: 1.3;
+  color: var(--g-text);
+  font-size: var(--g-font-sm);
+  font-weight: var(--g-weight);
+  line-height: var(--g-leading-sm);
   text-align: center;
   text-wrap: balance;
 }
@@ -2554,7 +2162,7 @@
   justify-content: center;
   width: fit-content;
   max-width: 100%;
-  gap: 0.625rem;
+  gap: var(--g-space-2);
   margin-inline: auto;
 }
 
@@ -2562,23 +2170,17 @@
 .game-trade-sides > .game-trade-well {
   align-self: stretch;
   min-width: 7.5rem;
-  padding-inline: var(--ui-space-3);
+  padding-inline: var(--g-space-3);
 }
 
 .game-trade-sides .game-resource-row {
-  gap: var(--ui-space-3);
-  min-height: 4.5rem;
-  padding-top: var(--ui-space-2);
+  gap: var(--g-space-3);
+  min-height: 0;
+  padding-top: var(--g-space-2);
 }
 
 .game-trade-sides .game-resource-thumb {
-  width: var(--hand-card-width, 3rem);
-}
-
-@media (width >= 48rem) {
-  .game-trade-sides .game-resource-thumb {
-    width: 3.75rem;
-  }
+  width: 2.5rem;
 }
 
 /* A royal arrow coin between the wells. */
@@ -2586,19 +2188,18 @@
   box-sizing: border-box;
   width: 2rem;
   height: 2rem;
-  padding: 0.375rem;
+  padding: var(--g-space-2);
   border: 0;
   border-radius: 50%;
-  background: var(--ui-royal);
-  box-shadow: var(--ui-shadow-control);
-  color: var(--ui-ink-on-primary);
+  background: var(--g-raised);
+  color: var(--g-text);
 }
 
 .game-trade-replies {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: var(--ui-space-2);
+  gap: var(--g-space-2);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -2607,34 +2208,33 @@
 /* One recipient's answer: a well whose edge and pill take the answer's color. Every plaque is
    the same size whatever it says. */
 .game-trade-reply {
-  --reply-color: var(--ui-well-border);
+  --reply-color: var(--g-raised);
 
   display: grid;
   justify-items: center;
   width: 6.25rem;
-  gap: 0.3125rem;
-  padding: 0.375rem;
+  gap: var(--g-space-1);
+  padding: var(--g-space-2);
   border: var(--ui-line) solid var(--reply-color);
   border-radius: var(--ui-radius-control);
-  background: var(--ui-well);
+  background: var(--g-raised);
 }
 
 .game-trade-reply[data-state="accepted"] {
-  --reply-color: var(--dock-accept);
+  --reply-color: var(--g-text);
 }
 
 .game-trade-reply[data-state="declined"] {
-  --reply-color: color-mix(in srgb, var(--ui-danger-top) 60%, transparent);
+  --reply-color: var(--g-raised);
 }
 
 /* An accepted recipient the proposer can trade with: the whole plaque is the button, a royal face
    with a gold "Trade" pill. */
 .game-trade-reply[data-state="partner"] {
-  --reply-color: color-mix(in srgb, var(--foreground) 16%, transparent);
+  --reply-color: var(--g-text);
 
-  background: var(--ui-royal);
-  box-shadow: var(--ui-shadow-control);
-  color: var(--ui-ink-on-primary);
+  background: var(--g-raised);
+  color: var(--g-text);
   font: inherit;
   cursor: pointer;
   transition:
@@ -2645,9 +2245,7 @@
 
 @media (hover: hover) {
   .game-trade-reply[data-state="partner"]:hover:not(:disabled) {
-    --reply-color: color-mix(in srgb, var(--foreground) 34%, transparent);
-
-    background: var(--ui-royal-hover);
+    box-shadow: inset 0 0 0 1px var(--g-muted);
   }
 }
 
@@ -2656,16 +2254,15 @@
 }
 
 .game-trade-reply[data-state="partner"]:focus-visible {
-  outline: 2px solid var(--ui-focus-ring);
+  outline: 2px solid var(--g-text);
   outline-offset: 2px;
 }
 
 .game-trade-reply[data-state="partner"]:disabled {
   --reply-color: transparent;
 
-  background: var(--ui-disabled-face);
-  box-shadow: none;
-  color: var(--ui-disabled-ink);
+  background: var(--g-raised);
+  color: var(--g-muted);
   cursor: not-allowed;
 }
 
@@ -2681,11 +2278,10 @@
   max-width: 100%;
   overflow: hidden;
   font-family: var(--font-sans);
-  font-size: 0.75rem;
-  font-weight: 700;
-  line-height: 1.2;
+  font-size: var(--g-font-xs);
+  font-weight: var(--g-weight-strong);
+  line-height: var(--g-leading-xs);
   text-overflow: ellipsis;
-  text-shadow: none;
   white-space: nowrap;
 }
 
@@ -2696,18 +2292,16 @@
   justify-content: center;
   width: 100%;
   height: 1.5rem;
-  gap: var(--ui-space-1);
-  padding-inline: var(--ui-space-1);
+  gap: var(--g-space-1);
+  padding-inline: var(--g-space-1);
   border: 0;
   border-radius: var(--ui-radius-pill);
-  background: var(--ui-tag-quiet);
-  box-shadow: none;
-  color: var(--foreground);
+  background: var(--g-raised);
+  color: var(--g-text);
   font-family: var(--font-sans);
-  font-size: 0.75rem;
-  font-weight: 700;
+  font-size: var(--g-font-xs);
+  font-weight: var(--g-weight-strong);
   line-height: 1;
-  text-shadow: none;
 }
 
 .game-trade-reply-state svg {
@@ -2717,30 +2311,30 @@
 }
 
 .game-trade-reply[data-state="accepted"] .game-trade-reply-state {
-  background: var(--ui-ready);
-  color: var(--ui-ink-on-ready);
+  background: var(--g-text);
+  color: var(--g-surface);
 }
 
 .game-trade-reply[data-state="declined"] .game-trade-reply-state {
-  color: var(--ui-text-muted);
+  color: var(--g-muted);
 }
 
 .game-trade-reply[data-state="partner"] .game-trade-reply-state {
-  background: linear-gradient(var(--ui-gold-top), var(--ui-gold-bottom));
-  color: var(--ui-ink-on-gold);
-  font-size: 0.8125rem;
-  font-weight: 800;
+  background: var(--g-accent);
+  color: var(--g-surface);
+  font-size: var(--g-font-xs);
+  font-weight: var(--g-weight-strong);
 }
 
 .game-trade-reply[data-state="partner"]:disabled .game-trade-reply-state {
-  background: var(--ui-disabled-edge);
-  color: var(--ui-disabled-ink);
+  background: var(--g-raised);
+  color: var(--g-muted);
 }
 
 /* Onlookers' answers: portraits with the answer as a badge on the corner. */
 .game-trade-replies[data-compact] {
-  gap: var(--ui-space-3);
-  padding-block: 0.125rem var(--ui-space-1);
+  gap: var(--g-space-3);
+  padding-block: var(--g-space-0) var(--g-space-1);
 }
 
 .game-trade-reply-chip {
@@ -2757,17 +2351,17 @@
 
 .game-trade-reply-badge {
   position: absolute;
-  right: -0.375rem;
-  bottom: -0.25rem;
+  right: calc(-1 * var(--g-space-1));
+  bottom: calc(-1 * var(--g-space-1));
   display: grid;
   width: 1.25rem;
   height: 1.25rem;
   place-items: center;
   border: 0;
   border-radius: 50%;
-  background: var(--ui-locked);
-  box-shadow: 0 0 0 1.5px var(--game-outline);
-  color: var(--foreground);
+  background: var(--g-raised);
+  box-shadow: 0 0 0 2px var(--g-surface);
+  color: var(--g-text);
 }
 
 .game-trade-reply-badge svg {
@@ -2776,13 +2370,13 @@
 }
 
 .game-trade-reply-chip[data-state="accepted"] .game-trade-reply-badge {
-  background: var(--ui-ready);
-  color: var(--ui-ink-on-ready);
+  background: var(--g-text);
+  color: var(--g-surface);
 }
 
 .game-trade-reply-chip[data-state="declined"] .game-trade-reply-badge {
-  background: var(--ui-danger-bottom);
-  color: var(--ui-ink-on-primary);
+  background: var(--g-accent);
+  color: var(--g-surface);
 }
 
 /* Discard: the pick tray hugs its five cards, which are a size up from the trade pickers. */
@@ -2790,65 +2384,62 @@
   justify-self: center;
   width: fit-content;
   max-width: 100%;
-  padding: var(--ui-space-2) var(--ui-space-4);
+  padding: var(--g-space-2) var(--g-space-4);
 }
 
 .game-discard-well .game-resource-picker {
   grid-template-columns: repeat(5, minmax(0, 3.5rem));
-  gap: var(--ui-space-3);
-  padding: 0.625rem 0 1rem;
+  gap: var(--g-space-3);
+  padding: var(--g-space-3) 0 var(--g-space-4);
 }
 
 /* Discard: a meter, the count and the auto-discard timer. */
 .game-discard-progress {
   display: flex;
   align-items: center;
-  gap: 0.625rem;
+  gap: var(--g-space-2);
 }
 
 .game-discard-meter {
   flex: 1;
   height: 0.625rem;
   overflow: hidden;
-  border: var(--ui-line) solid var(--ui-well-border);
+  border: var(--ui-line) solid var(--g-raised);
   border-radius: var(--ui-radius-pill);
-  background: var(--ui-well);
+  background: var(--g-raised);
 }
 
 .game-discard-meter-fill {
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: var(--ui-pick);
+  background: var(--g-text);
   transition: inline-size 200ms ease-out;
 }
 
 .game-discard-count {
   font-family: var(--font-sans);
-  font-size: 1rem;
+  font-size: var(--g-font-md);
   font-variant-numeric: tabular-nums;
-  font-weight: 800;
+  font-weight: var(--g-weight-strong);
   line-height: 1;
-  text-shadow: none;
 }
 
 .game-discard-timer {
   display: inline-flex;
   align-items: center;
-  gap: var(--ui-space-1);
+  gap: var(--g-space-1);
   height: 1.625rem;
-  padding-inline: var(--ui-space-2);
+  padding-inline: var(--g-space-2);
   border: 0;
   border-radius: var(--ui-radius-pill);
-  background: var(--ui-tag-quiet);
-  box-shadow: none;
-  color: var(--foreground);
+  background: var(--g-raised);
+  color: var(--g-text);
   font-family: var(--font-sans);
-  font-size: 0.8125rem;
-  font-weight: 800;
+  font-size: var(--g-font-xs);
+  font-weight: var(--g-weight-strong);
   font-variant-numeric: tabular-nums;
   line-height: 1;
-  text-shadow: none;
 }
 
 .game-discard-timer svg {
@@ -2857,15 +2448,15 @@
 }
 
 .game-discard-timer[data-urgent] {
-  background: var(--ui-danger-bottom);
-  color: var(--ui-ink-on-primary);
+  background: var(--g-accent);
+  color: var(--g-surface);
 }
 
 /* Development card dialog (GameDialog body and footer). */
 .game-dev-card-body {
   display: grid;
   justify-items: center;
-  gap: var(--ui-space-3);
+  gap: var(--g-space-3);
 }
 
 .game-dev-card-body > .game-trade-well {
@@ -2880,7 +2471,7 @@
 .game-dev-card-footer {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--ui-space-3);
+  gap: var(--g-space-3);
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -119,11 +119,9 @@ export function EventLog({
                 <div className="game-log-bubble">
                   <p className="game-log-head">
                     <strong className="game-log-name">{actor?.displayName ?? "Crew"}</strong>
-                    {/* One tag at most, so the name and the time keep one line: "Latest" on
-                        the newest bubble, whoever made it, and "You" on the viewer's others. */}
-                    {isNewest ? (
-                      <span className="game-log-latest">Latest</span>
-                    ) : actor?.id === viewerPlayerId ? (
+                    {/* The newest entry reads white and the rest muted (game-hud.css), so only
+                        the viewer's own moves carry a tag. */}
+                    {actor?.id === viewerPlayerId ? (
                       <span className="game-you-tag">You</span>
                     ) : null}
                     {latest ? (

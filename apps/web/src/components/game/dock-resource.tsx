@@ -32,59 +32,35 @@ function ResourceArt({
 }
 
 /**
- * A price as one mini card per card it takes, in hand order (a city is two Wheat and three
- * Stone). With `have`, the cards the player holds are in full color and the ones still missing
- * are ghosted, so what is short reads without words; the tile's label and tooltip say it too.
+ * A price as one resource icon per card it takes, in hand order (a city is two Wheat and three
+ * Stone). The cards the player holds are lit and the ones still missing are faint, so the price
+ * and what is short read in one line; the tile's label and tooltip say it in words.
  */
-export function CostCards({
+export function CostPips({
   cost,
   have,
 }: {
   cost: Readonly<ResourceInventory>;
-  have?: Readonly<ResourceInventory>;
+  have: Readonly<ResourceInventory>;
 }) {
   return (
-    <span aria-hidden="true" className="game-cost-cards">
+    <span aria-hidden="true" className="game-cost-pips">
       {RESOURCE_ORDER.flatMap((resource) =>
         Array.from({ length: cost[resource] }, (_, index) => (
-          <span
-            className="game-cost-card"
-            data-missing={have && index >= have[resource] ? true : undefined}
-            key={`${resource}-${index}`}
-          >
-            <ResourceArt className="game-cost-card-art" resource={resource} sizes="1.25rem" />
-          </span>
-        )),
-      )}
-    </span>
-  );
-}
-
-/**
- * Cards as small resource icons in hand order, one icon per resource with its count after it when
- * there is more than one ("×2"): a price (a city is Wheat ×2, Stone ×3) or the cards still
- * missing. The words are in the surrounding label.
- */
-export function ResourceIcons({ cards }: { cards: Readonly<ResourceInventory> }) {
-  return (
-    <span aria-hidden="true" className="game-resource-icons">
-      {RESOURCE_ORDER.filter((resource) => cards[resource] > 0).map((resource) => (
-        <span className="game-resource-icon" key={resource}>
           <Image
             alt=""
-            className="game-resource-icon-art"
+            className="game-cost-pip"
+            data-missing={index >= have[resource] ? true : undefined}
             draggable={false}
             height={256}
+            key={`${resource}-${index}`}
             loading="eager"
-            sizes="1.75rem"
+            sizes="1.25rem"
             src={RESOURCE_ICON_ASSET_PATHS[resource]}
             width={256}
           />
-          {cards[resource] > 1 ? (
-            <span className="game-resource-icon-count">×{cards[resource]}</span>
-          ) : null}
-        </span>
-      ))}
+        )),
+      )}
     </span>
   );
 }
@@ -123,9 +99,9 @@ export function ResourceCardRow({
 
 /**
  * Five resource cards to pick from: each tap adds one (the count chip shows how many), and the
- * round button under a picked card takes one back. In "choose" mode one card is picked at a time.
- * With `held`, each card also shows how many the player holds: the corner chip is the hand count
- * and the picks move to a gold chip on the card's lower edge.
+ * round button on a picked card's corner takes one back. In "choose" mode one card is picked at a
+ * time. With `held`, each card also shows how many the player holds: the corner chip is the hand
+ * count and the picks move to a chip on the card's lower edge.
  */
 export function ResourcePicker({
   canAdd,
@@ -191,12 +167,87 @@ export function ResourcePicker({
                 size="game-sm"
                 variant="game-icon"
               >
-                <MinusIcon className="size-4" />
+                <MinusIcon className="size-3" />
               </Button>
             ) : null}
           </li>
         );
       })}
+    </ul>
+  );
+}
+
+/**
+ * The cards put on one side of a trade so far: one small card per resource with its count. A tap
+ * takes one back. While it is empty it says how to add cards.
+ */
+export function ResourceTray({
+  cards,
+  disabled,
+  emptyText,
+  label,
+  onRemove,
+}: {
+  cards: Readonly<ResourceInventory>;
+  disabled: boolean;
+  emptyText: string;
+  label: string;
+  onRemove(resource: ResourceType): void;
+}) {
+  const picked = RESOURCE_ORDER.filter((resource) => cards[resource] > 0);
+  return (
+    <ul aria-label={label} className="game-trade-tray">
+      {picked.length === 0 ? (
+        <li className="game-trade-tray-empty">{emptyText}</li>
+      ) : (
+        picked.map((resource) => (
+          <li key={resource}>
+            <button
+              aria-label={`${RESOURCE_LABELS[resource]}, ${cards[resource]}. Take one back`}
+              className="game-trade-tray-card"
+              disabled={disabled}
+              onClick={() => onRemove(resource)}
+              type="button"
+            >
+              <ResourceArt className="game-trade-tray-art" resource={resource} sizes="2.5rem" />
+              <span aria-hidden="true" className="game-count-chip">
+                {cards[resource]}
+              </span>
+            </button>
+          </li>
+        ))
+      )}
+    </ul>
+  );
+}
+
+/** Five small cards to ask for: a tap adds one to the tray above them. */
+export function ResourcePalette({
+  canAdd,
+  disabled,
+  label,
+  onAdd,
+}: {
+  canAdd(resource: ResourceType): boolean;
+  disabled: boolean;
+  label: string;
+  onAdd(resource: ResourceType): void;
+}) {
+  return (
+    <ul aria-label={label} className="game-trade-palette">
+      {RESOURCE_ORDER.map((resource) => (
+        <li key={resource}>
+          <button
+            aria-label={`Add one ${RESOURCE_LABELS[resource]}`}
+            className="game-trade-palette-card"
+            disabled={disabled || !canAdd(resource)}
+            onClick={() => onAdd(resource)}
+            type="button"
+          >
+            <ResourceArt className="game-trade-tray-art" resource={resource} sizes="2rem" />
+          </button>
+        </li>
+      ))}
     </ul>
   );
 }

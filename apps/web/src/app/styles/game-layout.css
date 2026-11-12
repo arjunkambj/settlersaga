@@ -29,18 +29,17 @@
    ========================================================================= */
 
 .game-shell {
-  --game-gutter: clamp(0.5rem, 1.2vw, 1rem);
-  --game-gap: clamp(0.5rem, 1vw, 0.75rem);
+  --game-gutter: var(--g-space-2);
+  --game-gap: var(--g-space-2);
   --game-rail: clamp(330px, 26vw, 384px);
   --game-brand-width: clamp(6.5rem, 12vw, 11rem);
   /* Phone hand cards and Build & Trade tiles (the action bar sets its own tile width below).
      From md up the dock parts size themselves from game-dock.css (--dock-*). */
   --hand-card-width: 2.75rem;
   --action-tile-width: 5rem;
-  --action-tile-art-height: 2.5rem;
   /* The phone dock's least height (the turn card, the hand, then the action bar), so the board
      never jumps. */
-  --dock-height: 20.375rem;
+  --dock-height: 16rem;
 
   position: fixed;
   top: 0;
@@ -62,12 +61,11 @@
     max(var(--game-gutter), env(safe-area-inset-bottom))
     max(var(--game-gutter), env(safe-area-inset-left));
   overflow: hidden;
-  /* Open sea: a quiet wave pattern, deepening toward the edges so the island leads. */
+  /* Open sea: a quiet wave pattern, flat from edge to edge. */
   background:
-    radial-gradient(ellipse at 50% 45%, transparent 35%, var(--board-ocean-deep) 115%),
     url("/game-assets/ui/ocean-tile.webp") center / 640px repeat,
     var(--board-ocean);
-  color: var(--foreground);
+  color: var(--g-text);
 }
 
 /* HUD panels sit above the board, so a zoomed island passes underneath them. */
@@ -168,15 +166,11 @@
   grid-template-areas: "portrait text dice cancel";
   align-items: center;
   min-width: 0;
-  column-gap: var(--ui-space-3);
-  padding: var(--ui-space-2) var(--ui-space-3);
-  border: var(--ui-line) solid var(--ui-hairline-game);
+  column-gap: var(--g-space-3);
+  padding: var(--g-space-2) var(--g-space-3);
   border-radius: var(--ui-radius-hud);
-  background: var(--ui-glass-game);
-  box-shadow:
-    inset 0 1px 0 var(--ui-panel-highlight),
-    var(--ui-shadow-panel);
-  color: var(--foreground);
+  background: var(--g-surface);
+  color: var(--g-text);
   -webkit-backdrop-filter: var(--ui-glass-blur-game);
   backdrop-filter: var(--ui-glass-blur-game);
 }
@@ -199,7 +193,7 @@
   grid-area: text;
   align-content: center;
   min-width: 0;
-  gap: 0.125rem;
+  gap: var(--g-space-0);
 }
 
 /* One line. A long name comes as its first word (getShortPlayerName); should even that not fit,
@@ -208,29 +202,29 @@
   display: flex;
   min-width: 0;
   margin: 0;
-  color: var(--foreground);
+  color: var(--g-text);
   font-family: var(--font-display);
-  font-size: 1.125rem;
-  font-weight: 800;
-  letter-spacing: -0.01em;
+  font-size: var(--g-font-md);
+  font-weight: var(--g-weight-strong);
+  letter-spacing: 0;
   /* One line box at every size, so a long name never changes the card's height. */
-  line-height: 1.375rem;
+  line-height: var(--g-leading-sm);
   white-space: nowrap;
 }
 
 /* A long name shrinks the title a step before the name shortens. */
 .game-turn-card-title[data-name-fit="long"] {
-  font-size: 1rem;
+  font-size: var(--g-font-md);
 }
 
 .game-turn-card-title[data-name-fit="xlong"] {
-  font-size: 0.9375rem;
+  font-size: var(--g-font-sm);
   letter-spacing: 0;
 }
 
 .game-turn-card-title:focus-visible {
   border-radius: var(--ui-radius-small);
-  outline: 2px solid var(--ui-focus-ring);
+  outline: 2px solid var(--g-text);
   outline-offset: 2px;
 }
 
@@ -253,11 +247,11 @@
   align-items: center;
   min-width: 0;
   margin: 0;
-  gap: 0.375rem;
-  color: var(--ui-text-soft);
-  font-size: 0.9375rem;
-  font-weight: 600;
-  line-height: 1.25rem;
+  gap: var(--g-space-1);
+  color: var(--g-text);
+  font-size: var(--g-font-sm);
+  font-weight: var(--g-weight);
+  line-height: var(--g-leading-sm);
 }
 
 .game-turn-card-detail-text {
@@ -271,7 +265,7 @@
   flex: none;
   width: 1rem;
   height: 1rem;
-  color: var(--ui-text-soft);
+  color: var(--g-text);
 }
 
 /* What just happened: one quiet line, wherever the log is in the drawer (below xl). At xl the log
@@ -280,16 +274,16 @@
   display: flex;
   min-width: 0;
   margin: 0;
-  gap: 0.375rem;
-  color: var(--ui-text-muted);
-  font-size: 0.75rem;
-  font-weight: 600;
-  line-height: 1.25;
+  gap: var(--g-space-1);
+  color: var(--g-muted);
+  font-size: var(--g-font-xs);
+  font-weight: var(--g-weight);
+  line-height: var(--g-leading-xs);
 }
 
 .game-turn-card-last-label {
   flex: none;
-  font-weight: 800;
+  font-weight: var(--g-weight-strong);
 }
 
 .game-turn-card-last-text {
@@ -340,16 +334,67 @@
   }
 }
 
-/* Phones: a HUD panel above the hand. A fixed least height, so the board keeps its size whether
-   or not there is a last move or dice. */
+/* Phones: a panel beside the clock, 72px in every state so the board keeps its size. The title
+   leads, with this turn's dice (or a picked build's Cancel) at its end; under it the thing to do
+   now across the card, then what just happened as a quiet last line.
+     portrait title  |  title  dice    |  title  cancel
+     portrait detail |  detail detail  |  detail detail
+     portrait last   |  last   last    |                 */
 @media (width < 48rem) {
   .game-turn-card {
-    min-height: 5rem;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-rows: auto auto auto;
+    grid-template-areas:
+      "portrait title"
+      "portrait detail"
+      "portrait last";
+    align-content: center;
+    min-height: 4.5rem;
+  }
+
+  .game-turn-card-text {
+    display: contents;
+  }
+
+  .game-turn-card-title {
+    grid-area: title;
+  }
+
+  .game-turn-card-detail {
+    grid-area: detail;
+  }
+
+  .game-turn-card-last {
+    grid-area: last;
+  }
+
+  .game-turn-card:is(:has(> .game-turn-card-dice), :has(> .game-turn-card-cancel))
+    > .game-dock-portrait {
+    display: none;
+  }
+
+  .game-turn-card:has(> .game-turn-card-dice) {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "title dice"
+      "detail detail"
+      "last last";
+  }
+
+  .game-turn-card:has(> .game-turn-card-cancel) {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "title cancel"
+      "detail detail";
+  }
+
+  .game-turn-card:has(> .game-turn-card-cancel) .game-turn-card-last {
+    display: none;
   }
 
   .game-turn-card-dice .die-face {
-    width: 1.75rem;
-    height: 1.75rem;
+    width: 1.5rem;
+    height: 1.5rem;
   }
 }
 
@@ -357,13 +402,13 @@
 @media (width >= 48rem) {
   .game-turn-card {
     height: var(--turn-card-height);
-    column-gap: 0.625rem;
-    padding: var(--ui-space-2) 0.625rem var(--ui-space-2) var(--ui-space-2);
+    column-gap: var(--g-space-2);
+    padding: var(--g-space-2) var(--g-space-3) var(--g-space-2) var(--g-space-2);
   }
 
   .game-turn-card-detail {
-    font-size: 0.875rem;
-    line-height: 1.125rem;
+    font-size: var(--g-font-sm);
+    line-height: var(--g-leading-xs);
   }
 
   /* Two lines of about even length, never a lone word on the second. */
@@ -380,21 +425,6 @@
   .game-turn-card-dice .die-face {
     width: 2rem;
     height: 2rem;
-  }
-}
-
-/* Phones: the card is narrow for its words, so this turn's roll takes the portrait's place. */
-@media (width < 48rem) {
-  .game-turn-card:has(.game-turn-card-dice) > .game-dock-portrait {
-    display: none;
-  }
-
-  .game-turn-card:has(.game-turn-card-dice) {
-    grid-template-areas: "text text dice cancel";
-  }
-
-  .game-turn-card:has(.game-turn-card-dice):not(:has(> .game-turn-card-cancel)) {
-    grid-template-areas: "text text dice";
   }
 }
 
@@ -417,8 +447,8 @@
       "portrait detail"
       "last last";
     align-content: center;
-    row-gap: 0.125rem;
-    padding-block: 0.375rem;
+    row-gap: var(--g-space-0);
+    padding-block: var(--g-space-2);
   }
 
   .game-turn-card-text {
@@ -475,9 +505,9 @@
   }
 }
 
-/* xl: the card stands in the board area's bottom-right corner (--turn-card-width). The portrait,
-   then a 20px title across the card and, under it, the thing to do now beside this turn's dice (a
-   picked build's Cancel stands in the title's row). What just happened is in the log in the rail.
+/* xl: the card stands at the rail's foot, over the clock and the button. The portrait, then a
+   20px title across the card and, under it, the thing to do now beside this turn's dice (a picked
+   build's Cancel stands in the title's row). What just happened is in the log just above.
      portrait title  title   |  portrait title  cancel
      portrait detail dice    |  portrait detail detail  */
 @media (width >= 80rem) {
@@ -488,8 +518,8 @@
       "portrait title title"
       "portrait detail dice";
     align-content: center;
-    gap: 0.125rem var(--ui-space-3);
-    padding: 0.625rem var(--ui-space-3);
+    gap: var(--g-space-0) var(--g-space-3);
+    padding: var(--g-space-3) var(--g-space-3);
   }
 
   .game-turn-card:has(> .game-turn-card-cancel) {
@@ -515,21 +545,21 @@
   }
 
   .game-turn-card-title {
-    font-size: 1.25rem;
-    line-height: 1.5rem;
+    font-size: var(--g-font-lg);
+    line-height: var(--g-leading-lg);
   }
 
   .game-turn-card-title[data-name-fit="long"] {
-    font-size: 1.0625rem;
+    font-size: var(--g-font-md);
   }
 
   .game-turn-card-title[data-name-fit="xlong"] {
-    font-size: 1rem;
+    font-size: var(--g-font-md);
   }
 
   .game-turn-card-detail {
-    font-size: 0.9375rem;
-    line-height: 1.1875rem;
+    font-size: var(--g-font-sm);
+    line-height: var(--g-leading-sm);
   }
 
   /* A 36px box draws a 31px die. */
@@ -554,7 +584,7 @@
   display: grid;
   grid-auto-columns: minmax(0, 1fr);
   grid-auto-flow: column;
-  gap: 0.375rem;
+  gap: var(--g-space-1);
 }
 
 /* --------------------------------------------------------------------------
@@ -580,7 +610,7 @@
   bottom: 0;
   z-index: 5;
   display: grid;
-  gap: 0.5rem;
+  gap: var(--g-space-2);
 }
 
 .board-inspector {
@@ -597,27 +627,22 @@
   visibility: hidden;
 }
 
-/* An open sheet dims the board under it, so the offer reads as the thing to answer. Taps
-   still reach the board. */
+/* The dim behind a blocking sheet: the sea and the board, edge to edge (the HUD panels sit above
+   it). Taps still reach the board. */
 .board-shell::after {
   content: "";
   position: absolute;
-  inset: 0;
+  inset: -100vmax;
   z-index: 1;
-  /* Darkest under the sheet, fading out before the board area's edges. */
-  background: radial-gradient(
-    ellipse farthest-side at 50% 55%,
-    var(--game-scrim) 0 40%,
-    var(--game-scrim-soft) 75%,
-    transparent 100%
-  );
+  background: var(--g-surface);
   opacity: 0;
   pointer-events: none;
   transition: opacity 200ms ease-out;
 }
 
-.game-shell:has(.game-sheet-root:not(:empty)) .board-shell::after {
-  opacity: 1;
+/* Only a sheet the player must answer first (discarding) dims the board; trading never does. */
+.game-shell:has(.game-sheet-root > [data-blocking]) .board-shell::after {
+  opacity: 0.5;
 }
 
 /* Toasts and the trade and discard sheets, centered at the bottom of the board area just above
@@ -631,7 +656,7 @@
   justify-content: flex-end;
   min-width: 0;
   min-height: 0;
-  gap: 0.5rem;
+  gap: var(--g-space-2);
   pointer-events: none;
 }
 
@@ -640,7 +665,7 @@
   flex: none;
   justify-items: center;
   max-width: 100%;
-  gap: 0.5rem;
+  gap: var(--g-space-2);
 }
 
 .game-board-notices:empty {
@@ -651,16 +676,30 @@
   pointer-events: auto;
 }
 
+/* From md up a sheet stands at the left, right above the hand it trades or discards from, and the
+   middle of the board stays clear. Toasts keep the center. */
+@media (width >= 48rem) {
+  .game-board-overlay {
+    align-items: flex-start;
+  }
+
+  .game-board-notices {
+    align-self: center;
+  }
+}
+
 /* Trade and discard sheets (HandDockPortal). */
 .game-sheet-root {
   display: grid;
   flex: 0 1 auto;
   width: min(33rem, 100%);
   min-height: 0;
-  gap: 0.5rem;
-  padding: 0.375rem;
+  gap: var(--g-space-2);
+  padding: var(--g-space-2);
   overflow-y: auto;
   overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--g-raised) transparent;
   pointer-events: auto;
 }
 
@@ -678,7 +717,7 @@
   display: grid;
   align-content: end;
   min-width: 0;
-  gap: 0.5rem;
+  gap: var(--g-space-2);
 }
 
 .game-hand {
@@ -696,7 +735,7 @@
   grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto minmax(0, 1fr);
   min-width: 0;
-  gap: 0.5rem;
+  gap: var(--g-space-2);
 }
 
 /* Without a clock (discarding, a finished game) the turn control takes the whole slot. */
@@ -735,39 +774,20 @@
 }
 
 /* --------------------------------------------------------------------------
-   Phone (< 48rem): the turn card, the hand on its own row, then the action
-   bar beside the turn slot:
-     card    card
+   Phone (< 48rem): the turn card beside the clock, the hand on its own row,
+   then the action bar beside the Roll or End turn button:
+     card    clock
      hand    hand
      actions turn
-   The island fills the width here, so the camera keeps off it: pinch zooms,
-   and Recenter appears only once the view has moved.
+   Whose turn, the time left and the button read as one corner-to-corner Z,
+   and the dock is three short rows, so the island keeps the screen. The
+   island fills the width here, so the camera keeps off it: pinch zooms, and
+   Recenter appears only once the view has moved.
    ----------------------------------------------------------------------- */
 
 @media (width < 48rem) {
-  /* Three tiles share the action bar (still narrower on the smallest phones). */
-  .game-build-actions {
-    --action-tile-width: min(4.625rem, calc((100% - 0.5rem) / 3));
-    --action-tile-art-height: 2rem;
-  }
-
-  /* A compact clock, so the turn slot stays as short as the action bar. */
-  .game-turn-clock {
-    gap: 0.375rem;
-    padding-block: 0.125rem;
-  }
-
-  .game-turn-clock-time {
-    font-size: 1rem;
-  }
-
   .game-build-pieces {
     --action-tile-width: 5.75rem;
-  }
-
-  /* Phone pills are narrow: a step less room between the portrait and the points. */
-  .game-strip-player {
-    gap: 0.375rem;
   }
 
   .game-header-tools,
@@ -776,32 +796,54 @@
     display: none;
   }
 
+  /* The clock keeps its own narrow column, so the card beside it gets the rest of the row; the
+     button under it spans that column and the next. */
   .game-footer {
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-rows: 4.5rem auto 4rem;
     grid-template-areas:
-      "card card"
-      "hand hand"
-      "actions turn";
+      "card card clock"
+      "hand hand hand"
+      "actions turn turn";
   }
 
-  /* The clock level with the action bar's top edge, the button a 52px pill level with its
-     bottom edge. */
+  /* No clock (discarding): the card takes the row. */
+  .game-footer:not(:has(.game-turn-clock)) {
+    grid-template-areas:
+      "card card card"
+      "hand hand hand"
+      "actions turn turn";
+  }
+
+  /* The slot dissolves: its clock stands beside the card and its button beside the action bar. */
   .game-turn-slot {
-    grid-template-rows: auto auto;
-    align-content: space-between;
-    gap: 0.375rem;
+    display: contents;
+  }
+
+  .game-turn-clock {
+    grid-area: clock;
+    gap: var(--g-space-2);
+    padding: var(--g-space-2) var(--g-space-3);
+    border-radius: var(--ui-radius-hud);
+  }
+
+  .game-turn-clock .game-clock-ring {
+    height: 2rem;
+  }
+
+  .game-turn-control {
+    grid-area: turn;
+    min-width: 8rem;
   }
 
   .game-turn-slot[data-finished] {
+    display: grid;
+    grid-row: 3;
     grid-column: 1 / -1;
   }
 
   .game-build-panel {
     position: relative;
-  }
-
-  .game-build-actions {
-    justify-content: space-evenly;
   }
 
   .game-build-menu-toggle {
@@ -812,22 +854,29 @@
      line that says why they are locked when they are. */
   .game-build-pieces {
     position: absolute;
-    bottom: calc(100% + 0.75rem);
+    bottom: calc(100% + var(--g-space-3));
     left: 0;
     z-index: 20;
     display: none;
     grid-template-columns: repeat(3, auto);
     justify-content: center;
-    gap: 0.5rem;
-    padding: 0.75rem;
-    border: var(--ui-line) solid var(--ui-hairline-game);
+    gap: var(--g-space-2);
+    padding: var(--g-space-3);
+    border: var(--ui-line) solid var(--g-raised);
     border-radius: var(--ui-radius-hud);
-    background: var(--ui-glass-game);
-    box-shadow:
-      inset 0 1px 0 var(--ui-panel-highlight),
-      var(--ui-shadow-panel);
-    -webkit-backdrop-filter: var(--ui-glass-blur-game);
-    backdrop-filter: var(--ui-glass-blur-game);
+    background: var(--g-raised);
+    box-shadow: none;
+  }
+
+  /* A solid back under the panel colour: the tray lies over the hand, and blur can't reach
+     through the action bar it hangs from, so the cards would show through the glass. */
+  .game-build-pieces::before {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    background: var(--g-surface);
+    content: "";
   }
 
   .game-build-pieces[data-open] {
@@ -839,47 +888,44 @@
     grid-column: 1 / -1;
   }
 
-  /* The opening round in the narrow action bar: the title, then the four steps as two short
-     rows of two (number and name), so all four fit the bar's height under the lead. */
+  /* The opening round in the short action bar: one row of four steps, each its number and its
+     piece. The turn card names the piece to place. */
   .game-build-setup {
-    gap: var(--ui-space-1);
+    grid-template-rows: minmax(0, 1fr);
   }
 
-  .game-build-setup-lead > span,
-  .game-setup-step-art {
+  .game-build-setup-lead {
     display: none;
   }
 
   .game-setup-steps {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    align-content: center;
-    gap: 0.375rem;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--g-space-1);
   }
 
   .game-setup-step {
-    min-height: 2rem;
-    gap: 0.25rem;
-    padding: 0 0.25rem;
-    border-radius: var(--ui-radius-pill);
+    justify-content: center;
+    gap: var(--g-space-1);
+    padding: 0;
   }
 
-  .game-setup-step-number {
-    width: 1.125rem;
-    height: 1.125rem;
+  .game-setup-step-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
   }
 
+  .game-setup-step-number,
   .game-setup-step-number svg {
-    width: 1.125rem;
-    height: 1.125rem;
+    width: 1rem;
+    height: 1rem;
   }
 
   /* The status pill beside the clock keeps its words whole. */
   .game-turn-slot:has(.game-turn-clock) .game-turn-control[data-kind] {
-    padding-inline: var(--ui-space-1);
-  }
-
-  .game-turn-control .game-turn-button {
-    height: 3.25rem;
+    padding-inline: var(--g-space-1);
   }
 
   .game-sheet-root {
@@ -902,8 +948,10 @@
 
 @media (width >= 48rem) {
   .game-shell {
+    --game-gutter: var(--g-space-3);
     --dock-height: var(--dock-row-height, 7rem);
     --turn-column-width: 12.5rem;
+    --game-gap: var(--g-space-2);
 
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto auto minmax(0, 1fr) var(--dock-height);
@@ -922,7 +970,7 @@
       "hand actions turn";
     align-content: stretch;
     align-items: stretch;
-    gap: var(--ui-space-2) var(--game-gap);
+    gap: var(--g-space-2) var(--game-gap);
   }
 
   .game-hand,
@@ -937,7 +985,7 @@
   .game-turn-slot {
     grid-template-columns: auto minmax(0, 1fr);
     grid-template-rows: minmax(0, 1fr);
-    gap: var(--ui-space-2);
+    gap: var(--g-space-2);
   }
 
   .game-turn-slot:not(:has(.game-turn-clock)) {
@@ -957,8 +1005,8 @@
   /* A compact clock, so the button beside it keeps its label whole in the narrow column. */
   .game-turn-clock {
     min-width: 0;
-    gap: var(--ui-space-1);
-    padding-inline: var(--ui-space-1) 0.625rem;
+    gap: var(--g-space-1);
+    padding-inline: var(--g-space-1) var(--g-space-3);
   }
 
   .game-turn-clock .game-clock-ring {
@@ -971,7 +1019,7 @@
    step smaller, and the status pill keeps its words whole ("Reply to offer"). */
 @media (48rem <= width < 80rem) {
   .game-turn-clock {
-    padding-inline-end: var(--ui-space-2);
+    padding-inline-end: var(--g-space-2);
   }
 
   .game-turn-clock .game-clock-ring {
@@ -980,11 +1028,11 @@
   }
 
   .game-turn-clock-time {
-    font-size: 1rem;
+    font-size: var(--g-font-md);
   }
 
   .game-turn-slot .game-turn-control[data-kind] {
-    padding-inline: var(--ui-space-2);
+    padding-inline: var(--g-space-2);
   }
 
   .game-turn-slot .game-turn-button-icon,
@@ -1043,14 +1091,14 @@
     align-content: start;
     width: var(--game-strip-width);
     min-height: 0;
-    margin-bottom: calc(var(--game-camera-height) + 0.5rem);
-    padding: 0.25rem;
+    margin-bottom: calc(var(--game-camera-height) + var(--g-space-2));
+    padding: var(--g-space-1);
     overflow-y: auto;
     scrollbar-width: thin;
   }
 
   .board-camera {
-    right: calc(-1 * (var(--game-strip-width) + var(--game-gap)) + 0.25rem);
+    right: calc(-1 * (var(--game-strip-width) + var(--game-gap)) + var(--g-space-1));
     grid-auto-flow: column;
   }
 
@@ -1064,8 +1112,8 @@
       "avatar stats points";
     align-content: center;
     height: 4.25rem;
-    gap: 0.25rem 0.5rem;
-    padding: 0.3125rem 0.5rem;
+    gap: var(--g-space-1) var(--g-space-2);
+    padding: var(--g-space-1) var(--g-space-2);
     border-radius: var(--ui-radius-hud);
   }
 
@@ -1088,7 +1136,7 @@
 
   /* The name row is short here: long names take two lines rather than an ellipsis. */
   .game-player-strip .game-strip-name[data-name-fit] {
-    font-size: 0.8125rem;
+    font-size: var(--g-font-xs);
   }
 
   .game-player-strip .game-strip-stats {
@@ -1115,7 +1163,7 @@
 
   /* The name keeps the whole top row, less the award's room when there is one. */
   .game-player-strip .game-strip-player:has(.game-strip-award) .game-strip-name-row {
-    padding-inline-end: 1.75rem;
+    padding-inline-end: var(--g-space-6);
   }
 
   .game-player-strip .game-strip-award {
@@ -1131,28 +1179,27 @@
   .game-player-strip .game-strip-points {
     min-width: 1.625rem;
     height: 1.5rem;
-    padding-inline: 0.375rem;
-    font-size: 0.875rem;
-    line-height: 1.5rem;
+    padding-inline: var(--g-space-2);
+    font-size: var(--g-font-sm);
+    line-height: var(--g-leading-lg);
   }
 }
 
 /* --------------------------------------------------------------------------
-   xl (80rem+): the sidebar is a rail beside the board, and its foot holds the
-   clock and the Roll or End turn button, level with the dock's bottom edge.
-   The turn card stands in the board area's bottom-right corner, just above
-   the dock and left of the rail, over the open sea beside the island (the
-   board stays centered and full size); the map buttons move to the area's
-   top-right corner, and the sheets rise above the card. The footer spans the
+   xl (80rem+): the sidebar is a rail beside the board, and its foot is the
+   turn: the turn card, then the clock and the Roll or End turn button, level
+   with the dock's bottom edge. Whose turn, what to do, how long is left and
+   the button to press are one stack in one corner. The footer spans the
    board and dock rows:
-     .    .       .
-     card card    .        (the card at the end of its row)
+     .    .       card     (the card at the foot of its rows)
+     hand actions card
      hand actions turn
    ----------------------------------------------------------------------- */
 
 @media (width >= 80rem) {
   .game-shell {
-    --turn-card-width: 19rem;
+    --game-gutter: var(--g-space-4);
+    --game-gap: var(--g-space-3);
 
     grid-template-columns: minmax(0, 1fr) var(--game-rail);
     grid-template-areas:
@@ -1161,16 +1208,18 @@
       "dock rail";
   }
 
-  /* Only the dock row, the turn card and the rail foot catch the pointer; the board shows through
-     the rest. */
+  /* Only the dock row and the rail foot catch the pointer; the board shows through the rest. */
   .game-footer {
     grid-column: 1 / -1;
     grid-row: 2 / 4;
     grid-template-columns: max-content minmax(0, 1fr) var(--game-rail);
-    grid-template-rows: minmax(0, 1fr) var(--turn-card-height) var(--dock-row-height);
+    grid-template-rows:
+      minmax(0, 1fr)
+      calc(var(--dock-row-height) - var(--turn-row-height) - var(--game-gap))
+      var(--turn-row-height);
     grid-template-areas:
-      ". . ."
-      "card card ."
+      ". . card"
+      "hand actions card"
       "hand actions turn";
     row-gap: var(--game-gap);
     pointer-events: none;
@@ -1185,20 +1234,13 @@
   }
 
   .game-turn-card {
-    justify-self: end;
-    width: var(--turn-card-width);
+    align-self: end;
   }
 
   /* The clock and the button at the rail's foot, level with the dock's bottom edge. */
   .game-turn-slot {
-    align-self: end;
     height: var(--turn-row-height);
     gap: var(--game-gap);
-  }
-
-  /* The sheets and toasts rise above the turn card, so they never cover it. */
-  .game-board-overlay {
-    padding-bottom: calc(var(--turn-card-height) + var(--game-gap));
   }
 
   /* The map buttons move to the board area's top-right corner, over open sea. */
@@ -1208,13 +1250,13 @@
   }
 
   .game-turn-clock {
-    gap: 0.375rem;
-    padding-inline: 0.5rem 0.875rem;
+    gap: var(--g-space-2);
+    padding-inline: var(--g-space-3) var(--g-space-4);
   }
 
   .game-turn-clock .game-clock-ring {
     min-height: 1.75rem;
-    max-height: 2.25rem;
+    max-height: 2rem;
   }
 
   .game-player-strip,
@@ -1224,11 +1266,8 @@
     display: none;
   }
 
-  /* The plaques get their full height first; only when the feed would drop
-     under its minimum does the list scroll. The rail's foot holds only the
-     clock and the button, so the plaques stand taller than elsewhere (88px,
-     a 52px portrait and a taller points chip, the names keeping their width)
-     and the feed takes the rest. */
+  /* The crew gets its full height first; only when the feed would drop under its minimum does
+     the list scroll. The rail stops above the turn card. */
   .game-sidebar {
     grid-area: rail;
     grid-template-rows: minmax(0, auto) auto minmax(7rem, 1fr);
@@ -1237,70 +1276,22 @@
       "bank"
       "feed";
     min-height: 0;
-    margin-bottom: calc(var(--turn-row-height) + var(--game-gap));
+    margin-bottom: calc(var(--turn-card-height) + var(--turn-row-height) + 2 * var(--game-gap));
     gap: var(--game-gap);
   }
 
   .game-sidebar .game-player-list {
     min-height: 0;
   }
-
-  .game-sidebar .game-player {
-    grid-template-columns: 3.25rem minmax(0, 1fr) auto;
-    grid-template-rows: 1.75rem 1.75rem;
-    height: 5.5rem;
-  }
-
-  .game-sidebar .game-player-avatar {
-    width: 3.25rem;
-    height: 3.25rem;
-  }
-
-  .game-sidebar .game-player-score {
-    height: 1.875rem;
-    line-height: 1.875rem;
-  }
-
-  .game-sidebar .game-vp-number {
-    font-size: 1.1875rem;
-  }
-
-  .game-sidebar .game-vp-label {
-    font-size: 0.875rem;
-  }
 }
 
-/* xl up to 1440: the rail is at its narrowest, so the plaques' spacing tightens a little and the
-   names keep their width beside the larger portrait. */
-@media (80rem <= width < 90rem) {
-  .game-sidebar .game-player {
-    column-gap: 0.375rem;
-    padding-inline-start: 0.625rem;
-  }
-}
-
-/* xl on a short screen (under 820px, 1280x800): the rail tightens its spacing so the log below
-   keeps room for about two moves, the newest whole. The plaques keep their full height, the bank
-   cards are a step smaller, and the feed's padding is lighter. */
-@media (width >= 80rem) and (height < 51.25rem) {
-  .game-sidebar {
-    grid-template-rows: minmax(0, auto) auto minmax(9.5rem, 1fr);
-  }
-
+/* Below xl the drawer is the panel, so the crew list inside it needs no face of its own. */
+@media (width < 80rem) {
   .game-sidebar .game-player-list {
-    gap: 0.375rem;
-  }
-
-  .game-sidebar .game-bank {
-    padding-block: 0.375rem 0.75rem;
-  }
-
-  .game-sidebar .game-bank-card img {
-    max-width: 1.875rem;
-  }
-
-  .game-sidebar .game-feed {
-    padding: var(--ui-space-2) 0.625rem;
+    padding: 0;
+    background: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
   }
 }
 
@@ -1346,16 +1337,12 @@
       "bank"
       "feed";
     width: min(24rem, calc(100% - 2 * var(--game-gutter)));
-    gap: 0.75rem;
-    padding: 1rem;
+    gap: var(--g-space-3);
+    padding: var(--g-space-4);
     overflow-y: auto;
     overscroll-behavior: contain;
-    border: var(--ui-line) solid var(--ui-hairline-game);
     border-radius: var(--ui-radius-panel);
-    background: var(--ui-glass-game);
-    box-shadow:
-      inset 0 1px 0 var(--ui-panel-highlight),
-      var(--ui-shadow-panel);
+    background: var(--g-surface);
     -webkit-backdrop-filter: var(--ui-glass-blur-game);
     backdrop-filter: var(--ui-glass-blur-game);
     visibility: hidden;
@@ -1379,7 +1366,7 @@
     position: fixed;
     inset: 0;
     z-index: 30;
-    background: var(--game-scrim);
+    background: var(--g-surface);
   }
 }
 

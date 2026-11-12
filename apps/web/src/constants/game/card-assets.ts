@@ -28,6 +28,16 @@ export const ACTION_CARD_ASSET_PATHS = {
   trade: "/game-assets/card-art/actions/trade.png",
 } as const;
 
+/** Each build-bar action as one bold sticker icon on nothing, drawn as a set to read at 28px. */
+export const ACTION_ICON_ASSET_PATHS = {
+  build: "/game-assets/ui/actions/build.png",
+  city: "/game-assets/ui/actions/city.png",
+  developmentCard: "/game-assets/ui/actions/dev-card.png",
+  road: "/game-assets/ui/actions/road.png",
+  settlement: "/game-assets/ui/actions/settlement.png",
+  trade: "/game-assets/ui/actions/trade.png",
+} as const;
+
 export const DEVELOPMENT_CARD_ASSET_PATHS: Readonly<Record<DevelopmentCardType, string>> = {
   knight: "/game-assets/card-art/development/knight.png",
   monopoly: "/game-assets/card-art/development/monopoly.png",

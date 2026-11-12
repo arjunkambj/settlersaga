@@ -258,6 +258,34 @@
      for the main actions. */
   --ui-pick: var(--ui-active-rim);
   --ui-ink-on-pick: var(--game-outline);
+
+  /* ---- In-game HUD system ----
+     The game screen's chrome (styles/game-*.css) draws from these and nothing else: one spacing
+     scale, four type steps in two weights, and five flat colours. No gradients, no shadows.
+     Card, board and portrait art and each seat's --player-color are content, not chrome. */
+  --g-space-0: 0.125rem; /* 2: inside chips, between an icon and its count */
+  --g-space-1: 0.25rem; /* 4 */
+  --g-space-2: 0.5rem; /* 8 */
+  --g-space-3: 0.75rem; /* 12 */
+  --g-space-4: 1rem; /* 16 */
+  --g-space-6: 1.5rem; /* 24 */
+
+  --g-font-xs: 0.75rem; /* 12: counts, tags, quiet notes */
+  --g-leading-xs: 1rem;
+  --g-font-sm: 0.875rem; /* 14: names, log lines, labels */
+  --g-leading-sm: 1.25rem;
+  --g-font-md: 1rem; /* 16: panel titles, the clock */
+  --g-leading-md: 1.25rem;
+  --g-font-lg: 1.25rem; /* 20: whose turn it is, points, the main button */
+  --g-leading-lg: 1.5rem;
+  --g-weight: 600;
+  --g-weight-strong: 800;
+
+  --g-surface: rgb(12 38 86 / 92%); /* every panel; also the ink on white and gold */
+  --g-raised: #204a8e; /* a step up from a panel: tiles you can use, the row on turn, tracks */
+  --g-text: #ffffff; /* what to read first; rings for "on turn" and "picked" */
+  --g-muted: #a9c1e6; /* what can wait: labels, times, anything you can't use yet (5:1 or better) */
+  --g-accent: #ffd54a; /* gold: the one button to press, the leader's points, alerts */
 }
 
 /* No backdrop blur: the same glass, nearly solid, so text keeps its contrast. */
@@ -267,6 +295,75 @@
     --ui-glass-dialog-alpha: var(--ui-glass-solid-alpha);
     --ui-glass-game-alpha: var(--ui-glass-solid-alpha);
   }
+}
+
+/* While a game is on screen, the shared kit (dialogs, popovers, tooltips, menus, inputs, chat)
+   reads the in-game system too: its tokens point at the five --g-* colours, every glass face is
+   one flat colour, and highlights and shadows are off. Menus outside a game keep the tokens
+   above. */
+:root:has(.game-shell) {
+  --muted-foreground: var(--g-muted);
+  --primary: var(--g-raised);
+  --primary-foreground: var(--g-text);
+  --muted: var(--g-raised);
+  --accent: var(--g-muted);
+  --accent-foreground: var(--g-surface);
+  --destructive: var(--g-accent);
+  --destructive-foreground: var(--g-surface);
+  --border: var(--g-raised);
+  --input: var(--g-raised);
+  --game-outline: var(--g-surface);
+  --game-panel-edge: var(--g-raised);
+
+  --ui-glass-menu: var(--g-surface);
+  --ui-glass-dialog: var(--g-surface);
+  --ui-glass-game: var(--g-surface);
+  --ui-glass-game-top-solid: var(--g-surface);
+  --ui-glass-game-bottom-solid: var(--g-surface);
+  --ui-glass-hover: transparent;
+  --ui-hairline: var(--g-raised);
+  --ui-hairline-game: var(--g-raised);
+  --ui-hairline-light: var(--g-muted);
+  --ui-panel-highlight: transparent;
+  --ui-well: var(--g-raised);
+  --ui-well-border: var(--g-raised);
+  --ui-divider: var(--g-raised);
+  --ui-bubble: var(--g-raised);
+  --ui-text-soft: var(--g-muted);
+  --ui-text-muted: var(--g-muted);
+  --ui-title-shadow: none;
+  --ui-shadow-panel: 0 0 transparent;
+  --ui-shadow-control: 0 0 transparent;
+  --ui-shadow-inset: 0 0 transparent;
+
+  --ui-gold-top: var(--g-accent);
+  --ui-gold-bottom: var(--g-accent);
+  --ui-gold-top-hover: var(--g-accent);
+  --ui-gold-bottom-hover: var(--g-accent);
+  --ui-royal: var(--g-raised);
+  --ui-royal-hover: var(--g-raised);
+  --ui-danger-top: var(--g-accent);
+  --ui-danger-bottom: var(--g-accent);
+  --ui-ink-on-primary: var(--g-text);
+  --ui-disabled-face: var(--g-raised);
+  --ui-disabled-edge: transparent;
+  --ui-disabled-ink: var(--g-muted);
+  --ui-quiet-face: var(--g-raised);
+  --ui-quiet-face-hover: var(--g-raised);
+  --ui-quiet-line: transparent;
+  --ui-ghost-face-hover: transparent;
+
+  --ui-focus-ring: var(--g-text);
+  --ui-active-rim: var(--g-text);
+  --ui-input-focus-glow: transparent;
+  --ui-missing: var(--g-muted);
+  --ui-ready: var(--g-text);
+  --ui-ready-text: var(--g-text);
+  --ui-need: var(--g-muted);
+  --ui-locked: var(--g-raised);
+  --ui-ink-on-locked: var(--g-muted);
+  --ui-tag-you: var(--g-text);
+  --ui-tag-quiet: var(--g-raised);
 }
 
 * {

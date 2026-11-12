@@ -24,15 +24,16 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { ACTION_CARD_ASSET_PATHS } from "@/constants/game/card-assets";
+import { Tooltip } from "@/components/ui/tooltip";
+import { ACTION_ICON_ASSET_PATHS } from "@/constants/game/card-assets";
 import { RESOURCE_LABELS } from "@/constants/game/labels";
 import { isShownBesideControl, type SendCommand } from "@/lib/game/command-errors";
-import { formatInventory, getMissingInventory } from "@/lib/game/resources";
+import { formatInventory, getBankRates, getMissingInventory } from "@/lib/game/resources";
 import { getPlayerHudOrder } from "@/lib/game/view";
 
 import { ActionTile, TileArt } from "./action-tile";
 import { DockPortrait } from "./dock-portrait";
-import { ResourceCardRow, ResourcePicker } from "./dock-resource";
+import { ResourceCardRow, ResourcePalette, ResourceTray } from "./dock-resource";
 import { DockSheet, DockStatus } from "./dock-sheet";
 import { useHandDock } from "./hand-dock";
 
@@ -97,7 +98,7 @@ export function TradeCenter({
               ? "Trade: close trading"
               : `Trade with the bank or the crew${lockReason ? `. ${lockReason}` : ""}`
         }
-        art={<TileArt src={ACTION_CARD_ASSET_PATHS.trade} />}
+        art={<TileArt src={ACTION_ICON_ASSET_PATHS.trade} />}
         caption="Bank or crew"
         kind="trade"
         lockReason={tradeOfferOpen ? null : lockReason}
@@ -268,12 +269,48 @@ function TradeComposer({
     <DockSheet
       footer={
         <>
+          {legal.canProposeTrade ? (
+            <div aria-labelledby="trade-recipients-label" className="game-trade-ask" role="group">
+              <span className="game-trade-side-label" id="trade-recipients-label">
+                Ask
+              </span>
+              {opponents.map((player) => {
+                const selected = recipientPlayerIds.includes(player.id);
+                return (
+                  <Tooltip
+                    key={player.id}
+                    label={`${player.displayName}: ${selected ? "will get this offer" : "left out"}`}
+                    side="top"
+                  >
+                    <button
+                      aria-label={player.displayName}
+                      aria-pressed={selected}
+                      className="game-trade-recipient"
+                      disabled={busy}
+                      onClick={() =>
+                        setRecipientPlayerIds((current) =>
+                          selected
+                            ? current.filter((playerId) => playerId !== player.id)
+                            : [...current, player.id],
+                        )
+                      }
+                      type="button"
+                    >
+                      <DockPortrait player={player} />
+                    </button>
+                  </Tooltip>
+                );
+              })}
+            </div>
+          ) : null}
+          {/* One gold button at a time: the bank's when these cards are a bank trade as they
+              stand, otherwise the offer to the crew. */}
           <Button
             aria-describedby="trade-composer-status"
             disabled={busy || !matchingBankTrade}
             onClick={() => void tradeWithBank()}
             size="game-md"
-            variant="game-secondary"
+            variant={matchingBankTrade ? "game-gold" : "game-secondary"}
           >
             {sending === "bank" ? <Spinner /> : <Icon aria-hidden="true" icon={storeIcon} />}
             {matchingBankTrade ? `Bank ${matchingBankTrade.ratio}:1` : "Bank"}
@@ -283,7 +320,7 @@ function TradeComposer({
             disabled={busy || !canSendOffer}
             onClick={() => void sendOffer()}
             size="game-md"
-            variant="game-gold"
+            variant={matchingBankTrade ? "game-secondary" : "game-gold"}
           >
             {sending === "offer" ? <Spinner /> : <Icon aria-hidden="true" icon={handshakeIcon} />}
             Send offer
@@ -296,73 +333,56 @@ function TradeComposer({
       title="Trade"
       titleId="trade-composer-title"
     >
-      <div className="game-trade-grid">
-        <span aria-hidden="true" className="game-trade-row-label">
-          You give
-        </span>
-        <ResourcePicker
-          canAdd={(resource) => want[resource] === 0 && give[resource] < me.resources[resource]}
-          disabled={busy}
-          label="Cards you give"
-          onAdd={addGive}
-          onRemove={(resource) => change(setGive, resource, -1)}
-          quantities={give}
-        />
-        <span aria-hidden="true" className="game-trade-row-label">
-          You want
-        </span>
-        <ResourcePicker
-          canAdd={(resource) => give[resource] === 0 && want[resource] < bankResourceCount}
-          disabled={busy}
-          label="Cards you want"
-          onAdd={(resource) => change(setWant, resource, 1)}
-          onRemove={(resource) => change(setWant, resource, -1)}
-          quantities={want}
-        />
-        {legal.canProposeTrade ? (
-          <>
-            <span className="game-trade-row-label" id="trade-recipients-label">
-              Offer to
-            </span>
-            <div
-              aria-labelledby="trade-recipients-label"
-              className="game-trade-recipients"
-              role="group"
-            >
-              {opponents.map((player) => {
-                const selected = recipientPlayerIds.includes(player.id);
-                return (
-                  <button
-                    aria-label={player.displayName}
-                    aria-pressed={selected}
-                    className="game-trade-recipient"
-                    disabled={busy}
-                    key={player.id}
-                    onClick={() =>
-                      setRecipientPlayerIds((current) =>
-                        selected
-                          ? current.filter((playerId) => playerId !== player.id)
-                          : [...current, player.id],
-                      )
-                    }
-                    type="button"
-                  >
-                    <DockPortrait player={player} />
-                    <span aria-hidden="true" className="game-trade-recipient-name">
-                      {player.displayName}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </>
-        ) : null}
+      {/* Give by tapping cards in the hand just below: they move up into the tray, and a tap on a
+          tray card sends one back. Ask by tapping the small cards under "You get". */}
+      <div className="game-trade-composer">
+        <section aria-labelledby="trade-give-label" className="game-trade-side">
+          <h3 className="game-trade-side-label" id="trade-give-label">
+            You give
+          </h3>
+          <ResourceTray
+            cards={give}
+            disabled={busy}
+            emptyText="Tap cards in your hand"
+            label="Cards you give"
+            onRemove={(resource) => change(setGive, resource, -1)}
+          />
+          <p className="game-trade-rate">{formatBankRates(getBankRates(game.board, me.id))}</p>
+        </section>
+        <Icon aria-hidden="true" className="game-trade-arrow" icon={arrowRightIcon} />
+        <section aria-labelledby="trade-get-label" className="game-trade-side">
+          <h3 className="game-trade-side-label" id="trade-get-label">
+            You get
+          </h3>
+          <ResourceTray
+            cards={want}
+            disabled={busy}
+            emptyText="Tap a card below"
+            label="Cards you get"
+            onRemove={(resource) => change(setWant, resource, -1)}
+          />
+          <ResourcePalette
+            canAdd={(resource) => give[resource] === 0 && want[resource] < bankResourceCount}
+            disabled={busy}
+            label="Add a card you get"
+            onAdd={(resource) => change(setWant, resource, 1)}
+          />
+        </section>
       </div>
       <DockStatus id="trade-composer-status" tone={status.tone}>
         {status.text}
       </DockStatus>
     </DockSheet>
   );
+}
+
+/** "Bank: 4 for 1" plus any better rate a port gives ("Sheep 2 for 1"). */
+function formatBankRates(rates: Readonly<Record<ResourceType, number>>): string {
+  const base = Math.max(...RESOURCE_ORDER.map((resource) => rates[resource]));
+  const better = RESOURCE_ORDER.filter((resource) => rates[resource] < base).map(
+    (resource) => `${RESOURCE_LABELS[resource]} ${rates[resource]} for 1`,
+  );
+  return [`Bank: ${base} for 1`, ...better].join(" · ");
 }
 
 function getComposerStatus({
@@ -425,23 +445,23 @@ function getComposerStatus({
       return { text: `Add more: ${bankHint}`, tone: "neutral" };
     }
     if (!hasWant) {
-      return { text: `Pick what you want. Tip: ${bankHint}`, tone: "neutral" };
+      return { text: `Now tap what you want to get. Tip: ${bankHint}`, tone: "neutral" };
     }
   }
   if (!legal.canProposeTrade) {
     return { text: "You can't offer trades right now", tone: "neutral" };
   }
   if (!hasGive && !hasWant) {
-    return { text: "Pick what you give and what you want", tone: "neutral" };
+    return { text: "Tap cards in your hand to give them", tone: "neutral" };
   }
   if (!hasGive) {
-    return { text: "Pick what you give", tone: "neutral" };
+    return { text: "Tap cards in your hand to give them", tone: "neutral" };
   }
   if (!hasWant) {
-    return { text: "Pick what you want", tone: "neutral" };
+    return { text: "Now tap what you want to get", tone: "neutral" };
   }
   if (!hasRecipients) {
-    return { text: "Pick who gets the offer", tone: "neutral" };
+    return { text: "Pick who to ask", tone: "neutral" };
   }
   return {
     text: `Ready: ${formatInventory(give)} for ${formatInventory(want)}`,

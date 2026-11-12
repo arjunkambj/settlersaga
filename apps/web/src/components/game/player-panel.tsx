@@ -197,6 +197,7 @@ export function PlayerPanel({
                   Away
                 </span>
               ) : null}
+              {isWinner ? <span className="sr-only">Winner</span> : null}
               {/* Only for the host, on another human's seat: the bot button hands the seat to a
                   bot. It shows on away seats; on the others it waits behind hover or focus, so it
                   never reads as a bot marker. */}
@@ -268,14 +269,6 @@ export function PlayerPanel({
                 <span className="game-vp-label">VP</span>
               </p>
             </Tooltip>
-
-            {isWinner ? (
-              <span className="game-player-status" data-tone="winner">
-                Winner
-              </span>
-            ) : isActive ? (
-              <span className="game-player-status">Playing</span>
-            ) : null}
           </li>
         );
       })}

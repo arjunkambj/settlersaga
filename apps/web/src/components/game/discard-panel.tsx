@@ -92,6 +92,7 @@ export function DiscardPanel({
 
   return (
     <DockSheet
+      blocking
       footer={
         <Button
           aria-describedby="discard-tray-status"
