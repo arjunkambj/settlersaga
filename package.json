@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "turbo run dev",
     "build": "turbo run build",
-    "check-types": "turbo run check-types && tsc --noEmit -p tsconfig.tests.json",
+    "check-types": "turbo run check-types && tsc --noEmit -p tsconfig.tests.json && tsc --noEmit -p scripts",
     "dev:web": "turbo run dev -F web",
     "dev:desktop": "turbo run dev dev:desktop",
     "build:desktop": "turbo run build:stable -F desktop",
@@ -13,7 +13,8 @@
     "dev:server": "turbo run dev -F @settersaga/backend",
     "dev:setup": "turbo run dev:setup -F @settersaga/backend",
     "test": "bun test packages/game/tests packages/backend/tests apps/web/tests",
-    "check": "oxlint && oxfmt --write"
+    "check": "oxlint && oxfmt --write",
+    "art": "bun scripts/game-art.ts"
   },
   "devDependencies": {
     "@convex-dev/eslint-plugin": "^5.0.0",
