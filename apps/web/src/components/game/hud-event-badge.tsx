@@ -30,6 +30,7 @@ const EVENT_BADGES: Readonly<Record<RoomEventView["kind"], EventBadge>> = {
   buy_development_card: { art: DEVELOPMENT_CARD_BACK_ASSET_PATH },
   cancel_trade: { icon: closeIcon },
   confirm_trade: { icon: tradeIcon },
+  counter_trade: { icon: tradeIcon },
   discard: { icon: discardIcon },
   end_turn: { art: END_TURN_ICON_ASSET_PATH },
   game_paused: { icon: pauseIcon },

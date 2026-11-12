@@ -40,6 +40,7 @@ import type {
   ResourceInventory,
   RoadState,
   TileState,
+  TradeCounterOffer,
   TradeOffer,
 } from "./types";
 
@@ -541,12 +542,26 @@ function parseTradeOffer(
   }
 
   const offer = expectRecord(value, path);
+  const counterOffers = expectArray(offer.counterOffers, `${path}.counterOffers`).map(
+    (candidate, index): TradeCounterOffer => {
+      const counterPath = `${path}.counterOffers[${index}]`;
+      const counter = expectRecord(candidate, counterPath);
+      return {
+        give: parseInventory(counter.give, `${counterPath}.give`),
+        playerId: expectKnownId(counter.playerId, playerIds, `${counterPath}.playerId`),
+        want: parseInventory(counter.want, `${counterPath}.want`),
+      };
+    },
+  );
+  expectUniqueBy(counterOffers, (counter) => counter.playerId, `${path}.counterOffers`);
+
   return {
     acceptedPlayerIds: expectUniqueIds(
       offer.acceptedPlayerIds,
       `${path}.acceptedPlayerIds`,
       playerIds,
     ),
+    counterOffers,
     give: parseInventory(offer.give, `${path}.give`),
     offerActionNumber: expectInteger(offer.offerActionNumber, `${path}.offerActionNumber`, 1),
     proposerPlayerId: expectKnownId(offer.proposerPlayerId, playerIds, `${path}.proposerPlayerId`),
@@ -780,7 +795,11 @@ function checkTradeOffer(game: GameState, activePlayer: PlayerState): void {
   }
 
   const path = "game.tradeOffer";
-  const responders = [...offer.acceptedPlayerIds, ...offer.rejectedPlayerIds];
+  const responders = [
+    ...offer.acceptedPlayerIds,
+    ...offer.rejectedPlayerIds,
+    ...offer.counterOffers.map((counter) => counter.playerId),
+  ];
 
   if (game.phase.kind !== "build_and_trade" || offer.proposerPlayerId !== activePlayer.id) {
     invalid(path, "must come from the active player after rolling");
@@ -816,6 +835,19 @@ function checkTradeOffer(game: GameState, activePlayer: PlayerState): void {
   for (const playerId of offer.acceptedPlayerIds) {
     if (!hasResources(game.players.find(({ id }) => id === playerId)!.resources, offer.want)) {
       invalid(`${path}.acceptedPlayerIds`, "includes a player who cannot afford the trade");
+    }
+  }
+  for (const counter of offer.counterOffers) {
+    if (
+      totalResources(counter.give) === 0 ||
+      totalResources(counter.want) === 0 ||
+      RESOURCE_TYPES.some((resource) => counter.give[resource] > 0 && counter.want[resource] > 0)
+    ) {
+      invalid(`${path}.counterOffers`, "must give and request different resources");
+    }
+    const player = game.players.find(({ id }) => id === counter.playerId)!;
+    if (!hasResources(player.resources, counter.want)) {
+      invalid(`${path}.counterOffers`, "includes a player who cannot afford their counter-offer");
     }
   }
 }
@@ -874,6 +906,7 @@ function parseLegalActions(value: unknown, path: string): LegalActions {
     ),
     canBuyDevelopmentCard: flag("canBuyDevelopmentCard"),
     canCancelTrade: flag("canCancelTrade"),
+    canCounterTrade: flag("canCounterTrade"),
     canEndTurn: flag("canEndTurn"),
     canProposeTrade: flag("canProposeTrade"),
     canRespondToTrade: flag("canRespondToTrade"),

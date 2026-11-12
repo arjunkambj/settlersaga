@@ -701,7 +701,10 @@ function createTradeOfferPreviewGame(): GameState {
   return proposePreviewTrade(state, "player-3", ["player-1"]);
 }
 
-/** The viewer's own offer: Bartholomew accepted, Peter Bot declined and Mira hasn't answered. */
+/**
+ * The viewer's own offer: Bartholomew accepted, Peter Bot declined and Mira came back with a
+ * counter-offer (two Sheep for her Wood).
+ */
 function createTradeConfirmPreviewGame(): GameState {
   let state = createPreviewState({ showActions: true });
   for (const playerId of ["player-2", "player-3", "player-4"]) {
@@ -709,7 +712,16 @@ function createTradeConfirmPreviewGame(): GameState {
   }
   state = proposePreviewTrade(state, "player-1", ["player-2", "player-3", "player-4"]);
   state = answerPreviewTrade(state, "player-3", true);
-  return answerPreviewTrade(state, "player-4", false);
+  state = answerPreviewTrade(state, "player-4", false);
+  if (!state.tradeOffer) {
+    throw new Error("Trade preview needs an open offer");
+  }
+  return applyCommand(state, "player-2", {
+    give: { ...emptyInventory(), sheep: 2 },
+    kind: "counter_trade",
+    offerActionNumber: state.tradeOffer.offerActionNumber,
+    want: PREVIEW_TRADE_WANT,
+  });
 }
 
 /**
@@ -909,6 +921,9 @@ function createPreviewEvents(mode: GamePreviewMode, state: GameState): RoomEvent
       }
       for (const playerId of offer.rejectedPlayerIds) {
         rows.push([playerId, `${nameOf(playerId)} declined the trade offer.`, "respond_trade"]);
+      }
+      for (const { playerId } of offer.counterOffers) {
+        rows.push([playerId, `${nameOf(playerId)} made a counter-offer.`, "counter_trade"]);
       }
     }
     if (state.phase.kind === "finished" && state.winnerPlayerId) {

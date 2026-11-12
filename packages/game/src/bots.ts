@@ -294,6 +294,47 @@ function acceptsTrade(state: GameState, bot: PlayerState, offer: TradeOffer) {
 }
 
 /**
+ * What a bot asks for instead when it holds the cards an offer wants but the offer does not help
+ * it: the same number of cards, all of the resource its next build is most short of. Nothing when
+ * no such swap would bring that build closer.
+ */
+function chooseCounterOffer(state: GameState, bot: PlayerState, offer: TradeOffer) {
+  const proposer = requirePlayer(state, offer.proposerPlayerId);
+
+  if (
+    !hasResources(bot.resources, offer.want) ||
+    proposer.victoryPoints >= state.settings.victoryPoints - TRADE_REFUSAL_VICTORY_POINT_MARGIN
+  ) {
+    return null;
+  }
+
+  const target = chooseTargetBuildCost(state, bot);
+  if (!target) {
+    return null;
+  }
+
+  const afterPaying = subtractResources(bot.resources, offer.want);
+  const shortBy = (resource: ResourceType) => target[resource] - afterPaying[resource];
+  // Ties go to the earlier resource in RESOURCE_TYPES, so the choice is the same on every replay.
+  const needed = RESOURCE_TYPES.filter(
+    (resource) => offer.want[resource] === 0 && shortBy(resource) > 0,
+  ).reduce<ResourceType | null>(
+    (best, resource) => (best === null || shortBy(resource) > shortBy(best) ? resource : best),
+    null,
+  );
+  if (!needed) {
+    return null;
+  }
+
+  const give = { ...emptyInventory(), [needed]: totalResources(offer.give) };
+  const sameAsOffer = RESOURCE_TYPES.every((resource) => give[resource] === offer.give[resource]);
+  const helps =
+    costDeficit(addResources(afterPaying, give), target) < costDeficit(bot.resources, target);
+
+  return sameAsOffer || !helps ? null : { give, want: { ...offer.want } };
+}
+
+/**
  * Estimates each opponent's hand from public information only: their hand size split in
  * proportion to what their buildings produce.
  */
@@ -512,11 +553,14 @@ export function chooseAutomatedCommand(state: GameState, playerId: PlayerId): Ga
   }
 
   if (offer && legal.canRespondToTrade) {
-    return {
-      accept: acceptsTrade(state, player, offer),
-      kind: "respond_trade",
-      offerActionNumber: offer.offerActionNumber,
-    };
+    const accept = acceptsTrade(state, player, offer);
+    // Easy bots only say yes or no.
+    const counter =
+      accept || player.botDifficulty === "easy" ? null : chooseCounterOffer(state, player, offer);
+
+    return counter
+      ? { ...counter, kind: "counter_trade", offerActionNumber: offer.offerActionNumber }
+      : { accept, kind: "respond_trade", offerActionNumber: offer.offerActionNumber };
   }
 
   return player.botDifficulty === "easy"

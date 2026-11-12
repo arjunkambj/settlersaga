@@ -4,6 +4,7 @@ import {
   RESOURCE_ORDER,
   emptyInventory,
   getGameMapDefinition,
+  getTradeTermsWith,
   totalResources,
   type GameCommand,
   type PlayerGameView,
@@ -11,6 +12,7 @@ import {
   type PrivatePlayerState,
   type ResourceInventory,
   type ResourceType,
+  type TradeCounterOffer,
   type TradeOffer,
 } from "@settersaga/game";
 import arrowRightIcon from "@iconify-icons/solar/arrow-right-bold";
@@ -19,6 +21,7 @@ import closeIcon from "@iconify-icons/solar/close-circle-bold";
 import handshakeIcon from "@iconify-icons/solar/hand-shake-bold";
 import hourglassIcon from "@iconify-icons/solar/hourglass-bold";
 import storeIcon from "@iconify-icons/solar/shop-bold";
+import counterIcon from "@iconify-icons/solar/transfer-horizontal-bold";
 import { Icon, type IconifyIcon } from "@iconify/react/offline";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -470,16 +473,18 @@ function getComposerStatus({
 }
 
 type TradeRole = "observer" | "proposer" | "recipient";
-type ReplyState = "accepted" | "declined" | "pending";
+type ReplyState = "accepted" | "countered" | "declined" | "pending";
 
 const REPLY_LABELS: Readonly<Record<ReplyState, string>> = {
   accepted: "Accepted",
+  countered: "Countered",
   declined: "Declined",
   pending: "Pending",
 };
 
 const REPLY_ICONS: Readonly<Record<ReplyState, IconifyIcon>> = {
   accepted: checkIcon,
+  countered: counterIcon,
   declined: closeIcon,
   pending: hourglassIcon,
 };
@@ -488,12 +493,16 @@ function getReplyState(offer: TradeOffer, playerId: string): ReplyState {
   if (offer.acceptedPlayerIds.includes(playerId)) {
     return "accepted";
   }
+  if (offer.counterOffers.some((counter) => counter.playerId === playerId)) {
+    return "countered";
+  }
   return offer.rejectedPlayerIds.includes(playerId) ? "declined" : "pending";
 }
 
 /**
  * The open trade offer, as each player sees it: the proposer follows the answers and picks a
- * partner, a recipient accepts or declines (then sees their answer), and everyone else watches.
+ * partner, a recipient accepts, declines or counters (then sees their answer), and everyone else
+ * watches.
  */
 export function ActiveTradeOffer({
   disabled,
@@ -512,6 +521,8 @@ export function ActiveTradeOffer({
 }) {
   const { clearInteraction, setInteraction } = useHandDock();
   const [sent, setSent] = useState<{ actionNumber: number; key: string } | null>(null);
+  // The counter editor belongs to the offer it was opened on, so a new offer starts closed.
+  const [counteringOffer, setCounteringOffer] = useState<number | null>(null);
   const offer = game.tradeOffer;
   const role: TradeRole =
     offer?.proposerPlayerId === me.id
@@ -572,6 +583,28 @@ export function ActiveTradeOffer({
     onCommand(command, message);
   };
 
+  if (legal.canCounterTrade && counteringOffer === offer.offerActionNumber) {
+    return (
+      <CounterComposer
+        disabled={disabled}
+        game={game}
+        key={offer.offerActionNumber}
+        me={me}
+        offer={offer}
+        onBack={() => setCounteringOffer(null)}
+        onSend={(give, want) =>
+          send(
+            "counter",
+            { give, kind: "counter_trade", offerActionNumber: offer.offerActionNumber, want },
+            "Counter-offer sent.",
+          )
+        }
+        proposerName={proposerName}
+        sending={isSending("counter")}
+      />
+    );
+  }
+
   const status = getOfferStatus({
     canAfford,
     legal,
@@ -607,6 +640,19 @@ export function ActiveTradeOffer({
               {isSending("decline") ? <Spinner /> : <Icon aria-hidden="true" icon={closeIcon} />}
               Decline
             </Button>
+            {legal.canCounterTrade ? (
+              <Button
+                disabled={disabled}
+                onClick={() =>
+                  isPaused ? onPausedAction() : setCounteringOffer(offer.offerActionNumber)
+                }
+                size="game-md"
+                variant="game-secondary"
+              >
+                <Icon aria-hidden="true" icon={counterIcon} />
+                Counter
+              </Button>
+            ) : null}
             <Button
               aria-describedby="trade-offer-status"
               disabled={disabled || !canAfford}
@@ -676,6 +722,10 @@ export function ActiveTradeOffer({
             }
             const name = player.isViewer ? "You" : player.displayName;
             const state = getReplyState(offer, playerId);
+            // A counter-offer gets its own line below, with its cards and its Trade button.
+            if (state === "countered" && !compact) {
+              return null;
+            }
             if (compact) {
               return (
                 <li
@@ -737,11 +787,265 @@ export function ActiveTradeOffer({
           })}
         </ul>
       )}
+      {compact || offer.counterOffers.length === 0 ? null : (
+        <ul aria-label="Counter-offers" className="game-trade-counters">
+          {offer.counterOffers.map((counter) => {
+            const player = playerById(counter.playerId);
+            return player ? (
+              <TradeCounterRow
+                canTrade={legal.tradePartnerPlayerIds.includes(counter.playerId)}
+                counter={counter}
+                disabled={disabled}
+                key={counter.playerId}
+                onTrade={() =>
+                  send(
+                    counter.playerId,
+                    {
+                      kind: "confirm_trade",
+                      offerActionNumber: offer.offerActionNumber,
+                      partnerPlayerId: counter.playerId,
+                    },
+                    `Traded with ${player.displayName}.`,
+                  )
+                }
+                player={player}
+                proposerHand={role === "proposer" ? me.resources : null}
+                proposerName={proposerName}
+                sending={isSending(counter.playerId)}
+              />
+            ) : null;
+          })}
+        </ul>
+      )}
       <DockStatus id="trade-offer-status" tone={status.tone}>
         {status.text}
       </DockStatus>
     </DockSheet>
   );
+}
+
+/**
+ * One counter-offer as a line: who asks, the cards they want from the proposer, and the cards
+ * they would hand over. The proposer gets a Trade button on it; everyone else just reads it.
+ */
+function TradeCounterRow({
+  canTrade,
+  counter,
+  disabled,
+  onTrade,
+  player,
+  proposerHand,
+  proposerName,
+  sending,
+}: {
+  canTrade: boolean;
+  counter: TradeCounterOffer;
+  disabled: boolean;
+  onTrade(): void;
+  player: PlayerViewState;
+  /** The viewer's hand when the counter is theirs to accept; null for everyone else. */
+  proposerHand: Readonly<ResourceInventory> | null;
+  proposerName: string;
+  sending: boolean;
+}) {
+  const name = player.isViewer ? "You" : player.displayName;
+  const from = proposerHand ? "your" : `${proposerName}'s`;
+  const shortOf = proposerHand ? getMissingInventory(counter.give, proposerHand) : undefined;
+
+  return (
+    <li
+      aria-label={`${name} countered: ${from} ${formatInventory(counter.give)} for ${formatInventory(counter.want)}`}
+      className="game-trade-counter"
+    >
+      <DockPortrait player={player} />
+      <span aria-hidden="true" className="game-trade-counter-word">
+        <span className="game-trade-counter-name">{name} </span>
+        {player.isViewer ? "want" : "wants"}
+      </span>
+      <ResourceCardRow inventory={counter.give} label={`${name} would get`} shortOf={shortOf} />
+      <span aria-hidden="true" className="game-trade-counter-word">
+        for
+      </span>
+      <ResourceCardRow inventory={counter.want} label={`${name} would give`} />
+      {proposerHand ? (
+        <Button
+          aria-label={`Trade with ${player.displayName} on their counter-offer`}
+          className="game-trade-counter-action"
+          disabled={disabled || !canTrade}
+          onClick={onTrade}
+          size="game-sm"
+          variant="game-gold"
+        >
+          {sending ? <Spinner /> : <Icon aria-hidden="true" icon={handshakeIcon} />}
+          Trade
+        </Button>
+      ) : null}
+    </li>
+  );
+}
+
+/**
+ * A recipient changes the offer instead of accepting it. It opens on the offer as it stands, read
+ * from the recipient's side, and works like the trade composer: cards tapped in the hand move
+ * into "You give", and the small cards under "You get" add to the ask.
+ */
+function CounterComposer({
+  disabled,
+  game,
+  me,
+  offer,
+  onBack,
+  onSend,
+  proposerName,
+  sending,
+}: {
+  disabled: boolean;
+  game: PlayerGameView;
+  me: PrivatePlayerState;
+  offer: TradeOffer;
+  onBack(): void;
+  /** In the offer's own terms: what the proposer hands over, then what they get. */
+  onSend(give: ResourceInventory, want: ResourceInventory): void;
+  proposerName: string;
+  sending: boolean;
+}) {
+  const { clearInteraction, setInteraction } = useHandDock();
+  // The recipient pays what the proposer wants, as far as their hand goes.
+  const [youGive, setYouGive] = useState<ResourceInventory>(() => {
+    const affordable = emptyInventory();
+    for (const resource of RESOURCE_ORDER) {
+      affordable[resource] = Math.min(offer.want[resource], me.resources[resource]);
+    }
+    return affordable;
+  });
+  const [youGet, setYouGet] = useState<ResourceInventory>(() => ({ ...offer.give }));
+  const bankResourceCount = getGameMapDefinition(game.settings.map).bankResourceCount;
+  const missing = getMissingInventory(youGive, me.resources);
+  const unchanged = RESOURCE_ORDER.every(
+    (resource) =>
+      youGive[resource] === offer.want[resource] && youGet[resource] === offer.give[resource],
+  );
+  const status = getCounterStatus({ missing, proposerName, unchanged, youGet, youGive });
+
+  const change = (
+    setSide: (update: (current: ResourceInventory) => ResourceInventory) => void,
+    resource: ResourceType,
+    delta: -1 | 1,
+  ) => setSide((current) => ({ ...current, [resource]: Math.max(0, current[resource] + delta) }));
+
+  useEffect(() => {
+    setInteraction("trade", {
+      disabled,
+      label: "your counter-offer",
+      onSelect: (resource) => {
+        if (youGet[resource] === 0) {
+          setYouGive((current) =>
+            current[resource] >= me.resources[resource]
+              ? current
+              : { ...current, [resource]: current[resource] + 1 },
+          );
+        }
+      },
+      selected: youGive,
+      sourceResources: me.resources,
+    });
+    return () => clearInteraction("trade");
+  }, [clearInteraction, disabled, me.resources, setInteraction, youGet, youGive]);
+
+  return (
+    <DockSheet
+      footer={
+        <>
+          <Button disabled={disabled} onClick={onBack} size="game-md" variant="game-secondary">
+            Back
+          </Button>
+          <Button
+            aria-describedby="trade-counter-status"
+            disabled={disabled || status.tone !== "ready"}
+            onClick={() => onSend(youGet, youGive)}
+            size="game-md"
+            variant="game-gold"
+          >
+            {sending ? <Spinner /> : <Icon aria-hidden="true" icon={counterIcon} />}
+            Send counter
+          </Button>
+        </>
+      }
+      id={TRADE_OFFER_ID}
+      onClose={onBack}
+      sheetRef={focusOnAttach}
+      title="Counter-offer"
+      titleId="trade-offer-title"
+    >
+      <div className="game-trade-composer">
+        <section aria-labelledby="trade-counter-give-label" className="game-trade-side">
+          <h3 className="game-trade-side-label" id="trade-counter-give-label">
+            You give
+          </h3>
+          <ResourceTray
+            cards={youGive}
+            disabled={disabled}
+            emptyText="Tap cards in your hand"
+            label="Cards you give"
+            onRemove={(resource) => change(setYouGive, resource, -1)}
+          />
+        </section>
+        <Icon aria-hidden="true" className="game-trade-arrow" icon={arrowRightIcon} />
+        <section aria-labelledby="trade-counter-get-label" className="game-trade-side">
+          <h3 className="game-trade-side-label" id="trade-counter-get-label">
+            You get
+          </h3>
+          <ResourceTray
+            cards={youGet}
+            disabled={disabled}
+            emptyText="Tap a card below"
+            label="Cards you get"
+            onRemove={(resource) => change(setYouGet, resource, -1)}
+          />
+          <ResourcePalette
+            canAdd={(resource) => youGive[resource] === 0 && youGet[resource] < bankResourceCount}
+            disabled={disabled}
+            label="Add a card you get"
+            onAdd={(resource) => change(setYouGet, resource, 1)}
+          />
+        </section>
+      </div>
+      <DockStatus id="trade-counter-status" tone={status.tone}>
+        {status.text}
+      </DockStatus>
+    </DockSheet>
+  );
+}
+
+function getCounterStatus({
+  missing,
+  proposerName,
+  unchanged,
+  youGet,
+  youGive,
+}: {
+  missing: Readonly<ResourceInventory>;
+  proposerName: string;
+  unchanged: boolean;
+  youGet: Readonly<ResourceInventory>;
+  youGive: Readonly<ResourceInventory>;
+}): { text: string; tone: "error" | "neutral" | "ready" } {
+  if (totalResources(missing) > 0) {
+    return { text: `You no longer have ${formatInventory(missing)}`, tone: "error" };
+  }
+  if (unchanged) {
+    return { text: `Change the cards, then send it back to ${proposerName}`, tone: "neutral" };
+  }
+  if (totalResources(youGive) === 0) {
+    return { text: "Tap cards in your hand to give them", tone: "neutral" };
+  }
+  if (totalResources(youGet) === 0) {
+    return { text: "Now tap what you want to get", tone: "neutral" };
+  }
+  return {
+    text: `Ready: ${formatInventory(youGive)} for ${formatInventory(youGet)}`,
+    tone: "ready",
+  };
 }
 
 function TradeSide({
@@ -838,9 +1142,13 @@ function getOfferStatus({
               tone: "error",
             };
       }
-      return offer.acceptedPlayerIds.includes(me.id)
-        ? { text: `Accepted. Waiting for ${proposerName}`, tone: "ready" }
-        : { text: "You passed on this offer", tone: "neutral" };
+      if (getTradeTermsWith(offer, me.id)) {
+        return {
+          text: `${offer.acceptedPlayerIds.includes(me.id) ? "Accepted" : "Counter sent"}. Waiting for ${proposerName}`,
+          tone: "ready",
+        };
+      }
+      return { text: "You passed on this offer", tone: "neutral" };
     case "proposer": {
       const [onlyPartnerId, ...otherPartnerIds] = legal.tradePartnerPlayerIds;
       if (onlyPartnerId) {
@@ -852,9 +1160,16 @@ function getOfferStatus({
           tone: "ready",
         };
       }
-      return waitingCount > 0
-        ? { text: "Waiting for answers…", tone: "neutral" }
-        : { text: "No one who accepted can pay right now", tone: "error" };
+      if (waitingCount > 0) {
+        return { text: "Waiting for answers…", tone: "neutral" };
+      }
+      return {
+        text:
+          offer.counterOffers.length > 0
+            ? "You don't have the cards they ask for"
+            : "No one who accepted can pay right now",
+        tone: "error",
+      };
     }
     case "observer":
       return waitingCount > 0

@@ -2331,6 +2331,67 @@
   color: var(--g-muted);
 }
 
+/* Counter-offers, one line each under the answers: who asks, the cards they want, the cards
+   they give, and for the proposer a Trade button at the end. */
+.game-trade-counters {
+  display: grid;
+  gap: var(--g-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.game-trade-counter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--g-space-2);
+  padding: var(--g-space-2) var(--g-space-3);
+  border-radius: var(--ui-radius-control);
+  background: var(--g-raised);
+  color: var(--g-text);
+}
+
+.game-trade-counter > .game-dock-portrait {
+  --portrait-size: 2rem;
+}
+
+.game-trade-counter-word {
+  font-size: var(--g-font-sm);
+  font-weight: var(--g-weight-strong);
+  line-height: var(--g-leading-sm);
+  white-space: nowrap;
+}
+
+.game-trade-counter .game-resource-row {
+  flex-wrap: nowrap;
+  gap: var(--g-space-3);
+  min-height: 0;
+  padding: var(--g-space-1) var(--g-space-1) 0;
+}
+
+.game-trade-counter .game-resource-thumb {
+  width: 2rem;
+}
+
+.game-trade-counter-action {
+  margin-inline-start: auto;
+}
+
+/* Phones: the portrait says who, so the name goes and the line stays on one row. */
+@media (width < 34rem) {
+  .game-trade-counter {
+    flex-wrap: nowrap;
+    gap: var(--g-space-1);
+    padding-inline: var(--g-space-2);
+  }
+
+  .game-trade-counter-name {
+    display: none;
+  }
+}
+
 /* Onlookers' answers: portraits with the answer as a badge on the corner. */
 .game-trade-replies[data-compact] {
   gap: var(--g-space-3);

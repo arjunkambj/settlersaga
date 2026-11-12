@@ -152,6 +152,8 @@ export function commandText(
       return command.accept
         ? `${name} accepted the trade offer.`
         : `${name} declined the trade offer.`;
+    case "counter_trade":
+      return `${name} made a counter-offer.`;
     case "confirm_trade":
       return `${name} traded with ${playerName(state, command.partnerPlayerId)}.`;
     case "cancel_trade":

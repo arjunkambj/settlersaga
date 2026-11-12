@@ -203,6 +203,7 @@ describe("serialized game-state validation", () => {
     const setup = createGame("contradictions", {}, PLAYERS);
     const offer = {
       acceptedPlayerIds: [],
+      counterOffers: [],
       give: { ...emptyInventory(), brick: 1 },
       offerActionNumber: played.actionNumber,
       proposerPlayerId: active,

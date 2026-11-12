@@ -1,4 +1,5 @@
 import {
+  getTradeTermsWith,
   totalResources,
   type GamePhase,
   type ResourceInventory,
@@ -143,6 +144,7 @@ export function getEventSound(
     case "trade_bank":
       return "trade";
     case "cancel_trade":
+    case "counter_trade":
     case "game_started":
     case "propose_trade":
     case "respond_trade":
@@ -154,7 +156,8 @@ export function getEventSound(
 
 /**
  * Cues play for the viewer's own moves, and for a confirmed trade the viewer was picked for: they
- * accepted `closedOffer` (the offer open before this event) and their cards changed with it.
+ * accepted or countered `closedOffer` (the offer open before this event) and their cards changed
+ * with it.
  */
 export function getViewerEventSound(
   event: Pick<RoomEventView, "actorPlayerId" | "kind">,
@@ -167,7 +170,8 @@ export function getViewerEventSound(
     event.actorPlayerId === viewerPlayerId ||
     (event.kind === "confirm_trade" &&
       viewerHandChanged &&
-      closedOffer?.acceptedPlayerIds.includes(viewerPlayerId) === true);
+      closedOffer !== null &&
+      getTradeTermsWith(closedOffer, viewerPlayerId) !== null);
   return involvesViewer ? getEventSound(event.kind, currentPhaseKind) : null;
 }
 
@@ -224,7 +228,8 @@ export function getViewerEventCues(
 }
 
 /**
- * A new offer the viewer is asked to answer, or a new acceptance of the viewer's own offer.
+ * A new offer the viewer is asked to answer, or a new acceptance or counter-offer to the viewer's
+ * own offer.
  */
 export function getTradeOfferSound(
   previousOffer: TradeOffer | null,
@@ -238,7 +243,8 @@ export function getTradeOfferSound(
     return offer.recipientPlayerIds.includes(viewerPlayerId) ? "action" : null;
   }
   return offer.proposerPlayerId === viewerPlayerId &&
-    offer.acceptedPlayerIds.length > previousOffer.acceptedPlayerIds.length
+    offer.acceptedPlayerIds.length + offer.counterOffers.length >
+      previousOffer.acceptedPlayerIds.length + previousOffer.counterOffers.length
     ? "action"
     : null;
 }

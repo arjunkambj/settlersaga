@@ -26,6 +26,7 @@ function hand(cards: Partial<Record<"brick" | "sheep" | "stone" | "tree" | "whea
 function tradeOffer(overrides: Partial<TradeOffer> = {}): TradeOffer {
   return {
     acceptedPlayerIds: [],
+    counterOffers: [],
     give: { ...emptyInventory(), stone: 1 },
     offerActionNumber: 17,
     proposerPlayerId: "proposer",

@@ -199,8 +199,20 @@ export interface DiceRoll {
   sum: number;
 }
 
+/**
+ * A recipient's answer with different terms. It reads the same way round as the offer it answers:
+ * `give` is what the proposer would hand over, `want` is what this player would pay.
+ */
+export interface TradeCounterOffer {
+  give: ResourceInventory;
+  playerId: PlayerId;
+  want: ResourceInventory;
+}
+
 export interface TradeOffer {
   acceptedPlayerIds: PlayerId[];
+  /** At most one per recipient; countering is that recipient's answer. */
+  counterOffers: TradeCounterOffer[];
   give: ResourceInventory;
   offerActionNumber: number;
   proposerPlayerId: PlayerId;
@@ -262,6 +274,12 @@ export type GameCommand =
       offerActionNumber: number;
     }
   | {
+      give: ResourceInventory;
+      kind: "counter_trade";
+      offerActionNumber: number;
+      want: ResourceInventory;
+    }
+  | {
       kind: "confirm_trade";
       offerActionNumber: number;
       partnerPlayerId: PlayerId;
@@ -282,6 +300,7 @@ export interface LegalActions {
   bankTrades: BankTradeOption[];
   canBuyDevelopmentCard: boolean;
   canCancelTrade: boolean;
+  canCounterTrade: boolean;
   canEndTurn: boolean;
   canProposeTrade: boolean;
   canRespondToTrade: boolean;
@@ -293,6 +312,7 @@ export interface LegalActions {
   roadEdgeKeys: string[];
   robberTileIds: string[];
   settlementVertexKeys: string[];
+  /** Whoever the proposer can trade with now: on the offer's terms or on their own counter. */
   tradePartnerPlayerIds: PlayerId[];
   victimPlayerIds: PlayerId[];
 }

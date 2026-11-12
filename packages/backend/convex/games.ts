@@ -31,10 +31,16 @@ import {
   commandValidator,
 } from "./model/validators";
 
-/** Answers several players give at once, which do not depend on each other. */
-const CONCURRENT_ANSWER_COMMANDS: ReadonlySet<GameCommand["kind"]> = new Set([
-  "discard",
-  "respond_trade",
+/**
+ * Answers several players give at once, which do not depend on each other, each with the answers
+ * that may land beside it: discards beside discards, and any reply to a trade offer beside any
+ * other reply to it.
+ */
+const TRADE_ANSWERS: ReadonlySet<string> = new Set(["respond_trade", "counter_trade"]);
+const CONCURRENT_ANSWER_COMMANDS: ReadonlyMap<GameCommand["kind"], ReadonlySet<string>> = new Map([
+  ["discard", new Set(["discard"])],
+  ["respond_trade", TRADE_ANSWERS],
+  ["counter_trade", TRADE_ANSWERS],
 ]);
 
 /**
@@ -49,7 +55,8 @@ async function missedOnlyConcurrentAnswers(
   kind: GameCommand["kind"],
   expectedActionNumber: number,
 ): Promise<boolean> {
-  if (!CONCURRENT_ANSWER_COMMANDS.has(kind) || expectedActionNumber > game.revision) return false;
+  const answersBeside = CONCURRENT_ANSWER_COMMANDS.get(kind);
+  if (!answersBeside || expectedActionNumber > game.revision) return false;
   // Every other seat answering first is the most that can land in between.
   const missed = await ctx.db
     .query("gameActions")
@@ -57,7 +64,7 @@ async function missedOnlyConcurrentAnswers(
       index.eq("gameId", game._id).gt("afterRevision", expectedActionNumber),
     )
     .take(MAX_SEATS);
-  return missed.length < MAX_SEATS && missed.every((action) => action.eventKind === kind);
+  return missed.length < MAX_SEATS && missed.every((action) => answersBeside.has(action.eventKind));
 }
 
 export const createQuickGame = mutation({

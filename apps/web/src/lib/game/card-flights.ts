@@ -3,6 +3,7 @@ import {
   RESOURCE_ORDER,
   getBoardTopology,
   getDiceProduction,
+  getTradeTermsWith,
   type DevelopmentCardType,
   type PlayerGameView,
   type PrivatePlayerState,
@@ -343,15 +344,15 @@ function getPlayerTradeMoves(
   if (!offer || offer.proposerPlayerId !== proposerPlayerId) {
     return [];
   }
-  const partnerPlayerId = namedPartnerPlayerId
-    ? offer.acceptedPlayerIds.includes(namedPartnerPlayerId)
-      ? namedPartnerPlayerId
-      : null
-    : findTradePartner(change, offer);
-  const givenCount = countOf(gains(offer.give));
-  const wantedCount = countOf(gains(offer.want));
+  const partnerPlayerId = namedPartnerPlayerId ?? findTradePartner(change, offer);
+  // The partner's own counter-offer when they made one, else the offer they accepted.
+  const terms = partnerPlayerId ? getTradeTermsWith(offer, partnerPlayerId) : null;
+  if (!partnerPlayerId || !terms) {
+    return [];
+  }
+  const givenCount = countOf(gains(terms.give));
+  const wantedCount = countOf(gains(terms.want));
   if (
-    !partnerPlayerId ||
     change.countChange(proposerPlayerId) !== wantedCount - givenCount ||
     change.countChange(partnerPlayerId) !== givenCount - wantedCount
   ) {
@@ -366,8 +367,8 @@ function getPlayerTradeMoves(
       to: change.resourcesOf(to, resource),
     }));
   return [
-    ...between(proposerPlayerId, partnerPlayerId, offer.give),
-    ...between(partnerPlayerId, proposerPlayerId, offer.want),
+    ...between(proposerPlayerId, partnerPlayerId, terms.give),
+    ...between(partnerPlayerId, proposerPlayerId, terms.want),
   ];
 }
 
@@ -380,14 +381,21 @@ function findTradePartner(
   offer: NonNullable<PlayerGameView["tradeOffer"]>,
 ): string | null {
   const viewerTraded = RESOURCE_ORDER.some((resource) => change.handChange[resource] !== 0);
-  if (offer.acceptedPlayerIds.includes(change.viewerPlayerId) && viewerTraded) {
+  if (getTradeTermsWith(offer, change.viewerPlayerId) && viewerTraded) {
     return change.viewerPlayerId;
   }
 
-  const partnerChange = countOf(gains(offer.give)) - countOf(gains(offer.want));
-  const candidates = offer.acceptedPlayerIds.filter(
-    (playerId) => !change.isViewer(playerId) && change.countChange(playerId) === partnerChange,
-  );
+  const candidates = [
+    ...offer.acceptedPlayerIds,
+    ...offer.counterOffers.map((counter) => counter.playerId),
+  ].filter((playerId) => {
+    const terms = getTradeTermsWith(offer, playerId);
+    return (
+      terms !== null &&
+      !change.isViewer(playerId) &&
+      change.countChange(playerId) === countOf(gains(terms.give)) - countOf(gains(terms.want))
+    );
+  });
   return candidates.length === 1 ? candidates[0]! : null;
 }
 

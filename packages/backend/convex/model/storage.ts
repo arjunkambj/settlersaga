@@ -28,5 +28,9 @@ export function parseGameState(stateJson: string): GameState {
   return {
     ...stored,
     board: { ...createBoard(stored.settings.map, stored.seed), ...stored.board },
+    // An offer stored before counter-offers existed has no list of them.
+    tradeOffer: stored.tradeOffer
+      ? { ...stored.tradeOffer, counterOffers: stored.tradeOffer.counterOffers ?? [] }
+      : null,
   };
 }

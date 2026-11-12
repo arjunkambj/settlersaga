@@ -33,6 +33,7 @@ export {
   getDiceProduction,
   getLegalActions,
   getRequiredPlayerIds,
+  getTradeTermsWith,
   type DiceProduction,
 } from "./rules";
 export {
@@ -70,6 +71,7 @@ export {
   type ResourceInventory,
   type ResourceType,
   type TerrainType,
+  type TradeCounterOffer,
   type TradeOffer,
   type TurnTimerSeconds,
 } from "./types";

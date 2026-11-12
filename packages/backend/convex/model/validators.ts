@@ -104,6 +104,12 @@ export const commandValidator = v.union(
     offerActionNumber: v.number(),
   }),
   v.object({
+    give: resourceInventoryValidator,
+    kind: v.literal("counter_trade"),
+    offerActionNumber: v.number(),
+    want: resourceInventoryValidator,
+  }),
+  v.object({
     kind: v.literal("confirm_trade"),
     offerActionNumber: v.number(),
     partnerPlayerId: v.string(),

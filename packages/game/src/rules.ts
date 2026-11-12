@@ -890,6 +890,20 @@ function tradeWithBank(
   };
 }
 
+function requireTradeTerms(give: ResourceInventory, want: ResourceInventory): void {
+  if (
+    !isValidInventory(give) ||
+    !isValidInventory(want) ||
+    totalResources(give) === 0 ||
+    totalResources(want) === 0
+  ) {
+    fail("INVALID_TRADE", "A trade must give and request at least one resource");
+  }
+  if (RESOURCE_TYPES.some((resource) => give[resource] > 0 && want[resource] > 0)) {
+    fail("INVALID_TRADE", "A trade cannot give and request the same resource");
+  }
+}
+
 function proposeTrade(
   state: GameState,
   playerId: PlayerId,
@@ -903,17 +917,7 @@ function proposeTrade(
   if (state.tradeOffer) {
     fail("INVALID_TRADE", "Cancel the current trade offer before proposing another");
   }
-  if (
-    !isValidInventory(give) ||
-    !isValidInventory(want) ||
-    totalResources(give) === 0 ||
-    totalResources(want) === 0
-  ) {
-    fail("INVALID_TRADE", "A trade must give and request at least one resource");
-  }
-  if (RESOURCE_TYPES.some((resource) => give[resource] > 0 && want[resource] > 0)) {
-    fail("INVALID_TRADE", "A trade cannot give and request the same resource");
-  }
+  requireTradeTerms(give, want);
   if (!hasResources(requirePlayer(state, playerId).resources, give)) {
     fail("INSUFFICIENT_RESOURCES", "Player cannot afford the proposed trade");
   }
@@ -934,6 +938,7 @@ function proposeTrade(
     ...state,
     tradeOffer: {
       acceptedPlayerIds: [],
+      counterOffers: [],
       give: { ...give },
       offerActionNumber: state.actionNumber + 1,
       proposerPlayerId: playerId,
@@ -958,7 +963,11 @@ function requireTradeOffer(state: GameState, offerActionNumber: number): TradeOf
 }
 
 function hasResponded(offer: TradeOffer, playerId: PlayerId) {
-  return offer.acceptedPlayerIds.includes(playerId) || offer.rejectedPlayerIds.includes(playerId);
+  return (
+    offer.acceptedPlayerIds.includes(playerId) ||
+    offer.rejectedPlayerIds.includes(playerId) ||
+    offer.counterOffers.some((counter) => counter.playerId === playerId)
+  );
 }
 
 function respondToTrade(
@@ -988,30 +997,83 @@ function respondToTrade(
   return { ...state, tradeOffer: everyoneRejected ? null : { ...offer, rejectedPlayerIds } };
 }
 
+/**
+ * A recipient answers with terms of their own instead of accepting or declining. The proposer may
+ * not hold what the counter asks for; that is checked when they confirm it.
+ */
+function counterTrade(
+  state: GameState,
+  playerId: PlayerId,
+  offerActionNumber: number,
+  give: ResourceInventory,
+  want: ResourceInventory,
+): GameState {
+  const offer = requireTradeOffer(state, offerActionNumber);
+
+  if (!offer.recipientPlayerIds.includes(playerId) || hasResponded(offer, playerId)) {
+    fail("INVALID_TRADE", "Player cannot respond to this trade offer");
+  }
+  requireTradeTerms(give, want);
+  if (
+    RESOURCE_TYPES.every(
+      (resource) =>
+        give[resource] === offer.give[resource] && want[resource] === offer.want[resource],
+    )
+  ) {
+    fail("INVALID_TRADE", "A counter-offer must change the trade");
+  }
+  if (!hasResources(requirePlayer(state, playerId).resources, want)) {
+    fail("INSUFFICIENT_RESOURCES", "Player cannot afford this counter-offer");
+  }
+
+  return {
+    ...state,
+    tradeOffer: {
+      ...offer,
+      counterOffers: [...offer.counterOffers, { give: { ...give }, playerId, want: { ...want } }],
+    },
+  };
+}
+
+/**
+ * The terms the proposer and this partner would trade on: the partner's counter, else the offer
+ * they accepted. Null when they have done neither.
+ */
+export function getTradeTermsWith(
+  offer: TradeOffer,
+  partnerPlayerId: PlayerId,
+): Pick<TradeOffer, "give" | "want"> | null {
+  const counter = offer.counterOffers.find((candidate) => candidate.playerId === partnerPlayerId);
+  if (counter) {
+    return counter;
+  }
+  return offer.acceptedPlayerIds.includes(partnerPlayerId) ? offer : null;
+}
+
 function confirmTrade(
   state: GameState,
   playerId: PlayerId,
   offerActionNumber: number,
   partnerPlayerId: PlayerId,
 ): GameState {
-  const offer = requireTradeOffer(state, offerActionNumber);
+  const terms = getTradeTermsWith(requireTradeOffer(state, offerActionNumber), partnerPlayerId);
 
-  if (!offer.acceptedPlayerIds.includes(partnerPlayerId)) {
-    fail("INVALID_TRADE", "The trade partner has not accepted this offer");
+  if (!terms) {
+    fail("INVALID_TRADE", "The trade partner has not accepted or countered this offer");
   }
   if (
-    !hasResources(requirePlayer(state, playerId).resources, offer.give) ||
-    !hasResources(requirePlayer(state, partnerPlayerId).resources, offer.want)
+    !hasResources(requirePlayer(state, playerId).resources, terms.give) ||
+    !hasResources(requirePlayer(state, partnerPlayerId).resources, terms.want)
   ) {
     fail("INSUFFICIENT_RESOURCES", "Trade participants can no longer afford this offer");
   }
 
   const withProposer = updateResources(state, playerId, (resources) =>
-    addResources(subtractResources(resources, offer.give), offer.want),
+    addResources(subtractResources(resources, terms.give), terms.want),
   );
   return {
     ...updateResources(withProposer, partnerPlayerId, (resources) =>
-      addResources(subtractResources(resources, offer.want), offer.give),
+      addResources(subtractResources(resources, terms.want), terms.give),
     ),
     tradeOffer: null,
   };
@@ -1075,6 +1137,7 @@ function emptyLegalActions(): LegalActions {
     bankTrades: [],
     canBuyDevelopmentCard: false,
     canCancelTrade: false,
+    canCounterTrade: false,
     canEndTurn: false,
     canProposeTrade: false,
     canRespondToTrade: false,
@@ -1140,6 +1203,7 @@ export function getLegalActions(
     case "build_and_trade":
       if (actorPlayerId !== state.activePlayerId) {
         actions.canRespondToTrade = true;
+        actions.canCounterTrade = true;
         return actions;
       }
 
@@ -1149,7 +1213,12 @@ export function getLegalActions(
         state.developmentDeck.length > 0 && hasResources(player.resources, DEVELOPMENT_CARD_COST);
       actions.canCancelTrade = state.tradeOffer !== null;
       actions.canProposeTrade = state.tradeOffer === null;
-      actions.tradePartnerPlayerIds = [...(state.tradeOffer?.acceptedPlayerIds ?? [])];
+      actions.tradePartnerPlayerIds = [
+        ...(state.tradeOffer?.acceptedPlayerIds ?? []),
+        ...(state.tradeOffer?.counterOffers ?? [])
+          .filter((counter) => hasResources(player.resources, counter.give))
+          .map((counter) => counter.playerId),
+      ];
       actions.cityVertexKeys =
         player.piecesRemaining.cities > 0 && hasResources(player.resources, BUILD_COSTS.city)
           ? getCityVertexKeys(state, actorPlayerId)
@@ -1216,6 +1285,14 @@ function reduceCommand(state: GameState, actorPlayerId: PlayerId, command: GameC
       );
     case "respond_trade":
       return respondToTrade(state, actorPlayerId, command.offerActionNumber, command.accept);
+    case "counter_trade":
+      return counterTrade(
+        state,
+        actorPlayerId,
+        command.offerActionNumber,
+        command.give,
+        command.want,
+      );
     case "confirm_trade":
       return confirmTrade(state, actorPlayerId, command.offerActionNumber, command.partnerPlayerId);
     case "cancel_trade":
@@ -1243,7 +1320,8 @@ export function applyCommand(
   if (
     actorPlayerId !== state.activePlayerId &&
     state.phase.kind !== "discard" &&
-    command.kind !== "respond_trade"
+    command.kind !== "respond_trade" &&
+    command.kind !== "counter_trade"
   ) {
     fail("NOT_REQUIRED_ACTOR", "Player may only respond to the active trade offer");
   }
