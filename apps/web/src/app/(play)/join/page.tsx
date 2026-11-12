@@ -5,6 +5,8 @@ import { normalizeRoomCode } from "@/lib/session";
 
 export const metadata: Metadata = {
   description: "Join a friend's game with its code.",
+  // An invite link is the home screen with a code filled in, so only the home page is listed.
+  robots: { follow: true, index: false },
   title: "Join a Game",
 };
 
