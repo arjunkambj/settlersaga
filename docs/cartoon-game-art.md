@@ -64,7 +64,7 @@ Keep the central area from 20% to 78% image width and 12% to 82% height free of 
 
 ### Main menu coast
 
-Saved to: `apps/web/public/shared-assets/coastal-island-kingdom-supercell.png`
+Saved to: `apps/web/public/shared-assets/coastal-island-kingdom-supercell.png` (replaced on 2026-11-12 by `coastal-island-kingdom.webp`, see the end of this file)
 
 #### Generation
 
@@ -142,3 +142,137 @@ Asset type: square transparent app emblem for SetterSaga, a blue-themed cartoon 
 Create a bold clean polished cartoon 3D game emblem: one thick beveled royal-blue hexagonal badge with a narrow golden rim. Inside, a SINGLE charming cream settlement house with chunky cobalt blue roof and tiny gold flag, sitting on a small bright grassy green hexagonal island. One small rounded tree beside house only. Shapes large and simple, wide silhouette, readable at 48px, no miniature scene, no tiny windows, no scattered props. The royal-blue hex badge should be dominant and form a confident closed silhouette; cream, gold and green are accent colors.
 Premium custom mobile strategy game logo quality, smooth sculpted toy materials, warm upper-left light, soft shadows contained inside badge, crisp outline, restrained depth. Centered square composition, full emblem visible, 10 percent transparent padding. Actual transparent background, no text, no letters, no numbers, no checkerboard, no external background.
 ```
+
+### Build bar action icons
+
+Made with `pnpm art` (GPT-Image-2.6) on 2026-11-12. All six were drawn as one sheet so they match: one outline weight, a thin cream rim so they stand off the navy panels, and shapes simple enough to read at 28 px. A first set cut from the action cards scored 7.7 with the critic (the navy outline vanished on navy, and the city and trade icons turned to speckle when small), so it was replaced by this one. Each icon was cut out by its own outline, centered on a square with a 3 percent margin and saved at 512×512.
+
+Saved to: `apps/web/public/game-assets/ui/actions/{road,settlement,city,dev-card,trade,build}.png`
+
+#### Generation (Flare, medium, 1536×1024, transparent, two drafts)
+
+```text
+Use case: stylized-concept
+Asset type: one sheet of six matching action icons for the build bar of a cartoon island board game. Each icon is shown tiny, 28 to 48 px, on a dark navy panel, so every icon is ONE bold simple silhouette that still reads at 28 px.
+Destination: cut into apps/web/public/game-assets/ui/actions/{road,settlement,city,dev-card,trade}.png (512x512 each, transparent).
+Canvas: exactly 1536x1024, a strict grid of 3 columns by 2 rows of 512x512 cells. One icon per cell, centered, filling about 78 percent of its cell, with clear empty space between icons. Nothing touches or crosses a cell edge.
+Style, identical on all six: flat chunky cartoon sticker icons. Big simple shapes, flat bright colors with one soft highlight and one soft shade per shape. A thick dark navy outline of exactly the same weight on every icon, and outside it a thin even cream-white rim hugging the whole silhouette like a die-cut sticker, so the icon stands out on a dark navy background. No tiny details, no texture, no gradients that band, no sparkles, no glow, no drop shadow, no ground.
+Camera: straight on, no perspective, the same soft light from the upper left on all six.
+Row 1, left to right:
+1 ROAD: one short chunky wooden road plank lying diagonally from bottom left to top right, warm honey brown, with just two plank seams and rounded ends. It is thick and fills its cell.
+2 SETTLEMENT: one small house seen from the front: cream walls, a big orange-red gabled roof, one dark arched door. No windows.
+3 CITY: one small fortress seen from the front: a square cream keep with three large square battlements on top, a round cream tower on each side with a plain orange cone roof and a small red pennant, and one arched brown wooden gate in the middle. No windows, no roof tile lines, no brick lines.
+Row 2, left to right:
+4 DEV CARD: one portrait playing card with rounded corners, tilted 10 degrees clockwise, with a bright violet face and, large in its middle, a gold hexagon badge holding a white five-point star.
+5 TRADE: two big fat curved arrows chasing each other in a circle, a gold arrow on top pointing right and a sky blue arrow underneath pointing left. The arrows are the whole icon; nothing else in the cell.
+6 BUILD: one chunky wooden mallet with a steel-grey head, lying diagonally.
+Constraints: fully transparent background with real alpha everywhere outside the icons, no checkerboard, no backdrop, no grid lines, no frames, no text, no numbers, no letters, no watermark.
+```
+
+#### Final (Sunburst, high, edit of the chosen draft)
+
+```text
+Use case: precise-object-edit
+Asset type: final render of a sheet of six matching build-bar icons for a cartoon island board game, each shown at 28 to 48 px on dark navy.
+Re-render image 1 at final quality. Keep exactly the same six icons in the same six cells of the 3 by 2 grid, at the same positions, sizes, angles and colors: wooden road plank, small house, small fortress, purple card with a gold star badge, gold and blue swap arrows, wooden mallet. Keep the thick dark navy outline at one identical weight on all six and the thin even cream-white rim outside it. Make every edge crisp and every shape clean and flat, with one soft highlight and one soft shade per shape. Change nothing else: no new details, no windows, no texture, no shadows, no glow.
+Constraints: 1536x1024, fully transparent background with real alpha outside the icons, no checkerboard, no backdrop, no grid lines, no text, no numbers.
+```
+
+### Main menu coast, redrawn sharp
+
+Made with `pnpm art` on 2026-11-12. The first backdrop was 1536×1024 and painterly, so on a retina laptop it was stretched about 1.9 times and its houses and sheep smeared. This one is flat outlined art at 3840×2160, saved as WebP at quality 92. It replaces `coastal-island-kingdom-supercell.png` behind the home, menu and lobby screens and the results screen.
+
+Saved to: `apps/web/public/shared-assets/coastal-island-kingdom.webp`
+
+#### Draft (Flare, medium, 1536×864, edit of the old backdrop to keep its layout)
+
+```text
+Use case: stylized-concept
+Asset type: full-screen main menu backdrop for a blue-themed cartoon island board game, shown behind frosted menu panels on screens up to 2880 px wide.
+Destination: apps/web/public/shared-assets/coastal-island-kingdom-supercell.png (3840x2160, opaque).
+Redraw the scene in image 1 as clean, crisp art. Keep its layout: a calm royal blue bay filling the middle of the picture, a small seaside village on green cliffs at the left, a wooden dock with one small sailboat at the right, rounded rocks and plump trees framing the bottom corners, soft clouds and distant islands along the top.
+Style: flat cartoon with bold clean shapes and a thin dark navy outline on every object, the same family as the game's resource cards and board. Solid flat colors with one soft shade per shape. Absolutely no blur, no smear, no painterly mush, no grain, no tiny melted details.
+Simplify so it stays sharp: only FOUR houses, each large and chunky with cream walls, a big orange-red roof, one clear dark door and one clear window; only THREE sheep, each a simple fluffy white oval body with a small dark face and four short legs; one short wooden fence of four clear posts; trees as big rounded tiered shapes; rocks as a few big faceted boulders. Every object is drawn large enough that its outline is clean.
+Composition and camera: raised three-quarter aerial view. The middle 55 percent of the picture stays quiet open water with a few broad foam ripples and nothing else, because menu panels sit there. Joyful sunny daylight from the upper left.
+Constraints: opaque full-bleed picture, no text, no logos, no UI, no borders, no watermark.
+```
+
+#### Final (Sunburst, high, 3840×2160, edit of the draft)
+
+```text
+Use case: precise-object-edit
+Asset type: final full-screen main menu backdrop for a blue-themed cartoon island board game, shown behind frosted menu panels on screens up to 2880 px wide.
+Destination: apps/web/public/shared-assets/coastal-island-kingdom-supercell.png (3840x2160, opaque).
+Re-render image 1 at final quality and full size. Keep the picture exactly as it is: the same calm royal blue bay in the middle, the same three red-roofed houses, three sheep and fence on the green cliff at the left, the same house, dock and sailboat at the right, the same rocks, trees, beach, clouds and distant islands, in the same places, at the same sizes, in the same colors.
+Style: flat cartoon with bold clean shapes and a thin dark navy outline on every object, solid flat colors with one soft shade per shape. Every edge is razor crisp at full size: clean windows, doors, fence posts, sheep faces, sail and dock planks. No blur, no smear, no grain, no painterly texture, no new objects.
+Composition and camera: unchanged raised three-quarter aerial view. The middle of the picture stays quiet open water with a few broad foam ripples and nothing else.
+Constraints: opaque full-bleed picture, no text, no logos, no UI, no borders, no watermark.
+```
+
+#### Fix (Sunburst, high, 3840×2160, edit of the final)
+
+The critic scored the final 8.4: a small island sat right behind the menu title, and one door had white blobs. This edit removes that island and redraws the doors.
+
+```text
+Use case: precise-object-edit
+Asset type: final full-screen main menu backdrop for a blue-themed cartoon island board game. A menu title sits over the upper left-middle of the picture, so that area must be calm.
+Destination: apps/web/public/shared-assets/coastal-island-kingdom.webp (3840x2160, opaque).
+Change only two things in image 1.
+1. Remove the small rocky island with pine trees that floats on the water in the upper left-middle of the picture, just right of the village, together with the tiny rock beside it. Where it was, continue the calm open royal blue sea, the straight horizon line, the pale distant hills and the sky, so the area looks like the rest of the open water. Leave the small cloud behind it as a simple soft cloud.
+2. On the three red-roofed houses on the left cliff, make every door one plain arched brown wooden door with a thin dark navy outline and one small dark round handle. No white marks or blobs on any door.
+Keep everything else exactly as it is: the village houses, sheep, fence, cliffs, rocks, beach, trees, the two small islands on the right, the house, dock and sailboat on the right, the clouds, the foam ripples, all colors and all outlines, in the same places and at the same sizes.
+Style: flat cartoon with bold clean shapes and a thin dark navy outline on every object, solid flat colors with one soft shade per shape, razor crisp edges. No blur, no grain, no new objects.
+Constraints: opaque full-bleed picture, no text, no logos, no UI, no borders, no watermark.
+```
+
+### Settlement card, redrawn
+
+Made with `pnpm art` on 2026-11-12. The first settlement card was a flat app-icon house with a black arch that read as a dog kennel beside the detailed city card. This one is a small stone cottage drawn to match the city card, which was passed in as the style reference. Rendered at 1024×1536 and scaled to 512×768.
+
+Saved to: `apps/web/public/game-assets/card-art/actions/settlement.png`
+
+#### Draft (Flare, medium, 1024×1536, edit of the old card with the city card as image 2, two drafts)
+
+```text
+Use case: stylized-concept
+Asset type: the Settlement action card of a cartoon island board game, shown from 16 px badges up to a 256 px help picture, most often about 56 px in the build bar and results screen.
+Destination: apps/web/public/game-assets/card-art/actions/settlement.png (512x768, opaque).
+Redraw the house in image 1 so it belongs with image 2. Image 1 is the current settlement card; image 2 is the City card from the same set and is the style reference.
+Keep from image 1: the portrait card layout, the same cream card frame with rounded corners and thin dark navy inner line, exactly as in image 2, and the soft sunny meadow and blue sky background inside the frame.
+Change only the house: one chunky cozy cottage, centered, about the same size on the card as the castle in image 2, seen from the same raised three-quarter front view. Cream plaster walls, a big orange-red roof made of rows of rounded tiles like the tower roofs in image 2, a short cream chimney, one arched brown wooden plank door with a small round handle, and one small square window with a wooden frame. A thick dark navy outline around the cottage, the same weight as the castle outline in image 2, and the same soft shading. It must read as a small house at 56 px: one clear silhouette, no fence, no garden, no path, no smoke, no flag.
+Style: the same polished flat cartoon as image 2, warm sunlight from the upper left.
+Constraints: opaque full card, no text, no numbers, no letters, no watermark.
+```
+
+#### Final (Sunburst, high, edit of the chosen draft)
+
+```text
+Use case: precise-object-edit
+Asset type: final render of the Settlement action card of a cartoon island board game, shown from 16 px badges up to a 256 px help picture.
+Destination: apps/web/public/game-assets/card-art/actions/settlement.png (512x768, opaque).
+Re-render image 1 at final quality. Keep the card exactly as it is: the same cream card frame with rounded corners and thin dark navy inner line, the same soft sunny meadow and blue sky, and the same single round stone cottage in the middle with its orange-red rounded-tile roof, short cream chimney, arched brown plank door with a round handle and one arched window with a wooden frame, at the same size, position and colors. Image 2 is the City card from the same set: match its outline weight, shading and finish.
+Make every edge crisp and every shape clean. Change nothing else: no new objects, no fence, no path, no smoke, no flag.
+Constraints: opaque full card, no text, no numbers, no letters, no watermark.
+```
+
+### Emblem, matched to the wordmark
+
+Made with `pnpm art` on 2026-11-12. The old emblem (muted green hexagon, pyramid-roof house, white outline) was a different logo from the hexagon inside the wordmark. This one is the wordmark's own hexagon, cut out, scaled up and re-rendered crisp, so both are one logo. It replaces the emblem above. The Apple icon is the same emblem on a solid `#1a4a94` square, because iOS fills see-through corners with black. The favicon holds 16, 32 and 48 px sizes.
+
+Saved to: `apps/web/public/game-assets/brand/settersaga-mark.png`, `apps/web/src/app/icon.png` (both 512×512, transparent), `apps/web/src/app/apple-icon.png` (180×180, opaque), `apps/web/public/favicon.ico`
+
+#### Final (Sunburst, high, 1024×1024, transparent, edit of the scaled-up wordmark hexagon)
+
+```text
+Use case: logo-brand
+Asset type: square app emblem for SetterSaga, a blue-themed cartoon island board game. It is the same emblem that sits at the left of the game's wordmark, shown from 28 px (phone header, favicon) up to 512 px.
+Destination: apps/web/public/game-assets/brand/settersaga-mark.png (1024x1024, transparent), also used for the app icon.
+Re-render image 1 at final quality. Image 1 is a small, soft upscale; draw exactly the same emblem crisp and clean: one bright lime-green hexagon standing on a point, with a thick dark navy outline and a soft glossy highlight along its upper left edge; in its middle one simple cream-white house seen from the front with a gabled roof, a short chimney on the right, one dark navy arched door and a thick dark navy outline; four small darker-green grass tufts on the hexagon around the house. Same shapes, same positions, same colors.
+Style: flat chunky cartoon sticker, big simple shapes, flat bright colors with one soft highlight and one soft shade per shape, razor crisp edges. No new details, no text, no letters.
+Composition: the emblem centered, filling about 84 percent of the canvas, straight on.
+Constraints: fully transparent background with real alpha outside the hexagon, no checkerboard, no backdrop, no shadow patch, no glow, no watermark.
+```
+
+### Empty seat and bot portraits
+
+No new art. The empty-seat chair (`apps/web/public/game-assets/ui/empty-seat.png`) lost its cream sticker rim and the cream patches between its legs by image processing, so it has only a navy outline like the sprites beside it. The bot portraits are busts cut for a round frame, so the quick-match dialog and the lobby now show them in a round well instead of uncropped.
