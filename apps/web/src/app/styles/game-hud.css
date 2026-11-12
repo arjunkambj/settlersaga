@@ -85,82 +85,9 @@
 /* --------------------------------------------------------------------------
    The shared kit, in a game. Dialogs, popovers and tooltips open outside the
    shell (in portals), so these rules hang off the page while a game is on it.
-   Their colours come from the token remap in styles.css; this sets the kit's
-   type to the scale and its buttons to the system's faces.
+   The kit is already flat (menu.css); this holds its type to the game's four
+   sizes, where menus may size their own titles.
    ----------------------------------------------------------------------- */
-
-/* Buttons: gold for the one main action (and, in a confirm dialog, the step that can't be
-   undone), a raised face for the rest, a panel face for the round icon buttons. Flat: no
-   highlight, no shadow. */
-:root:has(.game-shell)
-  :is(
-    .game-button,
-    .game-button-secondary,
-    .game-button-gold,
-    .game-button-danger,
-    .game-button-ghost,
-    .game-button-icon,
-    .game-button-icon-danger
-  ) {
-  --btn-face: var(--g-raised);
-  --btn-face-hover: var(--g-raised);
-  --btn-line: transparent;
-  --btn-line-hover: var(--g-muted);
-  --btn-ink: var(--g-text);
-  --btn-highlight: transparent;
-  --btn-drop: 0 0 transparent;
-
-  font-weight: var(--g-weight-strong);
-}
-
-:root:has(.game-shell)
-  :is(.game-button-gold, [data-slot="alert-dialog-content"] .game-button-danger) {
-  --btn-face: var(--g-accent);
-  --btn-face-hover: var(--g-accent);
-  --btn-line-hover: var(--g-text);
-  --btn-ink: var(--g-surface);
-}
-
-:root:has(.game-shell) :is(.game-button-icon, .game-button-icon-danger) {
-  --btn-face: var(--g-surface);
-  --btn-face-hover: var(--g-surface);
-}
-
-:root:has(.game-shell) .game-button-ghost {
-  --btn-face: transparent;
-  --btn-face-hover: transparent;
-  --btn-line: var(--g-raised);
-}
-
-:root:has(.game-shell)
-  :is(
-    .game-button,
-    .game-button-secondary,
-    .game-button-gold,
-    .game-button-danger,
-    .game-button-ghost,
-    .game-button-icon,
-    .game-button-icon-danger
-  ):focus-visible {
-  --btn-focus-gap: 0 0 0 2px var(--g-surface);
-
-  outline-color: var(--g-text);
-}
-
-:root:has(.game-shell)
-  :is(
-    .game-button,
-    .game-button-secondary,
-    .game-button-gold,
-    .game-button-danger,
-    .game-button-ghost,
-    .game-button-icon,
-    .game-button-icon-danger
-  ):is(:disabled, [data-disabled]) {
-  --btn-face: var(--g-raised);
-  --btn-line: transparent;
-  --btn-ink: var(--g-muted);
-}
 
 /* The largest button's label is the scale's top step. */
 :root:has(.game-shell) :is(.game-button, .game-button-secondary, .game-button-gold).text-lg {
@@ -215,20 +142,7 @@
   font-weight: var(--g-weight);
 }
 
-/* The chosen tab and the picked choice: white on the raised face would vanish on a raised track,
-   so they turn white with navy ink. */
-:root:has(.game-shell) .game-segment[aria-selected="true"] {
-  background: var(--g-text);
-  color: var(--g-surface);
-}
-
-/* The kit's art stage and scroll fade are gradients; in a game the stage is one flat face and a
-   list just ends at its edge. */
-:root:has(.game-shell) .game-art-stage {
-  background: var(--g-raised);
-  box-shadow: none;
-}
-
+/* The kit's scroll fade is a gradient mask; in a game a list just ends at its edge. */
 :root:has(.game-shell) .game-scroll-fade {
   mask-image: none;
 }

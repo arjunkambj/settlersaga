@@ -162,30 +162,11 @@
   padding: var(--ui-space-3) var(--lobby-inset-right)
     max(var(--ui-space-3), env(safe-area-inset-bottom)) var(--lobby-inset-left);
 }
-/* Opaque, since page content scrolls underneath it on phones. */
+/* On phones the page scrolls underneath it, so it is a bar across the foot of the screen. */
 .game-menu-panel.lobby-launch {
   border-bottom-width: 0;
   border-inline-width: 0;
   border-radius: var(--ui-radius-hud) var(--ui-radius-hud) 0 0;
-  background: linear-gradient(var(--ui-panel-top), var(--ui-panel-bottom));
-  box-shadow:
-    0 -6px 16px color-mix(in srgb, var(--game-outline) 35%, transparent),
-    inset 0 1px 0 var(--ui-panel-highlight);
-}
-
-.game-menu-panel.lobby-launch::before {
-  content: "";
-  position: absolute;
-  right: 0;
-  bottom: 100%;
-  left: 0;
-  height: 3rem;
-  background: linear-gradient(
-    transparent,
-    color-mix(in srgb, var(--game-outline) 55%, transparent) 55%,
-    color-mix(in srgb, var(--game-outline) 88%, transparent)
-  );
-  pointer-events: none;
 }
 
 @media (width < 80rem) {
@@ -195,7 +176,7 @@
   }
 }
 
-/* The chat button's unread count: a small danger pill ringed in navy. */
+/* The chat button's unread count: a small gold pill ringed in navy, like an alert in the game. */
 .lobby-unread {
   position: absolute;
   top: -0.375rem;
@@ -207,9 +188,9 @@
   padding-inline: var(--ui-space-1);
   border: 0;
   border-radius: 9999px;
-  background: var(--ui-danger-bottom);
-  box-shadow: 0 0 0 1.5px var(--game-outline);
-  color: var(--ui-ink-on-primary);
+  background: var(--g-accent);
+  box-shadow: 0 0 0 2px var(--g-surface);
+  color: var(--g-surface);
   font-family: var(--font-sans);
   font-size: 0.75rem;
   font-weight: 800;
@@ -304,15 +285,9 @@
     margin: 0;
     padding: var(--ui-space-4);
   }
-  .game-menu-panel.lobby-launch::before {
-    content: none;
-  }
   .game-menu-panel.lobby-launch {
     border-width: var(--ui-line);
     border-radius: var(--ui-radius-panel);
-    box-shadow:
-      inset 0 1px 0 var(--ui-panel-highlight),
-      var(--ui-shadow-menu);
   }
 
   /* Seat rows grow into a tall crew column instead of leaving an empty panel bottom. */
@@ -402,8 +377,8 @@
    Seats
    ------------------------------------------------------------------------ */
 
-/* A row per seat: a neutral glass well with a hairline. The seat's color lives only in the
-   portrait's 2px ring. Rows share one height unless a tag has to wrap under a name. */
+/* A row per seat: a raised well. The seat's color lives only in the portrait's 2px ring. Rows
+   share one height unless a tag has to wrap under a name. */
 .lobby-seat {
   position: relative;
   display: flex;
@@ -491,10 +466,10 @@
   }
 }
 
+/* An open seat: the panel shows through a dashed outline. */
 .lobby-seat-open {
-  border: var(--ui-line) dashed color-mix(in srgb, var(--foreground) 30%, transparent);
-  background: var(--ui-well);
-  box-shadow: none;
+  border: var(--ui-line) dashed var(--g-muted);
+  background: transparent;
 }
 
 /* A round portrait in the seat's color: a 2px ring over a soft tint of the same color. */
@@ -508,7 +483,7 @@
   overflow: hidden;
   border: 2px solid var(--player-color, transparent);
   border-radius: 50%;
-  background: color-mix(in srgb, var(--player-color, var(--ui-panel-top)) 45%, var(--ui-well));
+  background: color-mix(in srgb, var(--player-color, var(--g-surface)) 45%, var(--g-raised));
 }
 .lobby-seat-open .lobby-seat-portrait {
   overflow: visible;
@@ -528,16 +503,6 @@
 :is(.game-choice-tile, .game-choice-option)[data-readonly]:hover:not([data-checked]) {
   border-color: var(--ui-well-border);
   background: var(--ui-well);
-}
-
-/* Island previews sit in a patch of shallow water. */
-.lobby-map-tile > svg {
-  border-radius: 0.875rem;
-  background: radial-gradient(
-    circle,
-    color-mix(in srgb, var(--board-shallows) 80%, transparent),
-    transparent 72%
-  );
 }
 
 /* Tall desktop screens: the names a step larger; the rows stay calm (80px or so). */

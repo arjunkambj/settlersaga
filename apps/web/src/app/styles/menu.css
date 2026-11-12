@@ -1,6 +1,7 @@
 /* ============================================================================
-   Game UI kit (E1 royal blue glass): backdrop, glass panels, popovers,
-   headings, buttons, pills, tabs, chips, wells and inputs.
+   Game UI kit: backdrop, panels, popovers, headings, buttons, pills, tabs,
+   chips, wells and inputs. Menus and the game share one flat look: the five
+   --g-* colours, no gradients and no shadows.
 
    These rules are unlayered on purpose, so they beat the utility classes the
    shadcn primitives carry (border, radius, background, shadow). Height,
@@ -8,16 +9,15 @@
    Colors come from the tokens in ../styles.css.
    ========================================================================= */
 
-/* Full-screen island art behind menus. The gradient is a sky-to-sea wash
-   that stands in for the art while the picture is still loading. */
+/* Full-screen island art behind menus, over a plain sea blue that stands in
+   while the picture is still loading. Nothing dims the art: text never sits
+   straight on it, only on panels and plates. */
 .scene-backdrop {
   position: fixed;
   inset: 0;
   z-index: -10;
   overflow: hidden;
-  background:
-    radial-gradient(ellipse 90% 55% at 50% 105%, var(--game-panel-top), transparent 70%),
-    linear-gradient(var(--game-button-top), var(--background) 45%, var(--game-panel-bottom));
+  background: var(--background);
 }
 .scene-backdrop-art {
   object-fit: cover;
@@ -29,52 +29,19 @@
     object-position: bottom;
   }
 }
-/* A soft navy vignette over the bright toon art, plus a wash along the top,
-   so panels, the wordmark and the header buttons keep their contrast. The
-   next/image fill sits before this, so it paints on top without a z-index. */
-.scene-backdrop::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background:
-    radial-gradient(ellipse 80% 75% at 50% 50%, transparent 50%, var(--game-vignette) 100%),
-    linear-gradient(var(--game-vignette-top), transparent 7rem);
-}
 
 /* ----------------------------------------------------------------------------
-   Glass surfaces. Each is a translucent gradient with a backdrop blur, a 1px
-   hairline, a faint top highlight and one soft ambient shadow. Where
-   backdrop-filter is missing, the glass tokens turn nearly solid instead.
-   Never put a CSS filter (drop-shadow and the like) on anything inside the
-   glass: Chromium then redraws the blur wrongly around that element's box,
+   Panels. One flat navy face with a thin line and a blur of whatever is behind
+   it. Never put a CSS filter (drop-shadow and the like) on anything inside a
+   panel: Chromium then redraws the blur wrongly around that element's box,
    leaving dark squares or seams across the panel.
    ------------------------------------------------------------------------- */
 
-/* Menu glass: home cards, header capsules, lobby panels, auth, results. */
+/* Home cards, header capsules, lobby panels, auth, dialogs, results. */
 .game-menu-panel {
   border: var(--ui-line) solid var(--ui-hairline);
   border-radius: var(--ui-radius-panel);
-  background: var(--ui-glass-menu);
-  box-shadow:
-    inset 0 1px 0 var(--ui-panel-highlight),
-    var(--ui-shadow-panel);
-  -webkit-backdrop-filter: var(--ui-glass-blur-menu);
-  backdrop-filter: var(--ui-glass-blur-menu);
-}
-/* Dialogs sit over busy screens, so their glass is nearly solid. */
-.game-dialog-panel {
-  background: var(--ui-glass-dialog);
-}
-
-/* Game glass: HUD panels, the dock, the turn pill. */
-.game-glass {
-  border: var(--ui-line) solid var(--ui-hairline-game);
-  border-radius: var(--ui-radius-hud);
-  background: var(--ui-glass-game);
-  box-shadow:
-    inset 0 1px 0 var(--ui-panel-highlight),
-    var(--ui-shadow-panel);
+  background: var(--g-surface);
   -webkit-backdrop-filter: var(--ui-glass-blur-game);
   backdrop-filter: var(--ui-glass-blur-game);
 }
@@ -96,30 +63,25 @@
   cursor: not-allowed;
 }
 
-/* The stage an illustration stands on: a soft sky with a pale glow under the
-   art. It is painted before the art arrives, so a card never shows an empty
-   top while its image loads. Callers set the radius (a box or a circle). */
+/* The stage an illustration stands on: a raised face, painted before the art
+   arrives, so a card never shows an empty top while its image loads. Callers
+   set the radius (a box or a circle). */
 .game-art-stage {
-  background:
-    radial-gradient(ellipse 70% 55% at 50% 72%, var(--ui-stage-glow), transparent 70%),
-    linear-gradient(var(--ui-stage-top), var(--ui-stage-bottom));
-  box-shadow: inset 0 0 0 1px var(--ui-hairline);
+  background: var(--g-raised);
 }
 
 /* Pickable choices. A tile has art (islands, bots, house rules); an option is
-   a text radio (seats, turn timer). Both share one selected state: a royal
-   face with a sky rim. */
+   a text radio (seats, turn timer). Both share one selected state: a white
+   ring, like a picked card in the game. */
 .game-choice-tile,
 .game-choice-option {
   border: var(--ui-line) solid var(--ui-well-border);
   border-radius: var(--ui-radius-control);
   background: var(--ui-well);
-  box-shadow: none;
   color: var(--foreground);
   cursor: pointer;
   transition:
     border-color 150ms,
-    background-color 150ms,
     box-shadow 150ms;
 }
 .game-choice-option {
@@ -140,7 +102,6 @@
     [data-readonly]
   ) {
   border-color: var(--ui-hairline-light);
-  background: color-mix(in srgb, var(--foreground) 6%, var(--ui-well));
 }
 :is(.game-choice-tile, .game-choice-option):focus-visible {
   outline: 2px solid var(--ui-focus-ring);
@@ -148,10 +109,7 @@
 }
 :is(.game-choice-tile, .game-choice-option)[data-checked] {
   border-color: var(--ui-selected-ring);
-  background: var(--ui-selected-face);
-  box-shadow:
-    inset 0 0 0 1px var(--ui-selected-ring),
-    var(--ui-shadow-control);
+  box-shadow: inset 0 0 0 1px var(--ui-selected-ring);
 }
 :is(.game-choice-tile, .game-choice-option)[data-disabled] {
   cursor: not-allowed;
@@ -165,14 +123,11 @@
   opacity: 0.85;
 }
 
-/* Small game glass for menus, select lists and tooltips. */
+/* A small panel for menus, select lists and tooltips. */
 .game-popover {
   border: var(--ui-line) solid var(--ui-hairline-game);
   border-radius: var(--ui-radius-control);
-  background: var(--ui-glass-game);
-  box-shadow:
-    inset 0 1px 0 var(--ui-panel-highlight),
-    var(--ui-shadow-panel);
+  background: var(--g-surface);
   color: var(--foreground);
   -webkit-backdrop-filter: var(--ui-glass-blur-game);
   backdrop-filter: var(--ui-glass-blur-game);
@@ -216,9 +171,12 @@
     text-transform: none;
   }
 
-  /* A title set straight on the scene art gets a soft, blurred shadow. */
+  /* A screen title over the scene art stands on its own navy plate, so it
+     reads on sky, sea and sand alike. */
   .game-title-on-art {
-    text-shadow: var(--ui-title-shadow);
+    padding: var(--g-space-2) var(--g-space-6);
+    border-radius: var(--ui-radius-pill);
+    background: var(--g-surface);
   }
 
   /* A small section label (bank, lobby sections, match map, "Victory!"). */
@@ -237,9 +195,8 @@
 /* ----------------------------------------------------------------------------
    Buttons (Button variants "game-gold", "game", "game-light", "game-secondary",
    "game-ghost", "game-danger", "game-icon" and "game-icon-danger"). Every one
-   is a pill (the icon ones a circle) with a 1px line and at most one soft
-   shadow: no inside bottom edge, no thick outline. Each variant only sets the
-   --btn-* values; hover changes the face in place, a press moves 1px, and
+   is a flat pill (the icon ones a circle). Each variant only sets the --btn-*
+   values; hover draws a thin line around the face, a press moves 1px, and
    focus is a 2px white ring over a 2px navy gap.
    ------------------------------------------------------------------------- */
 
@@ -251,94 +208,61 @@
 .game-button-ghost,
 .game-button-icon,
 .game-button-icon-danger {
-  --btn-highlight: color-mix(in srgb, var(--foreground) 18%, transparent);
   --btn-line: transparent;
-  --btn-drop: var(--ui-shadow-control);
+  --btn-line-hover: var(--g-muted);
   --btn-focus-gap: 0 0 #0000;
   border: var(--ui-line) solid var(--btn-line);
   border-radius: var(--ui-radius-pill);
   background: var(--btn-face);
   color: var(--btn-ink);
-  box-shadow:
-    var(--btn-focus-gap),
-    inset 0 1px 0 var(--btn-highlight),
-    var(--btn-drop);
+  box-shadow: var(--btn-focus-gap);
   font-family: var(--font-sans);
-  font-weight: 700;
+  font-weight: var(--g-weight-strong);
   letter-spacing: 0;
   text-shadow: none;
   transition:
     translate 90ms ease-out,
-    border-color 120ms ease-out,
-    box-shadow 120ms ease-out;
+    border-color 120ms ease-out;
 }
 
-/* Royal: the strong secondary (Host, Join, Sign in). */
-.game-button {
-  --btn-face: var(--ui-royal);
-  --btn-face-hover: var(--ui-royal-hover);
-  --btn-line: color-mix(in srgb, var(--foreground) 16%, transparent);
-  --btn-line-hover: color-mix(in srgb, var(--foreground) 34%, transparent);
-  --btn-ink: var(--ui-ink-on-primary);
+/* Raised: every button that is not the main one (Host, Join, Cancel, Copy, and
+   Leave or Remove before the dialog that confirms them). */
+.game-button,
+.game-button-secondary,
+.game-button-danger {
+  --btn-face: var(--g-raised);
+  --btn-ink: var(--g-text);
 }
 
-/* Quiet: the calm choice beside a primary (Go back, Cancel, Copy). */
-.game-button-secondary {
-  --btn-face: var(--ui-quiet-face);
-  --btn-face-hover: var(--ui-quiet-face-hover);
-  --btn-line: var(--ui-quiet-line);
-  --btn-line-hover: var(--ui-hairline-light);
-  --btn-ink: var(--foreground);
-  --btn-highlight: transparent;
-  --btn-drop: 0 0 #0000;
-}
-
-/* Gold: the one action a screen most wants pressed (Play, Roll, End turn, Rejoin). */
-.game-button-gold {
-  --btn-face: linear-gradient(var(--ui-gold-top), var(--ui-gold-bottom));
-  --btn-face-hover: linear-gradient(var(--ui-gold-top-hover), var(--ui-gold-bottom-hover));
-  --btn-ink: var(--ui-ink-on-gold);
-  --btn-highlight: color-mix(in srgb, var(--foreground) 45%, transparent);
+/* Gold: the one action a screen most wants pressed (Play, Roll, End turn, Rejoin),
+   and in a confirm dialog the step that can't be undone. */
+.game-button-gold,
+[data-slot="alert-dialog-content"] .game-button-danger {
+  --btn-face: var(--g-accent);
+  --btn-line-hover: var(--g-text);
+  --btn-ink: var(--g-surface);
 }
 
 /* Light: a white face with navy ink, for a third-party sign-in (Continue with
    Google) that should read as that brand's own button. */
 .game-button-light {
-  --btn-face: var(--ui-light-face);
-  --btn-face-hover: var(--ui-light-face-hover);
-  --btn-ink: var(--ui-ink-on-light);
-  --btn-highlight: transparent;
+  --btn-face: var(--g-text);
+  --btn-ink: var(--g-surface);
 }
 
-/* Danger: leave, remove, sign out of a guest account. */
-.game-button-danger,
-.game-button-icon-danger {
-  --btn-face: var(--ui-danger-top);
-  --btn-face-hover: var(--ui-danger-bottom);
-  --btn-line: color-mix(in srgb, var(--foreground) 16%, transparent);
-  --btn-line-hover: color-mix(in srgb, var(--foreground) 34%, transparent);
-  --btn-ink: var(--ui-ink-on-primary);
-}
-
-/* Ghost: see-through with a light hairline ("Play as guest"). */
+/* Ghost: see-through with a thin line ("Play as guest"). */
 .game-button-ghost {
-  --btn-face: var(--ui-ghost-face);
-  --btn-face-hover: var(--ui-ghost-face-hover);
-  --btn-line: var(--ui-ghost-line);
-  --btn-line-hover: var(--foreground);
-  --btn-ink: var(--foreground);
-  --btn-highlight: transparent;
-  --btn-drop: 0 0 #0000;
+  --btn-face: transparent;
+  --btn-line: var(--g-raised);
+  --btn-ink: var(--g-text);
 }
 
-/* Round glass icon button (header settings, help, pause, dialog close). */
-.game-button-icon {
-  --btn-face: var(--ui-glass-game);
-  --btn-face-hover:
-    linear-gradient(var(--ui-glass-hover), var(--ui-glass-hover)), var(--ui-glass-game);
-  --btn-line: var(--ui-hairline-game);
-  --btn-line-hover: var(--ui-hairline-light);
-  --btn-ink: var(--foreground);
+/* Round icon button on the panel colour (header settings, help, pause, leave,
+   dialog close). */
+.game-button-icon,
+.game-button-icon-danger {
+  --btn-face: var(--g-surface);
+  --btn-ink: var(--g-text);
   -webkit-backdrop-filter: var(--ui-glass-blur-game);
   backdrop-filter: var(--ui-glass-blur-game);
 }
@@ -349,7 +273,7 @@
   border-radius: var(--ui-radius-pill);
 }
 
-/* Hover: the face and line brighten in place. No lift, no shadow. */
+/* Hover: a thin line around the face. No lift, no shadow. */
 @media (hover: hover) {
   :is(
       .game-button,
@@ -361,12 +285,11 @@
       .game-button-icon,
       .game-button-icon-danger
     ):hover:not(:disabled, [data-disabled]) {
-    --btn-face: var(--btn-face-hover);
-    --btn-line: var(--btn-line-hover, transparent);
+    --btn-line: var(--btn-line-hover);
   }
 }
 
-/* Pressed: down 1px, the shadow tightens. */
+/* Pressed: down 1px. */
 :is(
     .game-button,
     .game-button-secondary,
@@ -377,18 +300,7 @@
     .game-button-icon,
     .game-button-icon-danger
   ):active:not(:disabled, [data-disabled]) {
-  --btn-face: var(--btn-face-hover);
   translate: 0 1px;
-}
-:is(
-    .game-button,
-    .game-button-gold,
-    .game-button-light,
-    .game-button-danger,
-    .game-button-icon,
-    .game-button-icon-danger
-  ):active:not(:disabled, [data-disabled]) {
-  --btn-drop: 0 2px 6px color-mix(in srgb, var(--ui-shadow-ink) 30%, transparent);
 }
 
 /* Focus: a white ring over a navy gap. The ring is an outline, so
@@ -408,8 +320,8 @@
   outline-offset: 2px;
 }
 
-/* Disabled: a flat slate face with the same shape. Never see-through, never
-   grayscale. */
+/* Disabled: the raised face with quiet ink, in the same shape. Never
+   see-through, never grayscale. */
 :is(
   .game-button,
   .game-button-secondary,
@@ -420,11 +332,9 @@
   .game-button-icon,
   .game-button-icon-danger
 ):is(:disabled, [data-disabled]) {
-  --btn-face: var(--ui-disabled-face);
-  --btn-line: var(--ui-disabled-edge);
-  --btn-ink: var(--ui-disabled-ink);
-  --btn-highlight: transparent;
-  --btn-drop: 0 0 #0000;
+  --btn-face: var(--g-raised);
+  --btn-line: transparent;
+  --btn-ink: var(--g-muted);
   opacity: 1;
   filter: none;
   cursor: not-allowed;
@@ -499,9 +409,10 @@
   --pill-bg: var(--ui-royal);
   --pill-ink: var(--ui-ink-on-primary);
 }
+/* An alert is gold, as in the game. */
 .game-pill[data-tone="danger"] {
-  --pill-bg: var(--ui-danger-bottom);
-  --pill-ink: var(--ui-ink-on-primary);
+  --pill-bg: var(--g-accent);
+  --pill-ink: var(--g-surface);
 }
 .game-pill[data-tone="ready"] {
   --pill-bg: var(--ui-ready);
@@ -550,24 +461,21 @@
   border: 0;
   border-radius: var(--ui-radius-pill);
   background: transparent;
-  color: color-mix(in srgb, var(--foreground) 80%, transparent);
+  color: var(--g-muted);
   font-family: var(--font-sans);
   font-size: 0.875rem;
   font-weight: 700;
-  text-shadow: none;
   cursor: pointer;
   transition:
     background-color 150ms,
     color 150ms;
 }
 .game-segment:hover:not([aria-selected="true"]) {
-  background: color-mix(in srgb, var(--foreground) 8%, transparent);
-  color: var(--foreground);
+  color: var(--g-text);
 }
 .game-segment[aria-selected="true"] {
-  background: var(--ui-royal);
-  box-shadow: var(--ui-shadow-control);
-  color: var(--ui-ink-on-primary);
+  background: var(--g-text);
+  color: var(--g-surface);
 }
 /* Inside the track, so the track never clips it. */
 .game-segment:focus-visible {
@@ -600,26 +508,29 @@
   object-fit: contain;
 }
 
-/* Inner well: a sunken spot inside a panel (rows, tiles, lists). */
+/* Inner well: a raised spot inside a panel (rows, tiles, lists). */
 .game-well {
   border: var(--ui-line) solid var(--ui-well-border);
   border-radius: var(--ui-radius-control);
   background: var(--ui-well);
 }
+/* A raised button or tag would vanish on a raised row, so there it takes the panel colour. */
+:is(.game-well, .lobby-seat) :is(.game-button, .game-button-secondary, .game-button-danger) {
+  --btn-face: var(--g-surface);
+}
+:is(.game-well, .lobby-seat) .game-pill[data-tone="quiet"] {
+  --pill-bg: var(--g-surface);
+}
 
 /* Text input and select trigger: a well with a hairline; focus turns the line
-   sky and adds a soft glow around it. The transparent outline still shows in
-   forced-colors mode. */
+   white. The transparent outline still shows in forced-colors mode. */
 .game-input {
   border: var(--ui-line) solid var(--ui-well-border);
   border-radius: var(--ui-radius-input);
   background: var(--ui-well);
-  box-shadow: none;
   color: var(--foreground);
   font-weight: 600;
-  transition:
-    border-color 150ms,
-    box-shadow 150ms;
+  transition: border-color 150ms;
 }
 .game-input::placeholder {
   color: var(--muted-foreground);
@@ -634,7 +545,6 @@
 .game-input[data-popup-open] {
   border-color: var(--ui-input-focus-line);
   outline: 2px solid transparent;
-  box-shadow: 0 0 0 3px var(--ui-input-focus-glow);
 }
 .game-input[aria-invalid="true"] {
   border-color: var(--ui-danger-top);

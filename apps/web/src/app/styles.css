@@ -11,36 +11,35 @@
 @import "./styles/menu.css";
 @import "./styles/home.css";
 
-/* Royal blue glass (E1). White and ice-blue text on frosted royal and navy
-   glass, 1px light hairlines, soft ambient shadows, gold only for the main
-   action, the leader's VP and awards. */
+/* One flat look for menus and the game: navy panels, a raised royal step,
+   white and ice-blue text, and gold only for the main action, the leader's
+   points and alerts. The five colours are the --g-* tokens at the end of this
+   block; the older --ui-* and shadcn names below point at them. */
 :root {
   color-scheme: dark;
 
   --background: #1a4a94;
   --foreground: #ffffff;
-  --card: var(--ui-glass-game-top-solid);
+  --card: var(--g-surface);
   --card-foreground: var(--foreground);
-  --primary: #2f8fe8;
-  --primary-foreground: #f4f9ff;
+  --primary: var(--g-raised);
+  --primary-foreground: var(--g-text);
   --secondary: var(--ui-royal);
   --secondary-foreground: var(--foreground);
-  --muted: #225aa8;
-  /* Muted copy on dialogs, game glass and wells: 4.6:1 or better on each. */
-  --muted-foreground: #c3d6f2;
-  --accent: #46b8ff;
-  --accent-foreground: #051b3d;
-  --destructive: #f04f5f;
-  --destructive-foreground: #fff1f2;
-  --border: color-mix(in oklch, var(--foreground) 16%, transparent);
-  --input: color-mix(in oklch, var(--foreground) 16%, transparent);
+  --muted: var(--g-raised);
+  --muted-foreground: var(--g-muted);
+  --accent: var(--g-muted);
+  --accent-foreground: var(--g-surface);
+  --destructive: var(--g-accent);
+  --destructive-foreground: var(--g-surface);
+  --border: var(--g-raised);
+  --input: var(--g-raised);
   --ring: var(--ui-focus-ring);
   --chart-1: #dbe8f8;
   --chart-3: #7ea6d8;
   --chart-5: #e8632e;
   --radius: 0.625rem;
   --board-ocean: #1f6fb4;
-  --board-ocean-deep: #15518d;
   --board-shallows: #309fd6;
   --board-foam: #b9efff;
   --board-sand: #edc57e;
@@ -52,34 +51,20 @@
   --board-token-edge: #d5be8a;
   --board-token-ink: #35322c;
   --board-token-hot: #c94335;
-  /* The solid menu blues: the menu glass is these two at --ui-glass-menu-alpha. */
-  --game-panel-top: #22559b;
-  --game-panel-bottom: #13376f;
-  --game-panel-edge: #5183c1;
-  --game-panel-base: #09234d;
-  /* Navy: ink on gold and the ready chip, and the base of scrims. Never a panel border. */
-  --game-outline: #0b1d3a;
-  --game-button-top: #60c4ff;
-  /* Sampled from the wordmark. */
-  --brand-gold-top: #fcd80d;
-  --brand-gold-bottom: #f4ad05;
-  --brand-gold-shade: #bc5c00;
-  --brand-outline: #002a91;
+  --game-panel-top: var(--g-raised);
+  --game-panel-bottom: var(--g-surface);
+  --game-panel-base: #09234d; /* the pips on the light die */
+  /* Navy: ink on gold and white, and the base of scrims. */
+  --game-outline: var(--g-surface);
   /* Google's own logo colors, for the "Continue with Google" mark. */
   --brand-google-blue: #4285f4;
   --brand-google-green: #34a853;
   --brand-google-yellow: #fbbc05;
   --brand-google-red: #ea4335;
-  /* Medal metals for places two and three (first place is the wordmark gold). */
-  --medal-silver-top: #f3f7fc;
-  --medal-silver-bottom: #adbdd2;
-  --medal-bronze-top: #f2ad70;
-  --medal-bronze-bottom: #c47a34;
-  --medal-bronze-ink: #6f3d10;
 
   /* Game UI kit (see styles/menu.css). */
-  --game-panel-rim: color-mix(in srgb, var(--board-foam) 55%, transparent);
-  --game-well: color-mix(in srgb, var(--game-panel-base) 55%, transparent);
+  --game-panel-rim: var(--g-muted);
+  --game-well: var(--g-raised);
 
   --game-radius-panel: 1.5rem; /* menu cards, dialogs, results, drawer (24px) */
   --game-radius-hud: 1.25rem; /* HUD panels, dock, turn pill (20px) */
@@ -89,14 +74,10 @@
   --game-well-fill: var(--ui-well);
   --game-well-line: var(--ui-well-border);
 
-  /* Behind dialogs and drawers, and the vignette over the bright scene art. */
+  /* Behind dialogs and drawers: the panel navy, thinned. */
   --game-scrim: color-mix(in srgb, var(--game-outline) 64%, transparent);
-  --game-vignette: color-mix(in srgb, var(--game-outline) 58%, transparent);
-  --game-vignette-top: color-mix(in srgb, var(--game-outline) 30%, transparent);
-  /* A light dim over the board while a dock sheet (trade offer, discard) is open. */
-  --game-scrim-soft: color-mix(in srgb, var(--game-outline) 50%, transparent);
 
-  /* ---- E1 chrome: frosted glass, 1px hairlines, soft depth ---- */
+  /* ---- Kit sizes ---- */
   --ui-space-1: 0.25rem; /* 4 */
   --ui-space-2: 0.5rem; /* 8 */
   --ui-space-3: 0.75rem; /* 12 */
@@ -113,156 +94,63 @@
   --ui-radius-small: 0.5rem; /* 8px: card corners */
   --ui-radius-pill: 9999px; /* buttons, chips, tags, tabs */
 
-  /* Glass. Each surface is a vertical gradient of two solid blues at an alpha,
-     frosted with a backdrop blur. Without backdrop-filter the alphas rise to
-     --ui-glass-solid-alpha (see the @supports rule below). */
-  --ui-glass-menu-alpha: 76%; /* home cards, header capsules, lobby panels */
-  --ui-glass-dialog-alpha: 92%; /* dialogs */
-  --ui-glass-game-alpha: 90%; /* HUD panels, dock, popovers, icon buttons */
-  --ui-glass-solid-alpha: 96%;
-  --ui-glass-blur-menu: blur(16px) saturate(1.2);
+  /* Panels blur what is behind them. */
   --ui-glass-blur-game: blur(12px);
-  /* Game glass is a shade deeper than the menu glass so HUD panels stand off the sea: even
-     the lighter top edge measures 2.5:1 or better against the open sea. */
-  --ui-glass-game-top-solid: #0c2656;
-  --ui-glass-game-bottom-solid: #081a40;
-  --ui-glass-menu-top: color-mix(
-    in srgb,
-    var(--game-panel-top) var(--ui-glass-menu-alpha),
-    transparent
-  );
-  --ui-glass-menu-bottom: color-mix(
-    in srgb,
-    var(--game-panel-bottom) var(--ui-glass-menu-alpha),
-    transparent
-  );
-  --ui-glass-dialog-top: color-mix(
-    in srgb,
-    var(--game-panel-top) var(--ui-glass-dialog-alpha),
-    transparent
-  );
-  --ui-glass-dialog-bottom: color-mix(
-    in srgb,
-    var(--game-panel-bottom) var(--ui-glass-dialog-alpha),
-    transparent
-  );
-  --ui-glass-game-top: color-mix(
-    in srgb,
-    var(--ui-glass-game-top-solid) var(--ui-glass-game-alpha),
-    transparent
-  );
-  --ui-glass-game-bottom: color-mix(
-    in srgb,
-    var(--ui-glass-game-bottom-solid) var(--ui-glass-game-alpha),
-    transparent
-  );
-  --ui-glass-menu: linear-gradient(var(--ui-glass-menu-top), var(--ui-glass-menu-bottom));
-  --ui-glass-dialog: linear-gradient(var(--ui-glass-dialog-top), var(--ui-glass-dialog-bottom));
-  --ui-glass-game: linear-gradient(var(--ui-glass-game-top), var(--ui-glass-game-bottom));
-  /* Laid over a glass face on hover. */
-  --ui-glass-hover: color-mix(in srgb, var(--foreground) 8%, transparent);
 
   /* Hairlines: the only edge a panel, control or well gets. */
-  --ui-hairline: color-mix(in srgb, var(--game-panel-edge) 70%, transparent); /* menu glass */
-  --ui-hairline-game: #6f9bd6; /* game glass */
-  --ui-hairline-light: color-mix(in srgb, var(--foreground) 40%, transparent); /* ghost buttons */
+  --ui-hairline: var(--g-raised);
+  --ui-hairline-game: var(--g-raised);
+  --ui-hairline-light: var(--g-muted); /* a control's edge on hover */
 
-  /* Surfaces. Screens that paint linear-gradient(--ui-panel-top, --ui-panel-bottom) get game glass. */
-  --ui-panel-top: var(--ui-glass-game-top);
-  --ui-panel-bottom: var(--ui-glass-game-bottom);
-  --ui-panel-highlight: color-mix(in srgb, var(--foreground) 14%, transparent);
-  --ui-well: color-mix(in srgb, #123565 75%, transparent);
-  --ui-well-border: color-mix(in srgb, var(--ui-hairline-game) 40%, transparent);
-  --ui-divider: color-mix(in srgb, var(--foreground) 12%, transparent);
-  --ui-bubble: #0f2b58; /* log and chat bubbles */
+  /* Surfaces inside a panel. */
+  --ui-well: var(--g-raised);
+  --ui-well-border: var(--g-raised);
+  --ui-divider: var(--g-raised);
+  --ui-bubble: var(--g-raised);
 
-  /* Text: main is --foreground (white). */
-  --ui-text-soft: #e3edfb; /* secondary copy; the only secondary color for menu glass */
-  --ui-text-muted: #a9c1e6; /* quiet HUD copy on game glass and wells only (5.2:1 or better) */
-  --ui-title-shadow: 0 2px 10px color-mix(in srgb, var(--game-outline) 35%, transparent);
+  /* Text: main is --foreground (white); everything quieter is ice blue. */
+  --ui-text-soft: var(--g-muted);
+  --ui-text-muted: var(--g-muted);
 
-  /* Depth: one soft ambient shadow per surface. No lips, glows or halos. */
-  --ui-shadow-ink: #06142d;
-  --ui-shadow-panel: 0 12px 32px color-mix(in srgb, var(--ui-shadow-ink) 35%, transparent);
-  --ui-shadow-control: 0 4px 12px color-mix(in srgb, var(--ui-shadow-ink) 30%, transparent);
+  /* Depth: none. The shadow utilities stay so callers need not change. */
+  --ui-shadow-panel: 0 0 transparent;
+  --ui-shadow-control: 0 0 transparent;
   --ui-shadow-raise: var(--ui-shadow-control);
-  --ui-shadow-float: var(--ui-shadow-panel);
-  --ui-shadow-menu: var(--ui-shadow-panel);
-  --ui-shadow-inset: inset 0 1px 2px color-mix(in srgb, var(--ui-shadow-ink) 25%, transparent);
+  --ui-shadow-inset: 0 0 transparent;
 
-  /* Button faces. Gold is the primary; royal the strong secondary. */
-  --ui-gold-top: #ffd54a;
-  --ui-gold-bottom: #f5b82e;
-  --ui-gold-top-hover: #ffdd66;
-  --ui-gold-bottom-hover: #f8c448;
-  --ui-ink-on-gold: var(--game-outline); /* 9.4:1 or better */
-  --ui-royal: #2573cf; /* white on it: 4.7:1 */
-  --ui-royal-hover: #2676d4; /* white on it: 4.5:1; the hover also brightens the hairline */
+  /* Faces: gold for the main action, the raised step for the rest. */
+  --ui-gold-top: var(--g-accent);
+  --ui-ink-on-gold: var(--game-outline);
+  --ui-royal: var(--g-raised);
   --ui-primary-bottom: var(--ui-royal);
-  --ui-danger-top: #d23d4d; /* white on it: 4.6:1 */
-  --ui-danger-bottom: #c93545;
-  --ui-ink-on-primary: #ffffff;
-  --ui-light-face: var(--foreground); /* the white sign-in button */
-  --ui-light-face-hover: #e8f1fd;
-  --ui-ink-on-light: var(--game-outline); /* 16:1 or better */
-  --ui-disabled-face: #2a4470;
-  --ui-disabled-edge: #1f3558;
-  --ui-disabled-ink: #d0dcee; /* 7.4:1 on the disabled face */
-  /* Quiet secondary ("Go back", "Cancel"): a faint white face on glass. */
-  --ui-quiet-face: color-mix(in srgb, var(--foreground) 12%, transparent);
-  --ui-quiet-face-hover: color-mix(in srgb, var(--foreground) 18%, transparent);
-  --ui-quiet-line: color-mix(in srgb, var(--foreground) 22%, transparent);
-  /* Ghost: see-through with a light hairline. */
-  --ui-ghost-face: transparent;
-  --ui-ghost-face-hover: color-mix(in srgb, var(--foreground) 10%, transparent);
-  --ui-ghost-line: var(--ui-hairline-light);
+  --ui-danger-top: var(--g-accent); /* an invalid field's line */
+  --ui-ink-on-primary: var(--g-text);
 
   /* States */
-  --ui-focus-ring: #ffffff; /* a 2px white ring... */
+  --ui-focus-ring: var(--g-text); /* a 2px white ring... */
   --ui-focus-offset: var(--game-outline); /* ...over a 2px navy gap */
-  --ui-input-focus-line: var(--ui-active-rim); /* a focused field: a sky line... */
-  --ui-input-focus-glow: color-mix(
-    in srgb,
-    var(--ui-active-rim) 35%,
-    transparent
-  ); /* ...and glow */
-  --ui-active-rim: #8ed8fb; /* the active player's row: a 2px sky rim */
-  --ui-selected-face: var(--ui-royal);
+  --ui-input-focus-line: var(--ui-active-rim); /* a focused field: a white line */
+  --ui-active-rim: var(--g-text); /* on turn, picked or chosen: a white ring */
   --ui-selected-ring: var(--ui-active-rim);
-  --ui-missing: #ff8a94; /* a resource the player lacks (on --ui-well: 5.4:1) */
 
   /* Chips and tags */
-  --ui-ready: #3cc46c; /* "Ready" (navy ink on it: 7.4:1) */
+  --ui-ready: var(--g-text); /* "Ready", and the live dot on a running game */
   --ui-ink-on-ready: var(--game-outline);
-  --ui-ready-text: #5ad687; /* "Ready" as text on dialog glass (5.6:1 on the trade sheet) */
-  --ui-need: #ffc670; /* "Need 2 Stone" (navy ink on it: 10.8:1; as text on --ui-well: 7.9:1) */
+  --ui-need: var(--g-muted); /* "Need 2 Stone" */
   --ui-ink-on-need: var(--game-outline);
-  --ui-locked: #3a5a8c; /* "None left", "Roll first" */
-  --ui-ink-on-locked: #d0dcee; /* 5.0:1 */
-  --ui-tag-you: #ffffff; /* the "You" tag: a white pill... */
+  --ui-locked: var(--g-raised); /* "None left", "Roll first" */
+  --ui-ink-on-locked: var(--g-muted);
+  --ui-tag-you: var(--g-text); /* the "You" tag: a white pill... */
   --ui-ink-on-tag-you: var(--game-outline); /* ...with navy text */
-  --ui-tag-quiet: color-mix(in srgb, var(--foreground) 12%, transparent); /* others' VP, "Bot" */
+  --ui-tag-quiet: var(--g-raised); /* others' VP, "Bot" */
   --ui-leader: var(--ui-gold-top); /* only the leader's VP chip */
   --ui-ink-on-leader: var(--ui-ink-on-gold);
 
-  /* Home: the art stage behind an illustration (the rejoin thumbnail) */
-  --ui-stage-top: #5ec0f2;
-  --ui-stage-bottom: #3a9ae0;
-  --ui-stage-glow: color-mix(in srgb, var(--board-foam) 60%, transparent);
-
-  /* Trade answers */
-  --dock-accept: var(--ui-ready);
-
-  /* ---- Game panels (hand, trade and discard pickers) ---- */
-  /* A picked count on a card, and the discard meter: sky with navy ink (8.9:1), so gold stays
-     for the main actions. */
-  --ui-pick: var(--ui-active-rim);
-  --ui-ink-on-pick: var(--game-outline);
-
-  /* ---- In-game HUD system ----
+  /* ---- The system ----
      The game screen's chrome (styles/game-*.css) draws from these and nothing else: one spacing
      scale, four type steps in two weights, and five flat colours. No gradients, no shadows.
-     Card, board and portrait art and each seat's --player-color are content, not chrome. */
+     Menus use the same five colours through the kit (styles/menu.css) and may size their own
+     titles. Card, board and portrait art and each seat's --player-color are content, not chrome. */
   --g-space-0: 0.125rem; /* 2: inside chips, between an icon and its count */
   --g-space-1: 0.25rem; /* 4 */
   --g-space-2: 0.5rem; /* 8 */
@@ -286,84 +174,6 @@
   --g-text: #ffffff; /* what to read first; rings for "on turn" and "picked" */
   --g-muted: #a9c1e6; /* what can wait: labels, times, anything you can't use yet (5:1 or better) */
   --g-accent: #ffd54a; /* gold: the one button to press, the leader's points, alerts */
-}
-
-/* No backdrop blur: the same glass, nearly solid, so text keeps its contrast. */
-@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  :root {
-    --ui-glass-menu-alpha: var(--ui-glass-solid-alpha);
-    --ui-glass-dialog-alpha: var(--ui-glass-solid-alpha);
-    --ui-glass-game-alpha: var(--ui-glass-solid-alpha);
-  }
-}
-
-/* While a game is on screen, the shared kit (dialogs, popovers, tooltips, menus, inputs, chat)
-   reads the in-game system too: its tokens point at the five --g-* colours, every glass face is
-   one flat colour, and highlights and shadows are off. Menus outside a game keep the tokens
-   above. */
-:root:has(.game-shell) {
-  --muted-foreground: var(--g-muted);
-  --primary: var(--g-raised);
-  --primary-foreground: var(--g-text);
-  --muted: var(--g-raised);
-  --accent: var(--g-muted);
-  --accent-foreground: var(--g-surface);
-  --destructive: var(--g-accent);
-  --destructive-foreground: var(--g-surface);
-  --border: var(--g-raised);
-  --input: var(--g-raised);
-  --game-outline: var(--g-surface);
-  --game-panel-edge: var(--g-raised);
-
-  --ui-glass-menu: var(--g-surface);
-  --ui-glass-dialog: var(--g-surface);
-  --ui-glass-game: var(--g-surface);
-  --ui-glass-game-top-solid: var(--g-surface);
-  --ui-glass-game-bottom-solid: var(--g-surface);
-  --ui-glass-hover: transparent;
-  --ui-hairline: var(--g-raised);
-  --ui-hairline-game: var(--g-raised);
-  --ui-hairline-light: var(--g-muted);
-  --ui-panel-highlight: transparent;
-  --ui-well: var(--g-raised);
-  --ui-well-border: var(--g-raised);
-  --ui-divider: var(--g-raised);
-  --ui-bubble: var(--g-raised);
-  --ui-text-soft: var(--g-muted);
-  --ui-text-muted: var(--g-muted);
-  --ui-title-shadow: none;
-  --ui-shadow-panel: 0 0 transparent;
-  --ui-shadow-control: 0 0 transparent;
-  --ui-shadow-inset: 0 0 transparent;
-
-  --ui-gold-top: var(--g-accent);
-  --ui-gold-bottom: var(--g-accent);
-  --ui-gold-top-hover: var(--g-accent);
-  --ui-gold-bottom-hover: var(--g-accent);
-  --ui-royal: var(--g-raised);
-  --ui-royal-hover: var(--g-raised);
-  --ui-danger-top: var(--g-accent);
-  --ui-danger-bottom: var(--g-accent);
-  --ui-ink-on-primary: var(--g-text);
-  --ui-disabled-face: var(--g-raised);
-  --ui-disabled-edge: transparent;
-  --ui-disabled-ink: var(--g-muted);
-  --ui-quiet-face: var(--g-raised);
-  --ui-quiet-face-hover: var(--g-raised);
-  --ui-quiet-line: transparent;
-  --ui-ghost-face-hover: transparent;
-
-  --ui-focus-ring: var(--g-text);
-  --ui-active-rim: var(--g-text);
-  --ui-input-focus-glow: transparent;
-  --ui-missing: var(--g-muted);
-  --ui-ready: var(--g-text);
-  --ui-ready-text: var(--g-text);
-  --ui-need: var(--g-muted);
-  --ui-locked: var(--g-raised);
-  --ui-ink-on-locked: var(--g-muted);
-  --ui-tag-you: var(--g-text);
-  --ui-tag-quiet: var(--g-raised);
 }
 
 * {
