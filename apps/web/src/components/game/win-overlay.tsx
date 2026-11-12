@@ -37,7 +37,7 @@ import {
 
 import { PlayerAvatar } from "./player-avatar";
 
-const RESULTS_SCENE_PATH = "/shared-assets/coastal-island-kingdom-supercell.png";
+const RESULTS_SCENE_PATH = "/shared-assets/coastal-island-kingdom.webp";
 const DEFEAT_FLOURISH_ASSET_PATH = "/game-assets/results/defeat-flourish.png";
 const PODIUM_ASSET_PATH = "/game-assets/results/podium.png";
 
@@ -132,7 +132,7 @@ export function WinOverlay({
           className="object-cover"
           fill
           priority
-          sizes="100vw"
+          sizes="(max-aspect-ratio: 16/9) 178vh, 100vw"
           src={RESULTS_SCENE_PATH}
         />
       </div>

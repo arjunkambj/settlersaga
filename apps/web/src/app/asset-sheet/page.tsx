@@ -331,7 +331,7 @@ const ASSET_CATEGORIES: readonly AssetCategory[] = [
             name: "Island world (supercell)",
             description: "Tabletop island backdrop used by the login, home, and end-of-game views.",
             fit: "cover",
-            path: "/shared-assets/coastal-island-kingdom-supercell.png",
+            path: "/shared-assets/coastal-island-kingdom.webp",
           },
         ],
       },
