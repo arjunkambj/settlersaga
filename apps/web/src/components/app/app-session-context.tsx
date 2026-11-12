@@ -87,12 +87,23 @@ const getDefaultDisplayName = (claims: AuthClaims) =>
     ? `Guest ${claims.id.slice(-4).toUpperCase()}`
     : cleanDisplayName(claims.displayName ?? claims.primaryEmail?.split("@")[0] ?? "");
 
-export function AppSessionProvider({ children }: { children: ReactNode }) {
+export function AppSessionProvider({
+  children,
+  initiallySignedOut,
+}: {
+  children: ReactNode;
+  /** No saved sign-in came with the request: start on the welcome screen, not the loading one. */
+  initiallySignedOut: boolean;
+}) {
   const hexclave = useHexclaveApp();
   const reauthenticateConvex = useReauthenticateConvex();
   const pathname = usePathname();
   const router = useRouter();
-  const [claims, setClaims] = useState<AuthClaims | null>();
+  // undefined while the account is still being checked, null once the visitor is known to be
+  // signed out.
+  const [claims, setClaims] = useState<AuthClaims | null | undefined>(
+    initiallySignedOut ? null : undefined,
+  );
   const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
   const [userLoadFailed, setUserLoadFailed] = useState(false);
   const [audioSettings, setAudioSettings] = useState(DEFAULT_AUDIO_SETTINGS);

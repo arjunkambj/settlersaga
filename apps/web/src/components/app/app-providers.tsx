@@ -22,10 +22,17 @@ const isConfigured = Boolean(
  * Shared by every playable route, so the signed-in session (and the music it hosts) survives
  * navigation between home and a room.
  */
-export function AppProviders({ children }: { children: ReactNode }) {
+export function AppProviders({
+  children,
+  signedOut,
+}: {
+  children: ReactNode;
+  /** The server saw no saved sign-in, so the first paint is the welcome screen. */
+  signedOut: boolean;
+}) {
   if (!isConfigured) return <SetupRequired />;
 
-  const app = <AppSessionProvider>{children}</AppSessionProvider>;
+  const app = <AppSessionProvider initiallySignedOut={signedOut}>{children}</AppSessionProvider>;
   if (process.env.NODE_ENV !== "development") return app;
 
   return (

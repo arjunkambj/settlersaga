@@ -1,9 +1,13 @@
 "use client";
 
 import { type CurrentUser, useHexclaveApp } from "@hexclave/next";
+import { DEFAULT_BASE_GAME_SETTINGS } from "@settersaga/game";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useState } from "react";
 
 import { MenuScreen, MenuScreenText } from "@/components/app/menu-screen";
+import { HomeLanding } from "@/components/home/home-landing";
 import { Button } from "@/components/ui/button";
 import { LiveMessage } from "@/components/ui/live-message";
 import { Spinner } from "@/components/ui/spinner";
@@ -12,6 +16,9 @@ type PendingAuth = "google" | "guest" | null;
 
 export function AuthScreen({ onPlayAsGuest }: { onPlayAsGuest(): Promise<void> }) {
   const hexclave = useHexclaveApp();
+  // The home page introduces the game to someone who has never seen it. An invite or room link
+  // keeps the short screen: that visitor already knows why they came.
+  const introduce = usePathname() === "/";
   const [pending, setPending] = useState<PendingAuth>(null);
   const [error, setError] = useState("");
   const signInWithGoogle = async () => {
@@ -43,6 +50,7 @@ export function AuthScreen({ onPlayAsGuest }: { onPlayAsGuest(): Promise<void> }
   return (
     <AuthScreenView
       error={error}
+      introduce={introduce}
       onPlayAsGuest={playAsGuest}
       onSignIn={signInWithGoogle}
       pending={pending}
@@ -52,19 +60,27 @@ export function AuthScreen({ onPlayAsGuest }: { onPlayAsGuest(): Promise<void> }
 
 export function AuthScreenView({
   error = "",
+  introduce = false,
   onPlayAsGuest,
   onSignIn,
   pending = null,
 }: {
   error?: string;
+  /** Say what the game is, and add the sections a first-time visitor can scroll through. */
+  introduce?: boolean;
   onPlayAsGuest(): Promise<void>;
   onSignIn(): Promise<void>;
   pending?: PendingAuth;
 }) {
   return (
-    <MenuScreen title="Welcome aboard">
+    <MenuScreen
+      below={introduce ? <HomeLanding /> : undefined}
+      title={introduce ? "A free online board game for you and your crew" : "Welcome aboard"}
+    >
       <MenuScreenText>
-        Sign in to keep your name and games on every device, or jump straight in as a guest.
+        {introduce
+          ? `Settle an island, trade with friends or bots, and race to ${DEFAULT_BASE_GAME_SETTINGS.victoryPoints} points. It runs in your browser, with nothing to download.`
+          : "Sign in to keep your name and games on every device, or jump straight in as a guest."}
       </MenuScreenText>
 
       <div className="flex w-full flex-col gap-3">
@@ -111,6 +127,12 @@ export function AuthScreenView({
         </Button>
         <LiveMessage message={error} />
       </div>
+      <Link
+        className="text-sm font-semibold text-ui-text-soft underline-offset-4 hover:text-foreground hover:underline"
+        href="/how-to-play"
+      >
+        New here? Learn how to play
+      </Link>
     </MenuScreen>
   );
 }
