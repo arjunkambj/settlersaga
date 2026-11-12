@@ -287,7 +287,7 @@ function DifficultyPicker({
         >
           <Image
             alt=""
-            className="size-16 object-contain @xl:size-20"
+            className="size-16 rounded-full bg-ui-well object-cover @xl:size-20"
             height={160}
             src={option.artSrc}
             width={160}

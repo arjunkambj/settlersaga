@@ -52,7 +52,7 @@ export function LobbyCrew({
           <span className="flex min-w-0 items-center gap-2">
             <Image
               alt=""
-              className="hidden size-10 shrink-0 object-contain @min-[16rem]:block"
+              className="hidden size-10 shrink-0 rounded-full bg-ui-well object-cover @min-[16rem]:block"
               height={80}
               src={bot.artSrc}
               width={80}
