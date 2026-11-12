@@ -8,7 +8,7 @@ The terrain atlas is 1536×1024: three columns, two rows, 512×512 frames ordere
 
 ### Terrain atlas
 
-Saved to: `apps/web/public/game-assets/terrain/terrain-atlas.png`
+Saved to: `apps/web/public/game-assets/terrain/terrain-atlas.png` (removed on 2026-11-12: nothing in the game used it any more. The board draws `terrain/ground-atlas.webp` with the art in `terrain/features/`, and the lobby map preview uses `terrain/terrain-atlas-board.webp`.)
 
 #### Generation
 
@@ -77,7 +77,7 @@ Composition for a centered menu overlay: keep the middle 55 percent very quiet, 
 
 ### Harbor ship
 
-Saved to: `apps/web/public/game-assets/ui/port-merchant.png`
+Saved to: `apps/web/public/game-assets/ui/port-merchant.png` (removed on 2026-11-12: harbors use the flat `ui/port-ship.png`.)
 
 #### Generation
 
@@ -90,7 +90,7 @@ Camera: elevated orthographic 65 degree view, bow pointing toward TOP CENTER of 
 
 ### Resource cards
 
-Saved to: `apps/web/public/game-assets/cards/resources/{tree,brick,sheep,wheat,stone}-card.png; unknown-resource-card-purple.png`
+Saved to: `apps/web/public/game-assets/cards/resources/{tree,brick,sheep,wheat,stone}-card.png; unknown-resource-card-purple.png` (removed on 2026-11-12 with the rest of `cards/`: the game uses the flat set in `card-art/`.)
 
 #### Generation
 
