@@ -276,3 +276,35 @@ Constraints: fully transparent background with real alpha outside the hexagon, n
 ### Empty seat and bot portraits
 
 No new art. The empty-seat chair (`apps/web/public/game-assets/ui/empty-seat.png`) lost its cream sticker rim and the cream patches between its legs by image processing, so it has only a navy outline like the sprites beside it. The bot portraits are busts cut for a round frame, so the quick-match dialog and the lobby now show them in a round well instead of uncropped.
+
+### Main menu coast, tall version for phones
+
+Made with `pnpm art` on 2026-11-12. On a phone held upright the wide backdrop crops to its middle, which is open water, so the village never showed. This tall picture keeps the sky at the top, open water behind the menu and the shore along the bottom. Screens taller than 2:3 get it; everything wider keeps the wide backdrop. The wide backdrop was passed in as the style reference.
+
+Saved to: `apps/web/public/shared-assets/coastal-island-kingdom-tall.webp` (1440×3120, WebP at quality 92)
+
+#### Draft (Flare, medium, 720×1568, edit of the wide backdrop, two drafts)
+
+```text
+Use case: stylized-concept
+Asset type: tall full-screen main menu backdrop for phones, for a blue-themed cartoon island board game. Frosted menu panels and a title sit over the middle of the screen, so the middle must be calm.
+Destination: apps/web/public/shared-assets/coastal-island-kingdom-tall.webp (1440x3120, opaque), shown full-screen on portrait phones.
+Recompose the scene in image 1 for a tall portrait canvas. Image 1 is the wide version of this backdrop and is the style reference: use the same flat cartoon look, the same colors, the same houses, sheep, fence, rocks, trees, dock and sailboat.
+Layout from top to bottom:
+- Top 16 percent: bright blue sky with a few soft white clouds and pale distant hills on a straight horizon. Nothing else.
+- From 16 to 74 percent: calm open royal blue sea with a few broad pale foam ripples and nothing else. No islands, no boats, no rocks in this band.
+- Bottom 26 percent: the shore seen from a raised three-quarter aerial view. A curved sandy beach with white foam along the water's edge. On green grass at the bottom left, two chunky cream houses with big orange-red tiled roofs, each with one clear door and one clear window, two fluffy white sheep with dark faces and a short wooden fence. At the bottom right, a short wooden dock reaching into the water with one small sailboat with a cream sail tied to it. A few big grey boulders on the sand and plump green trees in the two bottom corners.
+Style: flat cartoon with bold clean shapes and a thin dark navy outline on every object, solid flat colors with one soft shade per shape, razor crisp edges, joyful sunny daylight from the upper left. Every object is large and chunky enough that its outline stays clean. No blur, no smear, no grain, no painterly texture.
+Constraints: opaque full-bleed picture, no text, no logos, no UI, no borders, no watermark.
+```
+
+#### Final (Sunburst, high, 1440×3120, edit of the chosen draft)
+
+```text
+Use case: precise-object-edit
+Asset type: final tall full-screen main menu backdrop for phones, for a blue-themed cartoon island board game. Menu panels sit over the middle of the screen.
+Destination: apps/web/public/shared-assets/coastal-island-kingdom-tall.webp (1440x3120, opaque).
+Re-render image 1 at final quality and full size. Keep the picture exactly as it is: the same sky, clouds and distant hills at the top, the same calm open royal blue sea with broad foam ripples through the middle, and at the bottom the same beach, two red-roofed houses, two sheep, fence, boulders, trees, wooden dock and sailboat, in the same places, at the same sizes, in the same colors.
+Style: flat cartoon with bold clean shapes and a thin dark navy outline on every object, solid flat colors with one soft shade per shape. Every edge is razor crisp at full size: clean windows, doors, roof tiles, fence posts, sheep faces, sail and dock planks. Each door is one plain arched brown wooden door with one small dark handle. No blur, no smear, no grain, no painterly texture, no new objects.
+Constraints: opaque full-bleed picture, no text, no logos, no UI, no borders, no watermark.
+```

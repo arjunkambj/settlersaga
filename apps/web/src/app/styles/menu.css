@@ -9,7 +9,7 @@
    ========================================================================= */
 
 /* Full-screen island art behind menus. The gradient is a sky-to-sea wash
-   that stands in for the art while the large PNG is still loading. */
+   that stands in for the art while the picture is still loading. */
 .scene-backdrop {
   position: fixed;
   inset: 0;
@@ -21,6 +21,13 @@
 }
 .scene-backdrop-art {
   object-fit: cover;
+}
+/* Upright phones get the tall picture (scene-backdrop.tsx). Its shore runs along the bottom, so
+   a screen less tall than the art crops sky, not the village. */
+@media (max-aspect-ratio: 2/3) {
+  .scene-backdrop-art {
+    object-position: bottom;
+  }
 }
 /* A soft navy vignette over the bright toon art, plus a wash along the top,
    so panels, the wordmark and the header buttons keep their contrast. The
