@@ -48,6 +48,7 @@ import { GameHelpDialog } from "./game-help-dialog";
 import { GameSidebar, type GameFeedTab } from "./game-sidebar";
 import { HandDockProvider } from "./hand-dock";
 import { PlayerStrip } from "./player-strip";
+import { PortraitSourcesProvider } from "./portrait-sources-context";
 import { ResourceHand } from "./resource-hand";
 import { ActiveTradeOffer } from "./trade-center";
 import { TurnCard } from "./turn-card";
@@ -614,9 +615,11 @@ export function GameScreen({
   );
 
   return (
-    <CardFlightProvider events={events} game={game} isConnected={isConnected}>
-      {screen}
-    </CardFlightProvider>
+    <PortraitSourcesProvider value={{ botDifficulty, viewerProfileImageUrl }}>
+      <CardFlightProvider events={events} game={game} isConnected={isConnected}>
+        {screen}
+      </CardFlightProvider>
+    </PortraitSourcesProvider>
   );
 }
 
