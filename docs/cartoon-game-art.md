@@ -182,7 +182,7 @@ Constraints: 1536x1024, fully transparent background with real alpha outside the
 
 Made with `pnpm art` on 2026-11-12. The first backdrop was 1536×1024 and painterly, so on a retina laptop it was stretched about 1.9 times and its houses and sheep smeared. This one is flat outlined art at 3840×2160, saved as WebP at quality 92. It replaces `coastal-island-kingdom-supercell.png` behind the home, menu and lobby screens and the results screen.
 
-Saved to: `apps/web/public/shared-assets/coastal-island-kingdom.webp`
+Saved to: `apps/web/public/shared-assets/coastal-island-kingdom.webp` (replaced on 2026-11-13 by `coastal-lagoon.webp`, see the end of this file)
 
 #### Draft (Flare, medium, 1536×864, edit of the old backdrop to keep its layout)
 
@@ -307,4 +307,184 @@ Destination: apps/web/public/shared-assets/coastal-island-kingdom-tall.webp (144
 Re-render image 1 at final quality and full size. Keep the picture exactly as it is: the same sky, clouds and distant hills at the top, the same calm open royal blue sea with broad foam ripples through the middle, and at the bottom the same beach, two red-roofed houses, two sheep, fence, boulders, trees, wooden dock and sailboat, in the same places, at the same sizes, in the same colors.
 Style: flat cartoon with bold clean shapes and a thin dark navy outline on every object, solid flat colors with one soft shade per shape. Every edge is razor crisp at full size: clean windows, doors, roof tiles, fence posts, sheep faces, sail and dock planks. Each door is one plain arched brown wooden door with one small dark handle. No blur, no smear, no grain, no painterly texture, no new objects.
 Constraints: opaque full-bleed picture, no text, no logos, no UI, no borders, no watermark.
+```
+
+## Art pass of 2026-11-13
+
+Made with `pnpm art`. The owner's direction that day: the board stays clean and simple, the menu and other art gets more detail, and the portraits show good-looking people. Each board piece was scored by a critic in the running game (house 8.6, fortress 8.7, sea 8.5).
+
+### Board settlement
+
+A house seen from above with a seat-colored roof and a cream gable wall, in place of the roof-only lump. After the final, the piece was trimmed, centered on 512×512, and the highlights on the magenta parts were tamed so seat colors stay rich.
+
+Saved to: `apps/web/public/game-assets/pieces/board/settlement.png`
+
+#### Draft (Flare, medium, edit of the old piece with the settlement card as style reference, three drafts)
+
+```text
+Use case: precise-object-edit
+Asset type: board piece sprite for a cartoon island board game: one settlement house, shown at only 40 px wide on the board and recolored per player in code.
+Destination: apps/web/public/game-assets/pieces/board/settlement.png (512x512, transparent).
+Redraw the house in image 1 so it reads instantly as a HOUSE at 40 px. Image 2 is the style reference only: the same glossy cartoon look with a bold dark navy outline and clean simple shapes.
+Camera: the same as image 1: seen from high above and slightly in front, the roof ridge running straight up the middle of the picture, the front gable wall with the door at the bottom. Symmetrical left to right.
+The house: a chunky gabled roof made of two big smooth roof planes meeting at a clear raised ridge beam. The left plane is lit and the right plane is one clear shade darker, so the roof shape is obvious at a glance. Each plane has only THREE broad rows of big rounded shingles drawn with a few soft lines, not a mesh of small scales. A thick lighter eave trim runs along the bottom edge of the roof. Below the roof is a tall warm CREAM front wall, about one third of the height of the house, with one large dark brown arched wooden door with a tiny gold knob, and one small round dark window above the door. A short cream chimney with a magenta cap sits on the left plane.
+Colors: the whole roof, the ridge beam, the eave trim and the chimney cap are pure saturated MAGENTA (hue 300, like #e61ce6), using only lighter and darker magenta for light and shade. No other hue anywhere on the roof: no purple, no pink-red, no blue. The wall and chimney are cream, the door is brown. Nothing else is magenta.
+A bold dark navy outline of one even weight runs around the whole silhouette and between the main parts. One soft highlight per shape. No ground, no grass, no base, no shadow patch.
+Composition: centered, the house fills about 86 percent of the canvas and sits fully inside the frame.
+Constraints: isolated on a fully transparent background with real alpha, no checkerboard, no text, no watermark.
+```
+
+#### Final (Sunburst, high, edit of the chosen draft)
+
+```text
+Use case: precise-object-edit
+Asset type: final render of a board piece sprite for a cartoon island board game: one settlement house, shown at only 40 px wide and recolored per player in code.
+Destination: apps/web/public/game-assets/pieces/board/settlement.png (512x512, transparent).
+Re-render image 1 at final quality. Keep exactly the same house at the same position, size, angle and colors: seen from high above and slightly in front, the magenta roof with its raised ridge beam, three broad rows of big rounded shingles on each side, the lit left side and darker right side, the cream chimney with a magenta cap, the cream front wall with the round window and the brown arched door with a gold knob. Make every edge crisp and every shape clean, with the bold dark navy outline at one even weight and one soft highlight per shape. The roof, ridge, eave trim and chimney cap stay pure saturated MAGENTA (hue 300, like #e61ce6) in lighter and darker magenta only. Change nothing else: no new details, no ground, no shadow.
+Constraints: isolated on a fully transparent background with real alpha, no checkerboard, no text, no watermark.
+```
+
+### Board city
+
+A cream fortress whose roof, wall band, gate and cone roofs take the seat color (about half the piece), so its owner reads at a glance. Processed like the settlement.
+
+Saved to: `apps/web/public/game-assets/pieces/board/city.png`
+
+#### Draft (Flare, medium, edit of the old piece with the city card as style reference, three drafts)
+
+```text
+Use case: precise-object-edit
+Asset type: board piece sprite for a cartoon island board game: one city fortress, shown at only 52 px wide on the board and recolored per player in code.
+Destination: apps/web/public/game-assets/pieces/board/city.png (512x512, transparent).
+Redraw the fortress in image 1 so it reads instantly as a CASTLE at 52 px. Image 2 is the style reference only: the same glossy cartoon look with a bold dark navy outline and clean simple shapes.
+Camera: the same as image 1: seen from high above and slightly in front, symmetrical left to right.
+The fortress: a square keep in the middle with a crenellated top of FIVE big square battlements. One round tower at the front left corner and one at the front right corner, each with a smooth plain cone roof and a small pennant flag flying to the right. One big arched dark brown wooden gate in the middle of the front wall. Two narrow dark arrow slits on the keep. Simplify everything else away: no other windows, no shingle lines on the cones, no brick lines, no banners on the walls. Big chunky shapes only.
+Colors: the walls of the keep and both towers are warm CREAM stone with a soft grey-cream shade side. The two cone roofs, the flat roof of the keep seen from above inside the battlements, a thick trim band under the battlements, and both pennants are pure saturated MAGENTA (hue 300, like #e61ce6), using only lighter and darker magenta for light and shade. No other hue on the magenta parts: no purple, no pink-red, no blue. The gate is brown. Nothing else is magenta.
+A bold dark navy outline of one even weight runs around the whole silhouette and between the main parts. One soft highlight per shape. No ground, no grass, no base, no shadow patch.
+Composition: centered, the fortress fills about 88 percent of the canvas and sits fully inside the frame.
+Constraints: isolated on a fully transparent background with real alpha, no checkerboard, no text, no watermark.
+```
+
+#### Fix (Sunburst, high, edit of the first final)
+
+```text
+Use case: precise-object-edit
+Asset type: final board piece sprite for a cartoon island board game: one city fortress, shown at only 56 px wide and recolored per player in code. The magenta parts become the player's color, so about half of the piece must be magenta.
+Destination: apps/web/public/game-assets/pieces/board/city.png (512x512, transparent).
+Change image 1 in these ways and keep everything else: the same fortress, camera, position and size.
+1. Battlements: only SIX big cream blocks around the top of the keep (one at each corner and one in the middle of the front and back), with wide gaps, so the magenta flat roof inside shows as one big solid patch.
+2. Add a broad magenta band across the front wall of the keep above the gate, as wide as the wall, and make the two wooden gate doors magenta with a dark navy arch around them.
+3. Make both cone roofs about 15 percent bigger and remove both pennant flags and their poles; each cone ends in a small magenta ball.
+4. Remove the two arrow slits and any stone block marks. Walls are plain cream, a touch darker and warmer than before.
+5. The outline is dark navy blue, not black, at one even weight.
+All magenta parts are pure saturated MAGENTA (hue 300, like #e61ce6) in lighter and darker magenta only. Nothing else is magenta. No ground, no shadow.
+Constraints: isolated on a fully transparent background with real alpha, no checkerboard, no text, no watermark.
+```
+
+### Open sea behind the board
+
+One calm full-screen picture in place of the repeating `ocean-tile.webp`, which is removed. A livelier first version with big foam curls scored 6.8 because it fought the board, so it was calmed.
+
+Saved to: `apps/web/public/game-assets/ui/ocean-sea.webp` (2560×1440)
+
+#### Draft (Flare, medium, 1536×864)
+
+```text
+Use case: stylized-concept
+Asset type: full-screen open sea background behind the hex board of a cartoon island board game. HUD panels and the island board sit on top of it, so it must stay calm.
+Destination: apps/web/public/game-assets/ui/ocean-sea.webp (2560x1440, opaque).
+Scene: open sea seen from straight above. Nothing but water: no land, no rocks, no boats, no sky, no horizon.
+Style: flat cartoon water in the same family as the game's sunny menu backdrop. Rich royal blue as the middle tone, with large soft areas of slightly deeper blue and slightly lighter azure, like gentle depth changes under the water, in big smooth organic shapes with clean edges. Over that, sparse hand-drawn wave marks: short curved light blue crests with clean edges, in loose drifting groups, and a few larger curling foam swirls in pale blue-white. No sparkles, no dots, no stars, no noise, no grain, no photo texture, no banding.
+Composition: even from edge to edge, with no focal point and no vignette. Low contrast overall, so white text panels and a bright island read clearly on top.
+Constraints: opaque full-bleed picture, no text, no borders, no watermark.
+```
+
+#### Final (Sunburst, high, 2560×1440, edit of the first final)
+
+```text
+Use case: precise-object-edit
+Asset type: final full-screen open sea background behind the hex board of a cartoon island board game. It must be calm and simple: the board and navy HUD panels on top are what the player looks at.
+Destination: apps/web/public/game-assets/ui/ocean-sea.webp (2560x1440, opaque).
+Simplify image 1 into a much calmer sea. Keep the open water seen from straight above and the idea of large soft areas of slightly deeper and slightly lighter blue, but cut the difference between those blues to about half, so they are barely-there depth changes around a middle tone of #1f6fb4.
+Remove every large curling foam swirl completely and fill those places with plain water. Keep only small simple wave marks: short curved crests, about one third fewer than now, spread evenly, each in ONE flat mid blue that is only a little lighter than the water around it. No white, no pale blue, no texture inside the marks.
+Everything is flat color with crisp clean edges. No sparkles, no dots, no noise, no grain, no watercolor blotches, no banding, no new objects.
+Constraints: opaque full-bleed picture, no land, no boats, no text, no borders, no watermark.
+```
+
+### Main menu coast, rich and sharp
+
+The flat backdrop of 2026-11-12 read as a step back, so the painted lagoon from before it was re-rendered at 3840×2160 with fine detail. Two edits followed: one cleared an island and a boat from behind the menu title, and one redrew a sheep that had come out with two heads. The files have new names so no cached copy of the flat art is served.
+
+Saved to: `apps/web/public/shared-assets/coastal-lagoon.webp` (3840×2160) and `coastal-lagoon-tall.webp` (1440×3120)
+
+#### Wide (Sunburst, high, edit of the old 1536×1024 painted backdrop)
+
+```text
+Use case: precise-object-edit
+Asset type: final full-screen main menu backdrop for a cartoon island board game, shown behind menu panels on screens up to 2880 px wide.
+Destination: apps/web/public/shared-assets/coastal-island-kingdom.webp (3840x2160, opaque).
+Re-render image 1 at final quality and full size, as a wide 16:9 picture. Keep the picture and its rich painted cartoon style exactly: the glowing turquoise lagoon with deeper blue water toward the horizon and soft foam ripples, the village of red-roofed stone cottages with a wheat field, fence, sheep and pine trees on the green cliff at the left, the wooden dock with a small sailboat and barrels and a cottage at the right, the grey boulders and sandy beach curving along the bottom, lush leafy bushes and pines framing the bottom corners, small pine islands and a tiny white sail on the horizon, soft distant hills and fluffy clouds in a bright sky. Keep the soft painted shading, warm sunlight and depth; do not flatten it into sticker art.
+Make everything razor crisp at full size and add fine believable detail where the old picture was smeared: roof tiles, windows, doors, chimney smoke, fence posts, sheep faces, wheat rows, dock planks, rope, sail seams, rock facets, foam edges, leaves and pine needles, small flowers in the grass. No blur, no smear, no melted shapes, no grain.
+Composition: the middle of the picture stays open water with only gentle ripples, because menu panels sit there; do not add islands or objects in the middle band.
+Constraints: opaque full-bleed picture, no text, no logos, no UI, no borders, no watermark.
+```
+
+#### Tall (Sunburst, high, edit of the wide picture with the old tall one as layout reference)
+
+```text
+Use case: stylized-concept
+Asset type: tall main menu backdrop for phones, for a cartoon island board game. Menu panels sit over the middle of it.
+Destination: apps/web/public/shared-assets/coastal-island-kingdom-tall.webp (1440x3120, opaque).
+Paint the same place as image 1, in exactly the same rich painted cartoon style, colors, sunlight and level of fine detail, recomposed for a tall phone screen. Image 2 shows the layout to follow for a tall screen; take only its layout from it, not its flat style.
+From top to bottom: a bright sky with fluffy clouds and soft distant hills in the top eighth; then the horizon with one small pine island and a tiny white sail; then a long stretch of open glowing turquoise lagoon with gentle foam ripples filling the middle half of the picture, with nothing else in it; then the shore in the bottom third: the green cliff with two red-roofed stone cottages, a wheat field, a fence and three sheep on the left, the wooden dock with the small sailboat and barrels on the right, grey boulders in the shallows, the sandy beach curving along the bottom, and lush leafy bushes, flowers and pines framing the bottom corners.
+Everything is razor crisp with fine detail: roof tiles, windows, fence posts, sheep faces, dock planks, rope, rock facets, foam edges, leaves. No blur, no smear, no grain.
+Constraints: opaque full-bleed picture, no text, no logos, no UI, no borders, no watermark.
+```
+
+#### Fixes (Sunburst, high, one edit each)
+
+```text
+Use case: precise-object-edit
+Asset type: final full-screen main menu backdrop for a cartoon island board game. A menu title and a status bar sit over the upper middle of the picture, so that area must be calm open water.
+Destination: apps/web/public/shared-assets/coastal-lagoon.webp (3840x2160, opaque).
+Change only two things in image 1. First, remove the small pine island with its rocks that sits in the upper middle of the sea, a little left of center just below the horizon, and paint calm open water with gentle ripples in its place. Second, remove the tiny white sailboat on the horizon near the middle. Keep everything else exactly as it is: the same rich painted style, the village, wheat field, sheep and pines on the left cliff, the dock, sailboat, barrels and cottage on the right, the two small pine islands at the far right, the boulders, beach, bushes and flowers along the bottom, the lagoon colors, the distant hills, clouds and sky, at the same places, sizes and sharpness.
+Constraints: opaque full-bleed picture, no text, no logos, no UI, no borders, no watermark.
+```
+
+```text
+Use case: precise-object-edit
+Asset type: final full-screen main menu backdrop for a cartoon island board game.
+Change only the sheep in image 1. Every sheep must be a normal sheep with exactly ONE head at the front of its body, one face, two ears and four legs; the back end of each sheep is plain fluffy wool with a small tail, never a second head. Redraw the three sheep on the green cliff at the left that way: one walking left, one grazing, one standing and looking toward the viewer. Keep their size, places and fluffy cream wool. Keep everything else in the picture exactly as it is, in the same rich painted style, at the same places, sizes and sharpness.
+Constraints: opaque full-bleed picture, no text, no logos, no UI, no borders, no watermark.
+```
+
+### Player and bot portraits
+
+A new cast of eleven in one clean anime adventure style, picked by the owner from three sample styles. They are opaque squares shown in round frames. The folder is new (`portraits/`, was `avatars/`) so no cached copy of the old faces is served. Two samples set the style: the navigator and the cartographer. Every other portrait was drawn with one of them as the style reference; only the "what" line and the backdrop color change.
+
+Saved to: `apps/web/public/game-assets/portraits/{red-navigator,blue-cartographer,green-botanist,orange-builder,pink-pathfinder,purple-astronomer,teal-shipwright,yellow-merchant,bot-easy,bot-medium,bot-hard}.png` (512×512)
+
+#### Style sample (Flare, medium, 1024×1024)
+
+```text
+Use case: stylized-concept
+Asset type: player portrait for an island adventure board game, shown inside a round frame at 36 to 110 px, so the face must read when tiny.
+Subject: a sea captain navigator in his thirties: a white captain's cap with a navy band and a gold anchor badge, a red coat with a wide collar over a blue and white striped shirt, short dark brown hair and a neat short beard. This is a NEW, better-looking character design: an appealing person the player is proud to play as.
+Style: Clean anime-inspired adventure game art. Good-looking youthful characters with sharp stylish features, bright detailed eyes, a small nose, sleek well-designed hair with a few crisp highlights, a cool confident half smile. Clean thin linework, flat cel shading in two tones, crisp highlights, vivid color. No goofy caricature, no bulbous nose, no huge open-mouth grin.
+Composition: head and shoulders, facing the viewer and turned slightly to the left, looking at the viewer. The head with its hat or hair fills about 68 percent of the height and sits in the exact center, so a circle cut from the square keeps the whole face. Nothing covers the face and no hands show.
+Background: fills the whole square with a deep, slightly muted crimson red, a little lighter behind the head, plain, no scenery, no pattern.
+Constraints: opaque square, no border, no frame, no circle drawn, no text, no watermark.
+```
+
+#### One portrait of the set (Sunburst, high, edit of a style sample)
+
+```text
+Use case: stylized-concept
+Asset type: final player portrait for an island adventure board game, shown inside a round frame at 36 to 110 px, so the face must read when tiny. It is one of a set of eleven matching portraits.
+Destination: apps/web/public/game-assets/avatars/green-botanist.png (512x512, opaque).
+Draw a NEW character in exactly the style, line weight, shading, framing and head size of image 1; image 1 is the style reference only, do not copy its person. The new character is a botanist in her twenties with warm brown skin, long dark brown hair in a loose side braid with a small green leaf pin, bright hazel eyes, a gentle confident smile, a woven straw sun hat pushed back on her head with a green ribbon, a leaf green tunic with a cream collar. One small green sprout in a clay pot just visible at the bottom edge.
+Style: clean anime-inspired adventure game art. Good-looking characters with sharp stylish features, bright detailed eyes, a small nose, sleek well-designed hair with a few crisp highlights. Clean thin linework, flat cel shading in two tones, crisp highlights, vivid color, a warm key light from the upper left. No goofy caricature.
+Composition: head and shoulders, facing the viewer and turned slightly to the left, looking at the viewer. The head with its hat or hair fills about 68 percent of the height and sits in the exact center, so a circle cut from the square keeps the whole face. Nothing covers the face and no hands show.
+Background: fills the whole square with a deep, slightly muted forest green, a little lighter behind the head, plain, no scenery, no pattern.
+Constraints: opaque square, no border, no frame, no circle drawn, no text, no watermark.
 ```
