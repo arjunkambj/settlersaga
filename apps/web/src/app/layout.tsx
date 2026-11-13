@@ -4,7 +4,13 @@ import { HexclaveProvider, HexclaveTheme } from "@hexclave/next";
 import { hexclaveServerApp } from "@/hexclave/server";
 import Providers from "@/components/Providers";
 import { fontVariables } from "@/components/app/fonts";
-import { SITE_DESCRIPTION, SITE_NAME, SITE_TITLE, SITE_URL } from "@/lib/site";
+import {
+  SITE_ALTERNATE_NAMES,
+  SITE_DESCRIPTION,
+  SITE_NAME,
+  SITE_TITLE,
+  SITE_URL,
+} from "@/lib/site";
 
 import "./styles.css";
 
@@ -32,7 +38,13 @@ export const metadata: Metadata = {
 const structuredData = {
   "@context": "https://schema.org",
   "@graph": [
-    { "@id": `${SITE_URL}/#website`, "@type": "WebSite", name: SITE_NAME, url: SITE_URL },
+    {
+      "@id": `${SITE_URL}/#website`,
+      "@type": "WebSite",
+      alternateName: SITE_ALTERNATE_NAMES,
+      name: SITE_NAME,
+      url: SITE_URL,
+    },
     {
       "@id": `${SITE_URL}/#game`,
       "@type": "VideoGame",

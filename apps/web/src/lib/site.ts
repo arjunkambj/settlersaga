@@ -1,5 +1,11 @@
 export const SITE_NAME = "SetterSaga";
 
+/**
+ * Other spellings people type. The address is settlersaga.com, so search engines are told that
+ * "Settler Saga" is this same site.
+ */
+export const SITE_ALTERNATE_NAMES = ["Settler Saga", "SettlerSaga", "Setter Saga"];
+
 /** The search-result title of the home page; other pages use their own name and the site's. */
 export const SITE_TITLE = "SetterSaga: Free Online Island Board Game with Friends";
 
