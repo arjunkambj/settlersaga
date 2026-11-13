@@ -37,7 +37,7 @@ import {
 
 import { PlayerAvatar } from "./player-avatar";
 
-const RESULTS_SCENE_PATH = "/shared-assets/coastal-island-kingdom.webp";
+const RESULTS_SCENE_PATH = "/shared-assets/coastal-lagoon.webp";
 const DEFEAT_FLOURISH_ASSET_PATH = "/game-assets/results/defeat-flourish.png";
 const PODIUM_ASSET_PATH = "/game-assets/results/podium.png";
 

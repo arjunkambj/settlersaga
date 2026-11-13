@@ -19,14 +19,14 @@ export function SceneBackdrop() {
     ...COMMON,
     // Drawn as wide as the screen, or wider on a screen taller than the 6:13 art.
     sizes: "max(100vw, 47vh)",
-    src: "/shared-assets/coastal-island-kingdom-tall.webp",
+    src: "/shared-assets/coastal-lagoon-tall.webp",
   }).props;
   const { srcSet: wideSrcSet, ...wide } = getImageProps({
     ...COMMON,
     // On a screen taller than 16:9 the art is scaled by height, so it is drawn wider than the
     // screen and needs that many pixels.
     sizes: "(max-aspect-ratio: 16/9) 178vh, 100vw",
-    src: "/shared-assets/coastal-island-kingdom.webp",
+    src: "/shared-assets/coastal-lagoon.webp",
   }).props;
 
   return (
