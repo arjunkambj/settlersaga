@@ -1,3 +1,4 @@
+import { PLAYER_COUNTS } from "@settersaga/game";
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import { HexclaveProvider, HexclaveTheme } from "@hexclave/next";
@@ -54,7 +55,12 @@ const structuredData = {
       genre: ["Board game", "Strategy"],
       image: `${SITE_URL}/opengraph-image.jpg`,
       name: SITE_NAME,
-      numberOfPlayers: { "@type": "QuantitativeValue", maxValue: 8, minValue: 1 },
+      // Seats at a table, the same range the page copy gives; bots can fill all but one.
+      numberOfPlayers: {
+        "@type": "QuantitativeValue",
+        maxValue: Math.max(...PLAYER_COUNTS),
+        minValue: Math.min(...PLAYER_COUNTS),
+      },
       offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
       operatingSystem: "Any",
       playMode: ["SinglePlayer", "MultiPlayer"],
