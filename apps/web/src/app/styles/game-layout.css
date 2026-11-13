@@ -61,9 +61,9 @@
     max(var(--game-gutter), env(safe-area-inset-bottom))
     max(var(--game-gutter), env(safe-area-inset-left));
   overflow: hidden;
-  /* Open sea: a quiet wave pattern, flat from edge to edge. */
+  /* Open sea: calm painted water with nothing but waves, from edge to edge. */
   background:
-    url("/game-assets/ui/ocean-tile.webp") center / 640px repeat,
+    url("/game-assets/ui/ocean-sea.webp") center / cover no-repeat,
     var(--board-ocean);
   color: var(--g-text);
 }
