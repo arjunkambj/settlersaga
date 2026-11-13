@@ -6,6 +6,7 @@ import Link from "next/link";
 import { BrandWordmark } from "@/components/app/brand-logo";
 import { SceneBackdrop } from "@/components/app/scene-backdrop";
 import { buttonVariants } from "@/components/ui/button";
+import { COMMON_QUESTIONS } from "@/lib/game/common-questions";
 import { getGuidePages, type GuidePage } from "@/lib/game/guide-pages";
 import { SITE_NAME, SITE_SHARE_IMAGE } from "@/lib/site";
 
@@ -68,6 +69,28 @@ export default function HowToPlayPage() {
           {GUIDE_PAGES.map((page, index) => (
             <GuideSection eager={index === 0} key={page.topic} page={page} />
           ))}
+
+          <section
+            aria-labelledby="guide-questions"
+            className="flex flex-col gap-5 border-t border-ui-divider pt-8"
+          >
+            <h2
+              className="game-title m-0 text-center text-xl text-balance sm:text-2xl"
+              id="guide-questions"
+            >
+              Good to know
+            </h2>
+            <dl className="m-0 grid gap-x-8 gap-y-5 md:grid-cols-2">
+              {COMMON_QUESTIONS.map(({ answer, question }) => (
+                <div className="flex flex-col gap-1" key={question}>
+                  <dt className="game-title text-lg">{question}</dt>
+                  <dd className="m-0 text-base leading-relaxed font-medium text-pretty text-ui-text-soft">
+                    {answer}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </section>
 
           <div className="flex flex-col items-center gap-4 border-t border-ui-divider pt-8 text-center">
             <h2 className="game-title m-0 text-xl text-balance sm:text-2xl">Ready to settle in?</h2>

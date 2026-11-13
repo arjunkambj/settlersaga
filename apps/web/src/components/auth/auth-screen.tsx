@@ -66,7 +66,7 @@ export function AuthScreenView({
   pending = null,
 }: {
   error?: string;
-  /** Say what the game is, and add the sections a first-time visitor can scroll through. */
+  /** Say what the game is, and show the three ways to play under the card. */
   introduce?: boolean;
   onPlayAsGuest(): Promise<void>;
   onSignIn(): Promise<void>;

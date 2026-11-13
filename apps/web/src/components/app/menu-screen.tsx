@@ -6,8 +6,8 @@ import { cn } from "@/lib/utils";
 
 /**
  * A full-screen game menu: the island backdrop, the wordmark standing clear above one panel, an
- * optional title, the screen's content, then its buttons stacked full width. `below` adds more
- * to read under that first screen, for a page worth scrolling.
+ * optional title, the screen's content, then its buttons stacked full width. `below` sits under
+ * the panel on the same screen.
  */
 export function MenuScreen({
   actions,
@@ -28,22 +28,15 @@ export function MenuScreen({
       <SceneBackdrop />
       {/* Three rows: the wordmark at the foot of the top one, the panel, and an equal row below,
           so the panel itself sits on the screen's center line. */}
-      <div
-        className={cn(
-          "grid w-full max-w-sm grid-rows-[1fr_auto_1fr] justify-items-center gap-4 motion-safe:animate-game-pop sm:max-w-md lg:max-w-lg lg:gap-5",
-          // With more below, the panel still centers on the first screen, and the top of what
-          // follows shows at the bottom edge as a cue to scroll.
-          below ? "min-h-[calc(100dvh-9rem)]" : "flex-1",
-        )}
-      >
+      <div className="grid w-full max-w-sm flex-1 grid-rows-[1fr_auto_1fr] justify-items-center gap-4 motion-safe:animate-game-pop sm:max-w-md lg:max-w-lg lg:gap-5">
         <BrandWordmark className="w-56 self-end sm:w-72 lg:w-[26rem]" priority />
         <section className="game-menu-panel flex w-full flex-col items-center gap-5 px-6 py-6 text-center lg:gap-6 lg:px-10 lg:py-8">
           {title ? <h1 className="game-heading text-[1.75rem] lg:text-[2rem]">{title}</h1> : null}
           {children}
           {actions ? <div className="flex w-full flex-col gap-3">{actions}</div> : null}
         </section>
+        {below}
       </div>
-      {below}
     </main>
   );
 }

@@ -109,7 +109,11 @@ export function UiPreview({ mode, seed }: { mode: UiPreviewMode; seed?: string }
   switch (mode) {
     case "auth":
       return (
-        <AuthScreenView onPlayAsGuest={async () => undefined} onSignIn={async () => undefined} />
+        <AuthScreenView
+          introduce
+          onPlayAsGuest={async () => undefined}
+          onSignIn={async () => undefined}
+        />
       );
     case "home":
     case "home-fresh":
