@@ -530,7 +530,7 @@ function GamePreview({
       onRematch={async () => undefined}
       onReplacePlayer={async () => undefined}
       pausedRemainingMs={isPaused ? 42_000 : undefined}
-      viewerProfileImageUrl="/game-assets/avatars/red-navigator.png"
+      viewerProfileImageUrl="/game-assets/portraits/red-navigator.png"
     />
   );
 }
