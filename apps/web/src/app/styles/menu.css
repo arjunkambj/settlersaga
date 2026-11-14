@@ -208,21 +208,27 @@
 .game-button-ghost,
 .game-button-icon,
 .game-button-icon-danger {
-  --btn-line: transparent;
-  --btn-line-hover: var(--g-muted);
+  --btn-line: var(--g-edge);
+  --btn-lip: var(--g-lip-raised);
+  --btn-rise: var(--g-lip);
   --btn-focus-gap: 0 0 #0000;
-  border: var(--ui-line) solid var(--btn-line);
+  border: 2px solid var(--btn-line);
   border-radius: var(--ui-radius-pill);
   background: var(--btn-face);
   color: var(--btn-ink);
-  box-shadow: var(--btn-focus-gap);
+  box-shadow:
+    inset 0 2px 0 var(--g-shine),
+    0 var(--btn-rise) 0 0 var(--btn-lip),
+    0 var(--btn-rise) 0 2px var(--g-edge),
+    var(--btn-focus-gap);
   font-family: var(--font-sans);
   font-weight: var(--g-weight-strong);
   letter-spacing: 0;
   text-shadow: none;
   transition:
-    translate 90ms ease-out,
-    border-color 120ms ease-out;
+    translate 70ms ease-out,
+    box-shadow 70ms ease-out,
+    filter 120ms ease-out;
 }
 
 /* Raised: every button that is not the main one (Host, Join, Cancel, Copy, and
@@ -239,21 +245,23 @@
 .game-button-gold,
 [data-slot="alert-dialog-content"] .game-button-danger {
   --btn-face: var(--g-accent);
-  --btn-line-hover: var(--g-text);
-  --btn-ink: var(--g-surface);
+  --btn-lip: var(--g-lip-accent);
+  --btn-ink: var(--g-text);
 }
 
 /* Light: a white face with navy ink, for a third-party sign-in (Continue with
    Google) that should read as that brand's own button. */
 .game-button-light {
   --btn-face: var(--g-text);
+  --btn-lip: var(--g-muted);
   --btn-ink: var(--g-surface);
 }
 
-/* Ghost: see-through with a thin line ("Play as guest"). */
+/* Ghost: see-through with a thin line ("Play as guest"), so no lip. */
 .game-button-ghost {
   --btn-face: transparent;
   --btn-line: var(--g-raised);
+  --btn-rise: 0px;
   --btn-ink: var(--g-text);
 }
 
@@ -262,6 +270,8 @@
 .game-button-icon,
 .game-button-icon-danger {
   --btn-face: var(--g-surface);
+  --btn-lip: var(--g-edge);
+  --btn-rise: 0.1875rem;
   --btn-ink: var(--g-text);
   -webkit-backdrop-filter: var(--ui-glass-blur-game);
   backdrop-filter: var(--ui-glass-blur-game);
@@ -273,7 +283,7 @@
   border-radius: var(--ui-radius-pill);
 }
 
-/* Hover: a thin line around the face. No lift, no shadow. */
+/* Hover: the face brightens a little. */
 @media (hover: hover) {
   :is(
       .game-button,
@@ -285,11 +295,11 @@
       .game-button-icon,
       .game-button-icon-danger
     ):hover:not(:disabled, [data-disabled]) {
-    --btn-line: var(--btn-line-hover);
+    filter: brightness(1.08);
   }
 }
 
-/* Pressed: down 1px. */
+/* Pressed: the face sinks onto its lip. */
 :is(
     .game-button,
     .game-button-secondary,
@@ -300,6 +310,16 @@
     .game-button-icon,
     .game-button-icon-danger
   ):active:not(:disabled, [data-disabled]) {
+  --btn-rise: 0px;
+  translate: 0 var(--g-lip);
+}
+
+.game-button-icon:active:not(:disabled, [data-disabled]),
+.game-button-icon-danger:active:not(:disabled, [data-disabled]) {
+  translate: 0 0.1875rem;
+}
+
+.game-button-ghost:active:not(:disabled, [data-disabled]) {
   translate: 0 1px;
 }
 
@@ -333,7 +353,7 @@
   .game-button-icon-danger
 ):is(:disabled, [data-disabled]) {
   --btn-face: var(--g-raised);
-  --btn-line: transparent;
+  --btn-lip: var(--g-lip-raised);
   --btn-ink: var(--g-muted);
   opacity: 1;
   filter: none;

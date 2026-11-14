@@ -174,6 +174,18 @@
   --g-text: #ffffff; /* what to read first; rings for "on turn" and "picked" */
   --g-muted: #a9c1e6; /* what can wait: labels, times, anything you can't use yet (5:1 or better) */
   --g-accent: #ffd54a; /* gold: the one button to press, the leader's points, alerts */
+
+  /* ---- Depth ----
+     A chunky game feel without gradients: a dark outline around panels, buttons and game type,
+     a lighter line along a face's top edge, and a solid lip under each button that a press
+     squashes. The lips are the face colours stepped down, never new hues. */
+  --g-edge: #061633; /* outlines on panels, buttons and game type */
+  --g-shine: rgb(255 255 255 / 22%); /* the lit top edge of a face */
+  --g-lip: 0.25rem; /* how far a button stands up from its lip */
+  --g-lip-raised: color-mix(in oklab, var(--g-raised) 55%, var(--g-edge));
+  --g-lip-accent: color-mix(in oklab, var(--g-accent) 62%, #8a4b00);
+  --g-panel-depth:
+    inset 0 2px 0 var(--g-shine), 0 0 0 3px var(--g-edge), 0 0.3125rem 0 3px rgb(3 12 30 / 50%);
 }
 
 * {
@@ -204,13 +216,63 @@ body {
   transform: translateY(0);
 }
 
+/* Panels in the game and the menus: the flat navy face gets a dark outline, a lit top edge and a
+   short hard drop, so they read as solid boards rather than glass. */
+:is(
+  .game-panel,
+  .game-hand,
+  .game-build-panel,
+  .game-player-list,
+  .game-turn-card,
+  .game-goal-chip,
+  .game-menu-panel
+) {
+  box-shadow: var(--g-panel-depth);
+}
+
+/* Game type: the chunky face with a dark outline and a hard drop below it, like a sticker.
+   The stroke is painted under the fill so thin letters stay readable. It sits after the area
+   stylesheets, so it wins over their sans at the same weight: whose turn it is, points, the turn
+   goal, build tile names and the solid buttons. */
+.game-type,
+.game-turn-card-title,
+.game-strip-points,
+.game-vp-number,
+.game-goal-turn,
+.game-goal-points strong,
+.game-action-label,
+.game-panel-heading,
+.game-strip-name,
+.game-feed-tab,
+:is(.game-button, .game-button-secondary, .game-button-gold, .game-button-danger):not(
+  :disabled,
+  [data-disabled]
+) {
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  -webkit-text-stroke: 0.16em var(--g-edge);
+  paint-order: stroke fill;
+  text-shadow: 0 0.09em 0 var(--g-edge);
+}
+
+/* Points are what a glance at the crew looks for, so they run a step bigger than the names. */
+.game-strip-points {
+  font-size: var(--g-font-lg);
+}
+
+.game-strip-points .game-strip-vp {
+  font-size: var(--g-font-xs);
+}
+
 @theme inline {
   /* next/font sets --font-jakarta-sans on <html> (components/app/fonts.ts). One family,
      Plus Jakarta Sans 500-800, for all UI text. The display and heading stacks are the
      same face; whoever uses them sets the weight (titles 800, labels 700). */
   --font-sans: var(--font-jakarta-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-sans);
-  --font-heading: var(--font-sans);
+  /* The chunky game face (Lilita One, one weight) for titles, points and main buttons. */
+  --font-display: var(--font-lilita-one), var(--font-sans);
+  --font-heading: var(--font-display);
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
